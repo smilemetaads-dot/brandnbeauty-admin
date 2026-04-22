@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 const products = [
   ["Acne Balance Facewash", "Some By Mi", "Skincare", "Tk 890", "124", "Active"],
   ["Barrier Calm Serum", "BrandnBeauty", "Skincare", "Tk 990", "42", "Active"],
@@ -128,9 +130,12 @@ export default function RealProductManagementPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        <button className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50">
+                        <Link
+                          href="/products/edit"
+                          className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50"
+                        >
                           Edit
-                        </button>
+                        </Link>
                         <button className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50">
                           Duplicate
                         </button>

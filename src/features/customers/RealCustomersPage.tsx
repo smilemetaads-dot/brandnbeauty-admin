@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 const customerStats = [
   ["Total Customers", "1,240", "+86 this month"],
   ["Returning Customers", "680", "54.8% repeat rate"],
@@ -283,9 +285,12 @@ export default function RealCustomersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        <button className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50">
+                        <Link
+                          href="/customers/profile"
+                          className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50"
+                        >
                           View Profile
-                        </button>
+                        </Link>
                         <button className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50">
                           Message
                         </button>

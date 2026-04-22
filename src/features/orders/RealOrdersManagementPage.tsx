@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 const orderStats = [
   ["New Orders", "37", "Need confirmation"],
   ["Confirmed", "54", "Ready for processing"],
@@ -496,9 +498,12 @@ export default function RealOrdersManagementPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        <button className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50">
+                        <Link
+                          href="/orders/details"
+                          className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50"
+                        >
                           View
-                        </button>
+                        </Link>
                         <button className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50">
                           Call
                         </button>

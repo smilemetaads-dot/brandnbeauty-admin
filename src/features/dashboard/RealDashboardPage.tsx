@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export default function RealDashboardPage() {
   const stats = [
     ["Today Orders", "128", "+12%"],
@@ -47,9 +49,12 @@ export default function RealDashboardPage() {
                 Recent Orders
               </h2>
             </div>
-            <button className="w-fit rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-stone-50">
+            <Link
+              href="/orders"
+              className="w-fit rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-stone-50"
+            >
               View All Orders
-            </button>
+            </Link>
           </div>
 
           <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
@@ -164,9 +169,12 @@ export default function RealDashboardPage() {
                 Best Performing Products
               </h2>
             </div>
-            <button className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-stone-50">
+            <Link
+              href="/products"
+              className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-stone-50"
+            >
               View Products
-            </button>
+            </Link>
           </div>
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {[
