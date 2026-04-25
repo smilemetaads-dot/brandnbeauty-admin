@@ -2,356 +2,100 @@
 
 import Link from "next/link";
 
-const orderStats = [
-  ["New Orders", "37", "Need confirmation"],
-  ["Confirmed", "54", "Ready for processing"],
-  ["Packed", "18", "Waiting for courier"],
-  ["Returns / Cancels", "6", "Review needed"],
-] as const;
-
-const orders = [
-  {
-    id: "#BNB-240401",
-    customer: "Nusrat Jahan",
-    orderCount: 4,
-    phone: "01711XXXXXX",
-    orderTime: "5 min ago",
-    location: "Dhaka / Mirpur",
-    payment: "COD",
-    verification: "COD",
-    assigned: "Unassigned",
-    courier: "Steadfast",
-    tracking: "-",
-    amount: 1260,
-    status: "New",
-    courierStatus: "Not handed over",
-  },
-  {
-    id: "#BNB-240400",
-    customer: "Sadia Akter",
-    orderCount: 2,
-    phone: "01822XXXXXX",
-    orderTime: "18 min ago",
-    location: "Gazipur / Tongi",
-    payment: "bKash",
-    verification: "Verified",
-    assigned: "Rafi",
-    courier: "Steadfast",
-    tracking: "SA-940021",
-    amount: 2140,
-    status: "Confirmed",
-    courierStatus: "Awaiting pickup",
-  },
-  {
-    id: "#BNB-240399",
-    customer: "Mehedi Hasan",
-    orderCount: 1,
-    phone: "01933XXXXXX",
-    orderTime: "25 min ago",
-    location: "Chattogram / Panchlaish",
-    payment: "COD",
-    verification: "COD",
-    assigned: "Nila",
-    courier: "Pathao",
-    tracking: "SA-940022",
-    amount: 980,
-    status: "Packed",
-    courierStatus: "Awaiting pickup",
-  },
-  {
-    id: "#BNB-240398",
-    customer: "Tania Islam",
-    orderCount: 3,
-    phone: "01644XXXXXX",
-    orderTime: "40 min ago",
-    location: "Sylhet / Sadar",
-    payment: "COD",
-    verification: "COD",
-    assigned: "Rafi",
-    courier: "RedX",
-    tracking: "SA-940023",
-    amount: 1540,
-    status: "Shipped",
-    courierStatus: "In transit",
-  },
-  {
-    id: "#BNB-240397",
-    customer: "Raisa Khan",
-    orderCount: 5,
-    phone: "01555XXXXXX",
-    orderTime: "1 hr ago",
-    location: "Dhaka / Uttara",
-    payment: "bKash",
-    verification: "Verified",
-    assigned: "Mitu",
-    courier: "Steadfast",
-    tracking: "SA-940024",
-    amount: 1890,
-    status: "Delivered",
-    courierStatus: "Delivered",
-  },
-  {
-    id: "#BNB-240396",
-    customer: "Tanvir Alam",
-    orderCount: 1,
-    phone: "01366XXXXXX",
-    orderTime: "2 hr ago",
-    location: "Rajshahi / Sadar",
-    payment: "COD",
-    verification: "COD",
-    assigned: "Unassigned",
-    courier: "Pathao",
-    tracking: "-",
-    amount: 750,
-    status: "Cancelled",
-    courierStatus: "Not created",
-  },
-  {
-    id: "#BNB-240395",
-    customer: "Sharmin Sultana",
-    orderCount: 2,
-    phone: "01777XXXXXX",
-    orderTime: "3 hr ago",
-    location: "Dhaka / Mohammadpur",
-    payment: "COD",
-    verification: "COD",
-    assigned: "Rafi",
-    courier: "Steadfast",
-    tracking: "SA-940025",
-    amount: 1120,
-    status: "Confirmed",
-    courierStatus: "Awaiting pickup",
-  },
-  {
-    id: "#BNB-240394",
-    customer: "Mim Akter",
-    orderCount: 1,
-    phone: "01988XXXXXX",
-    orderTime: "4 hr ago",
-    location: "Cumilla / Sadar",
-    payment: "bKash",
-    verification: "Pending",
-    assigned: "Nila",
-    courier: "RedX",
-    tracking: "-",
-    amount: 1480,
-    status: "New",
-    courierStatus: "Not handed over",
-  },
-  {
-    id: "#BNB-240393",
-    customer: "Jannat Islam",
-    orderCount: 3,
-    phone: "01855XXXXXX",
-    orderTime: "Yesterday",
-    location: "Narayanganj / Fatullah",
-    payment: "COD",
-    verification: "COD",
-    assigned: "Mitu",
-    courier: "Steadfast",
-    tracking: "SA-940026",
-    amount: 870,
-    status: "Packed",
-    courierStatus: "Awaiting pickup",
-  },
-  {
-    id: "#BNB-240392",
-    customer: "Sabbir Rahman",
-    orderCount: 1,
-    phone: "01622XXXXXX",
-    orderTime: "Yesterday",
-    location: "Khulna / Sadar",
-    payment: "COD",
-    verification: "COD",
-    assigned: "Unassigned",
-    courier: "Pathao",
-    tracking: "-",
-    amount: 1650,
-    status: "New",
-    courierStatus: "Not handed over",
-  },
-  {
-    id: "#BNB-240391",
-    customer: "Ayesha Siddika",
-    orderCount: 4,
-    phone: "01511XXXXXX",
-    orderTime: "Yesterday",
-    location: "Dhaka / Badda",
-    payment: "bKash",
-    verification: "Verified",
-    assigned: "Rafi",
-    courier: "Steadfast",
-    tracking: "SA-940027",
-    amount: 2260,
-    status: "Shipped",
-    courierStatus: "In transit",
-  },
-  {
-    id: "#BNB-240390",
-    customer: "Farzana Karim",
-    orderCount: 2,
-    phone: "01766XXXXXX",
-    orderTime: "Yesterday",
-    location: "Barishal / Sadar",
-    payment: "COD",
-    verification: "COD",
-    assigned: "Nila",
-    courier: "RedX",
-    tracking: "SA-940028",
-    amount: 930,
-    status: "Confirmed",
-    courierStatus: "Awaiting pickup",
-  },
-  {
-    id: "#BNB-240389",
-    customer: "Arif Hossain",
-    orderCount: 1,
-    phone: "01333XXXXXX",
-    orderTime: "Yesterday",
-    location: "Rangpur / Sadar",
-    payment: "COD",
-    verification: "COD",
-    assigned: "Unassigned",
-    courier: "Pathao",
-    tracking: "-",
-    amount: 1090,
-    status: "New",
-    courierStatus: "Not handed over",
-  },
-  {
-    id: "#BNB-240388",
-    customer: "Nadia Tabassum",
-    orderCount: 3,
-    phone: "01944XXXXXX",
-    orderTime: "2 days ago",
-    location: "Mymensingh / Sadar",
-    payment: "bKash",
-    verification: "Verified",
-    assigned: "Mitu",
-    courier: "Steadfast",
-    tracking: "SA-940029",
-    amount: 1730,
-    status: "Delivered",
-    courierStatus: "Delivered",
-  },
-  {
-    id: "#BNB-240387",
-    customer: "Imran Hossain",
-    orderCount: 2,
-    phone: "01899XXXXXX",
-    orderTime: "2 days ago",
-    location: "Bogura / Sadar",
-    payment: "COD",
-    verification: "COD",
-    assigned: "Rafi",
-    courier: "RedX",
-    tracking: "SA-940030",
-    amount: 1320,
-    status: "Shipped",
-    courierStatus: "In transit",
-  },
-  {
-    id: "#BNB-240386",
-    customer: "Sanjida Noor",
-    orderCount: 2,
-    phone: "01799XXXXXX",
-    orderTime: "2 days ago",
-    location: "Dhaka / Dhanmondi",
-    payment: "COD",
-    verification: "COD",
-    assigned: "Nila",
-    courier: "Steadfast",
-    tracking: "SA-940031",
-    amount: 1440,
-    status: "Packed",
-    courierStatus: "Awaiting pickup",
-  },
-  {
-    id: "#BNB-240385",
-    customer: "Omar Faruk",
-    orderCount: 1,
-    phone: "01688XXXXXX",
-    orderTime: "2 days ago",
-    location: "Noakhali / Sadar",
-    payment: "COD",
-    verification: "COD",
-    assigned: "Unassigned",
-    courier: "Pathao",
-    tracking: "-",
-    amount: 690,
-    status: "Cancelled",
-    courierStatus: "Not created",
-  },
-  {
-    id: "#BNB-240384",
-    customer: "Mahinur Rahman",
-    orderCount: 2,
-    phone: "01577XXXXXX",
-    orderTime: "2 days ago",
-    location: "Sylhet / Beanibazar",
-    payment: "bKash",
-    verification: "Pending",
-    assigned: "Mitu",
-    courier: "RedX",
-    tracking: "—",
-    amount: 1990,
-    status: "New",
-    courierStatus: "Not handed over",
-  },
-] as const;
+import type { AdminOrderRecord } from "@/lib/orders/supabaseOrders";
 
 function getOrderStatusClasses(status: string) {
   if (status === "New") return "bg-amber-50 text-amber-700";
   if (status === "Confirmed") return "bg-sky-50 text-sky-700";
+  if (status === "Processing") return "bg-cyan-50 text-cyan-700";
   if (status === "Packed") return "bg-violet-50 text-violet-700";
   if (status === "Shipped") return "bg-indigo-50 text-indigo-700";
   if (status === "Delivered") return "bg-emerald-50 text-emerald-700";
+  if (status === "Returned") return "bg-rose-50 text-rose-700";
   return "bg-rose-50 text-rose-700";
 }
 
-function getCourierStatusClasses(status: string) {
-  if (status === "Delivered") return "bg-emerald-50 text-emerald-700";
-  if (status === "In transit") return "bg-indigo-50 text-indigo-700";
-  if (status === "Awaiting pickup") return "bg-amber-50 text-amber-700";
+function getPaymentStatusClasses(status: string) {
+  if (status === "Paid" || status === "Verified") {
+    return "bg-emerald-50 text-emerald-700";
+  }
+
+  if (status === "Pending") {
+    return "bg-amber-50 text-amber-700";
+  }
+
   return "bg-stone-100 text-slate-700";
 }
 
-function getVerificationClasses(status: string) {
-  if (status === "Verified") return "bg-emerald-50 text-emerald-700";
-  if (status === "COD") return "bg-stone-100 text-slate-700";
-  return "bg-amber-50 text-amber-700";
+function formatAmount(amount: number) {
+  return `Tk ${amount.toLocaleString()}`;
 }
 
-export default function RealOrdersManagementPage() {
+function formatCreatedAt(value: string) {
+  if (!value) {
+    return "N/A";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+export default function RealOrdersManagementPage({
+  initialOrders,
+}: {
+  initialOrders: AdminOrderRecord[];
+}) {
+  const newOrders = initialOrders.filter((order) => order.orderStatus === "New");
+  const confirmedOrders = initialOrders.filter(
+    (order) => order.orderStatus === "Confirmed",
+  );
+  const paidOrders = initialOrders.filter(
+    (order) => order.paymentStatus === "Paid" || order.paymentStatus === "Verified",
+  );
+  const pendingOrders = initialOrders.filter(
+    (order) => order.paymentStatus === "Pending",
+  );
+
   return (
     <div className="p-4 md:p-6">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {orderStats.map(([label, value, sub]) => (
-          <div
-            key={label}
-            className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm"
-          >
-            <div className="text-sm font-medium text-slate-500">{label}</div>
-            <div className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
-              {value}
+        {[
+          ["Total Orders", String(initialOrders.length), "Live from Supabase"],
+          ["New Orders", String(newOrders.length), "Need confirmation"],
+          ["Confirmed", String(confirmedOrders.length), "Ready for processing"],
+          ["Paid / Verified", String(paidOrders.length), "Payment cleared"],
+          ["Pending Payment", String(pendingOrders.length), "Review needed"],
+        ]
+          .slice(0, 4)
+          .map(([label, value, sub]) => (
+            <div
+              key={label}
+              className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm"
+            >
+              <div className="text-sm font-medium text-slate-500">{label}</div>
+              <div className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
+                {value}
+              </div>
+              <div className="mt-2 text-xs text-slate-500">{sub}</div>
             </div>
-            <div className="mt-2 text-xs text-slate-500">{sub}</div>
-          </div>
-        ))}
+          ))}
       </div>
 
       <div className="mt-6 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap gap-2">
-            {[
-              "All Orders",
-              "New",
-              "Confirmed",
-              "Packed",
-              "Shipped",
-              "Delivered",
-              "Cancelled",
-            ].map((item, idx) => (
+            {["All Orders", "New", "Confirmed", "Delivered"].map((item, idx) => (
               <button
                 key={item}
                 className={`rounded-full px-4 py-2 text-sm font-medium ${
@@ -372,10 +116,10 @@ export default function RealOrdersManagementPage() {
               <option>bKash</option>
             </select>
             <select className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">
-              <option>Delivery Zone: All</option>
-              <option>Dhaka City</option>
-              <option>Dhaka Sub Area</option>
-              <option>Outside Dhaka</option>
+              <option>Status: All</option>
+              <option>New</option>
+              <option>Confirmed</option>
+              <option>Delivered</option>
             </select>
             <select className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">
               <option>Sort: Latest</option>
@@ -385,129 +129,84 @@ export default function RealOrdersManagementPage() {
           </div>
         </div>
 
-        <div className="mt-5 flex flex-col gap-3 rounded-2xl bg-stone-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" /> Select all on this page
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {[
-              "Mark Confirmed",
-              "Mark Packed",
-              "Assign Moderator",
-              "Courier Export",
-              "Print Invoice",
-            ].map((action) => (
-              <button
-                key={action}
-                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-100"
-              >
-                {action}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead className="bg-stone-50 text-slate-500">
                 <tr>
-                  <th className="px-4 py-3 font-medium">
-                    <input type="checkbox" />
-                  </th>
                   <th className="px-4 py-3 font-medium">Order</th>
                   <th className="px-4 py-3 font-medium">Customer</th>
-                  <th className="px-4 py-3 font-medium">Order Time</th>
                   <th className="px-4 py-3 font-medium">Phone</th>
-                  <th className="px-4 py-3 font-medium">Location</th>
-                  <th className="px-4 py-3 font-medium">Payment</th>
-                  <th className="px-4 py-3 font-medium">Verification</th>
-                  <th className="px-4 py-3 font-medium">Assigned</th>
-                  <th className="px-4 py-3 font-medium">Courier</th>
-                  <th className="px-4 py-3 font-medium">Tracking ID</th>
-                  <th className="px-4 py-3 font-medium">Amount</th>
+                  <th className="px-4 py-3 font-medium">Total</th>
+                  <th className="px-4 py-3 font-medium">Payment Method</th>
+                  <th className="px-4 py-3 font-medium">Payment Status</th>
                   <th className="px-4 py-3 font-medium">Order Status</th>
-                  <th className="px-4 py-3 font-medium">Courier Status</th>
+                  <th className="px-4 py-3 font-medium">Created At</th>
                   <th className="px-4 py-3 font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id} className="border-t border-slate-100 bg-white">
-                    <td className="px-4 py-3">
-                      <input type="checkbox" />
+                {initialOrders.length === 0 ? (
+                  <tr className="border-t border-slate-100 bg-white">
+                    <td
+                      colSpan={9}
+                      className="px-4 py-10 text-center text-sm text-slate-500"
+                    >
+                      No live orders found.
                     </td>
+                  </tr>
+                ) : null}
+
+                {initialOrders.map((order) => (
+                  <tr
+                    key={order.id || order.orderNumber}
+                    className="border-t border-slate-100 bg-white"
+                  >
                     <td className="px-4 py-3 font-semibold text-slate-900">
-                      {order.id}
+                      {order.orderNumber}
                     </td>
                     <td className="px-4 py-3 text-slate-700">
-                      <div>{order.customer}</div>
-                      <div className="text-xs text-slate-400">
-                        Orders: {order.orderCount}
-                      </div>
+                      {order.customerName}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{order.orderTime}</td>
                     <td className="px-4 py-3 text-slate-700">
-                      <div className="flex items-center gap-2">
-                        <span>{order.phone}</span>
-                        <span className="text-xs text-sky-600">Call</span>
-                      </div>
+                      {order.customerPhone}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{order.location}</td>
-                    <td className="px-4 py-3 text-slate-600">{order.payment}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">
+                      {formatAmount(order.total)}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {order.paymentMethod}
+                    </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${getVerificationClasses(
-                          order.verification,
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${getPaymentStatusClasses(
+                          order.paymentStatus,
                         )}`}
                       >
-                        {order.verification}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">{order.assigned}</td>
-                    <td className="px-4 py-3 text-slate-700">{order.courier}</td>
-                    <td className="px-4 py-3 text-slate-700">{order.tracking}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={
-                          order.amount >= 2000
-                            ? "font-bold text-emerald-600"
-                            : "font-medium text-slate-900"
-                        }
-                      >
-                        Tk {order.amount}
+                        {order.paymentStatus}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-semibold ${getOrderStatusClasses(
-                          order.status,
+                          order.orderStatus,
                         )}`}
                       >
-                        {order.status}
+                        {order.orderStatus}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {formatCreatedAt(order.createdAt)}
+                    </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${getCourierStatusClasses(
-                          order.courierStatus,
-                        )}`}
+                      <Link
+                        href={`/orders/details?id=${encodeURIComponent(
+                          order.id,
+                        )}&order=${encodeURIComponent(order.orderNumber)}`}
+                        className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50"
                       >
-                        {order.courierStatus}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <Link
-                          href="/orders/details"
-                          className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50"
-                        >
-                          View
-                        </Link>
-                        <button className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50">
-                          Call
-                        </button>
-                      </div>
+                        View Details
+                      </Link>
                     </td>
                   </tr>
                 ))}
@@ -517,7 +216,10 @@ export default function RealOrdersManagementPage() {
         </div>
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-slate-600">Showing 1-18 of 215 orders</div>
+          <div className="text-sm text-slate-600">
+            Showing {initialOrders.length} live order
+            {initialOrders.length === 1 ? "" : "s"}
+          </div>
           <div className="flex items-center gap-2">
             {[1, 2, 3, 4].map((page) => (
               <button
@@ -531,52 +233,6 @@ export default function RealOrdersManagementPage() {
                 {page}
               </button>
             ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_380px]">
-        <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <div>
-            <div className="text-sm font-medium text-slate-500">Quick Actions</div>
-            <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900">
-              Order Operations
-            </h2>
-          </div>
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {[
-              "Pending Call Confirm",
-              "Create Courier Batch",
-              "Print Selected Invoice",
-              "Review Cancelled Orders",
-            ].map((action) => (
-              <button
-                key={action}
-                className="rounded-2xl border border-slate-300 bg-stone-50 px-4 py-4 text-sm font-medium text-slate-700 hover:bg-white"
-              >
-                {action}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <div className="text-sm font-medium text-slate-500">Order Notes</div>
-          <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900">
-            Bangladesh Ecommerce Flow
-          </h2>
-          <div className="mt-5 space-y-3 text-sm text-slate-600">
-            <div className="rounded-2xl bg-stone-50 p-4">
-              Internal flow: New to Confirmed to Packed to Shipped to Delivered.
-            </div>
-            <div className="rounded-2xl bg-stone-50 p-4">
-              Courier status should update separately: Not handed over to
-              Awaiting pickup to In transit to Delivered.
-            </div>
-            <div className="rounded-2xl bg-stone-50 p-4">
-              Automatic call confirmation can be added later in the
-              automation phase without changing this page structure.
-            </div>
           </div>
         </div>
       </div>
