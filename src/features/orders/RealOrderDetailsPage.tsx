@@ -70,6 +70,19 @@ function getLineTotal(item: AdminOrderItemRecord) {
   return item.totalPrice || item.unitPrice * item.quantity;
 }
 
+function shouldRenderOrderItemImage(imageUrl: string) {
+  if (!imageUrl) {
+    return false;
+  }
+
+  try {
+    const parsedUrl = new URL(imageUrl);
+    return parsedUrl.hostname !== "via.placeholder.com";
+  } catch {
+    return true;
+  }
+}
+
 export default function RealOrderDetailsPage({
   initialOrderDetails,
 }: {
@@ -246,7 +259,7 @@ export default function RealOrderDetailsPage({
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            {item.imageUrl ? (
+                            {shouldRenderOrderItemImage(item.imageUrl) ? (
                               // Keep the existing table layout while showing the real ordered image.
                               <Image
                                 src={item.imageUrl}
@@ -255,7 +268,11 @@ export default function RealOrderDetailsPage({
                                 height={48}
                                 className="h-12 w-12 rounded-2xl object-cover"
                               />
-                            ) : null}
+                            ) : (
+                              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-100 text-[10px] text-slate-400">
+                                Image
+                              </div>
+                            )}
                             <div>
                               <div className="font-semibold text-slate-900">
                                 {item.name}
