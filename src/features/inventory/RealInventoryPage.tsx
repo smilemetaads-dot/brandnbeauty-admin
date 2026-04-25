@@ -1,12 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { mockProducts } from "@/lib/mock/products";
-import {
-  getLocalProducts,
-  updateLocalProductStock,
-} from "@/lib/products/localProducts";
+import type { InventoryMovementRecord } from "@/lib/inventory/supabaseInventory";
 import type { ProductRecord } from "@/lib/types/product";
 
 const inventoryMeta: Record<
@@ -20,16 +16,39 @@ const inventoryMeta: Record<
   prd_tea_tree_spot_gel: { reserved: 2, reorderLevel: 10 },
 };
 
-export default function RealInventoryPage() {
-  const [products, setProducts] = useState<ProductRecord[]>(mockProducts);
+function formatMovementTime(value: string) {
+  if (!value) {
+    return "N/A";
+  }
 
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setProducts(getLocalProducts());
-    }, 0);
+  const date = new Date(value);
 
-    return () => window.clearTimeout(timeoutId);
-  }, []);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function formatMovementQuantity(value: number) {
+  if (value === 0) {
+    return "0";
+  }
+
+  return value > 0 ? `+${value}` : String(value);
+}
+
+export default function RealInventoryPage({
+  initialProducts,
+  initialMovements,
+}: {
+  initialProducts: ProductRecord[];
+  initialMovements: InventoryMovementRecord[];
+}) {
+  const [products, setProducts] = useState<ProductRecord[]>(initialProducts);
 
   const inventoryRows = products.map((product) => {
     const meta = inventoryMeta[product.id] ?? { reserved: 0, reorderLevel: 15 };
@@ -72,15 +91,13 @@ export default function RealInventoryPage() {
       ),
       sub: "Sales blocked",
     },
-    { label: "Today Stock Movement", value: "182", sub: "In + out combined" },
-  ];
-
-  const movements = [
-    ["10:15 AM", "Stock In", "+40", "Barrier Calm Serum", "Purchase received"],
-    ["11:05 AM", "Reserved", "-4", "Acne Balance Facewash", "Orders packed"],
-    ["12:20 PM", "Sold", "-3", "Hydra Gel Moisturizer", "Delivered orders"],
-    ["1:45 PM", "Adjustment", "-2", "Tea Tree Spot Gel", "Damaged units"],
-    ["3:10 PM", "Stock In", "+60", "Goat Milk Facewash", "Factory batch added"],
+    {
+      label: "Today Stock Movement",
+      value: String(
+        initialMovements.reduce((sum, movement) => sum + Math.abs(movement.quantity), 0),
+      ),
+      sub: "In + out combined",
+    },
   ];
 
   function handleStockAdjust(productId: string, currentStock: number) {
@@ -99,8 +116,11 @@ export default function RealInventoryPage() {
       return;
     }
 
-    updateLocalProductStock(productId, nextStock);
-    setProducts(getLocalProducts());
+    setProducts((currentProducts) =>
+      currentProducts.map((product) =>
+        product.id === productId ? { ...product, stock: nextStock } : product,
+      ),
+    );
   }
 
   return (
@@ -315,27 +335,52 @@ export default function RealInventoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {movements.map(([time, type, qty, product, reason]) => (
-                  <tr key={`${time}-${product}`} className="border-t border-slate-100 bg-white">
-                    <td className="px-4 py-3 text-slate-600">{time}</td>
+                {initialMovements.length === 0 ? (
+                  <tr className="border-t border-slate-100 bg-white">
+                    <td
+                      colSpan={5}
+                      className="px-4 py-10 text-center text-sm text-slate-500"
+                    >
+                      No inventory movements found yet.
+                    </td>
+                  </tr>
+                ) : null}
+
+                {initialMovements.map((movement) => (
+                  <tr key={movement.id} className="border-t border-slate-100 bg-white">
+                    <td className="px-4 py-3 text-slate-600">
+                      {formatMovementTime(movement.createdAt)}
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          type === "Stock In"
+                          movement.movementType === "Stock In"
                             ? "bg-emerald-50 text-emerald-700"
-                            : type === "Adjustment"
+                            : movement.movementType === "Adjustment"
                               ? "bg-amber-50 text-amber-700"
                               : "bg-sky-50 text-sky-700"
                         }`}
                       >
-                        {type}
+                        {movement.movementType}
                       </span>
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-900">
-                      {qty}
+                      {formatMovementQuantity(movement.quantity)}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{product}</td>
-                    <td className="px-4 py-3 text-slate-600">{reason}</td>
+                    <td className="px-4 py-3 text-slate-700">
+                      <div>{movement.productName}</div>
+                      {movement.orderReference ? (
+                        <div className="text-xs text-slate-500">
+                          Order: {movement.orderReference}
+                        </div>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      <div>{movement.note || "Inventory movement recorded"}</div>
+                      <div className="text-xs text-slate-500">
+                        {movement.previousStock} to {movement.newStock}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
