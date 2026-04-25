@@ -123,32 +123,19 @@ export async function updateOrderStatusWithServiceRole(params: {
 
   await ensureOrderStockSyncReady(supabase);
 
-  const { data, error } = await supabase.rpc("admin_update_order_status", {
-    target_order_id: params.id,
-    next_order_status: normalizedOrderStatus,
-  });
+  const rpcResult = await confirmOrderWithStockSync(supabase, params.id);
 
-  if (error) {
-    if (
-      error.message.includes("Could not find the function") ||
-      error.message.includes("admin_update_order_status") ||
-      error.message.includes("stock_deducted")
-    ) {
-      throw new OrderSaveError(
-        "Order stock sync is not ready yet. Apply the latest Supabase migration and try again.",
-      );
-    }
-
-    throw new OrderSaveError(error.message);
+  if (rpcResult.error) {
+    throw buildStockSyncError(rpcResult.error);
   }
 
-  const orderRow = Array.isArray(data) ? data[0] : data;
+  const orderRow = await getOrderRowById(supabase, params.id);
 
   if (!orderRow) {
     throw new OrderSaveError("This order could not be found for updating.", 404);
   }
 
-  return mapOrderRow(orderRow as OrderRow);
+  return mapOrderRow(orderRow);
 }
 
 export async function getOrderDetailsFromSupabase(params: {
@@ -252,9 +239,82 @@ async function ensureOrderStockSyncReady(
     (error.message.includes("stock_deducted") || error.code === "42703")
   ) {
     throw new OrderSaveError(
-      "Order stock sync is not ready yet. Run the latest Supabase SQL migration to add stock_deducted and admin_update_order_status.",
+      "Order stock sync is not ready yet. Missing column `orders.stock_deducted`. Run the latest Supabase SQL migration.",
     );
   }
+}
+
+async function confirmOrderWithStockSync(
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  orderId: string,
+) {
+  const numericOrderId = Number(orderId);
+
+  if (Number.isInteger(numericOrderId) && numericOrderId > 0) {
+    const numericRpcResult = await supabase.rpc("confirm_order_and_deduct_stock", {
+      target_order_id: numericOrderId,
+    });
+
+    if (!numericRpcResult.error) {
+      return numericRpcResult;
+    }
+
+    if (!isMissingFunctionError(numericRpcResult.error)) {
+      return numericRpcResult;
+    }
+  }
+
+  return supabase.rpc("admin_update_order_status", {
+    target_order_id: orderId,
+    next_order_status: "confirmed",
+  });
+}
+
+async function getOrderRowById(
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  orderId: string,
+): Promise<OrderRow | null> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select(
+      "id, order_number, customer_name, customer_phone, total, payment_method, payment_status, order_status, created_at",
+    )
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (error) {
+    throw new OrderSaveError(error.message);
+  }
+
+  return data as OrderRow | null;
+}
+
+function buildStockSyncError(error: { message: string; code?: string | null }) {
+  if (
+    error.message.includes("stock_deducted") ||
+    error.code === "42703"
+  ) {
+    return new OrderSaveError(
+      "Order stock sync is not ready yet. Missing column `orders.stock_deducted`. Run the latest Supabase SQL migration.",
+    );
+  }
+
+  if (isMissingFunctionError(error)) {
+    return new OrderSaveError(
+      "Order stock sync is not ready yet. Missing RPC function `confirm_order_and_deduct_stock(target_order_id bigint)` or legacy `admin_update_order_status(target_order_id uuid, next_order_status text)`.",
+    );
+  }
+
+  return new OrderSaveError(error.message);
+}
+
+function isMissingFunctionError(error: { message: string; code?: string | null }) {
+  return (
+    error.message.includes("Could not find the function") ||
+    error.message.includes("confirm_order_and_deduct_stock") ||
+    error.message.includes("admin_update_order_status") ||
+    error.code === "42883"
+  );
 }
 
 async function updateOrderStatusWithoutStockSync(
