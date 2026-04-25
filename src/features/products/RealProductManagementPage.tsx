@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 
-const products = [
-  ["Acne Balance Facewash", "Some By Mi", "Skincare", "Tk 890", "124", "Active"],
-  ["Barrier Calm Serum", "BrandnBeauty", "Skincare", "Tk 990", "42", "Active"],
-  ["Daily Sun Gel", "Beauty of Joseon", "Skincare", "Tk 1250", "11", "Low Stock"],
-  ["Pore Clay Mask", "COSRX", "Skincare", "Tk 1050", "9", "Low Stock"],
-  ["Hydra Gel Moisturizer", "Simple", "Skincare", "Tk 850", "58", "Active"],
-  ["Tea Tree Spot Gel", "Some By Mi", "Skincare", "Tk 780", "25", "Draft"],
-] as const;
+import type { ProductRecord, ProductStatus } from "@/lib/types/product";
 
 const filters = [
   "All Products",
@@ -19,15 +12,40 @@ const filters = [
   "Out of Stock",
 ] as const;
 
-export default function RealProductManagementPage() {
+const statusLabels: Record<ProductStatus, string> = {
+  active: "Active",
+  draft: "Draft",
+  low_stock: "Low Stock",
+  out_of_stock: "Out of Stock",
+};
+
+function formatPrice(price: ProductRecord["price"]) {
+  return `Tk ${price}`;
+}
+
+export default function RealProductManagementPage({
+  initialProducts,
+}: {
+  initialProducts: ProductRecord[];
+}) {
+  const products = initialProducts;
+  const activeProducts = products.filter((product) => product.status === "active");
+  const draftProducts = products.filter((product) => product.status === "draft");
+  const lowStockProducts = products.filter(
+    (product) => product.status === "low_stock" || product.stock <= 15,
+  );
+  const brandCount = new Set(
+    products.map((product) => product.brand).filter(Boolean),
+  ).size;
+
   return (
     <div className="p-4 md:p-6">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          ["Total Products", "248", "32 brands"],
-          ["Active Products", "214", "Currently live"],
-          ["Draft Products", "18", "Need review"],
-          ["Low Stock", "16", "Restock soon"],
+          ["Total Products", String(products.length), `${brandCount} brands`],
+          ["Active Products", String(activeProducts.length), "Currently live"],
+          ["Draft Products", String(draftProducts.length), "Need review"],
+          ["Low Stock", String(lowStockProducts.length), "Restock soon"],
         ].map(([label, value, sub]) => (
           <div
             key={label}
@@ -60,6 +78,12 @@ export default function RealProductManagementPage() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Link
+              href="/products/edit"
+              className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white"
+            >
+              Add Product
+            </Link>
             <select className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">
               <option>All Categories</option>
               <option>Skincare</option>
@@ -96,42 +120,53 @@ export default function RealProductManagementPage() {
                 </tr>
               </thead>
               <tbody>
-                {products.map(([name, brand, category, price, stock, status]) => (
-                  <tr key={name} className="border-t border-slate-100 bg-white">
+                {products.map((product) => (
+                  <tr
+                    key={product.id}
+                    className="border-t border-slate-100 bg-white"
+                  >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-stone-100 text-[10px] text-slate-400">
                           Image
                         </div>
                         <div>
-                          <div className="font-semibold text-slate-900">{name}</div>
+                          <div className="font-semibold text-slate-900">
+                            {product.name}
+                          </div>
                           <div className="text-xs text-slate-500">
-                            SKU: BNB-PRD-102
+                            SKU: {product.sku}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{brand}</td>
-                    <td className="px-4 py-3 text-slate-600">{category}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{price}</td>
-                    <td className="px-4 py-3 text-slate-700">{stock}</td>
+                    <td className="px-4 py-3 text-slate-700">{product.brand}</td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {product.category}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-slate-900">
+                      {formatPrice(product.price)}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {product.stock}
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          status === "Active"
+                          product.status === "active"
                             ? "bg-emerald-50 text-emerald-700"
-                            : status === "Low Stock"
+                            : product.status === "low_stock"
                               ? "bg-amber-50 text-amber-700"
                               : "bg-slate-100 text-slate-700"
                         }`}
                       >
-                        {status}
+                        {statusLabels[product.status]}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <Link
-                          href="/products/edit"
+                          href={`/products/edit?id=${product.id}`}
                           className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50"
                         >
                           Edit
@@ -149,7 +184,10 @@ export default function RealProductManagementPage() {
         </div>
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-slate-600">Showing 1-6 of 248 products</div>
+          <div className="text-sm text-slate-600">
+            Showing {products.length ? `1-${products.length}` : "0"} of{" "}
+            {products.length} products
+          </div>
           <div className="flex items-center gap-2">
             {[1, 2, 3, 4].map((page) => (
               <button

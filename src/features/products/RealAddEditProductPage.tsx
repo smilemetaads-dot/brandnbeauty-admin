@@ -1,17 +1,95 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { FormEvent } from "react";
+
+import {
+  createEmptyProduct,
+  productFromFormData,
+} from "@/lib/products/localProducts";
+import type { ProductRecord, ProductStatus } from "@/lib/types/product";
 
 const gallery = ["Main Image", "Image 2", "Image 3", "Image 4"] as const;
 
-export default function RealAddEditProductPage() {
+const statusLabels: Record<ProductStatus, string> = {
+  active: "Active",
+  draft: "Draft",
+  low_stock: "Low Stock",
+  out_of_stock: "Out of Stock",
+};
+
+export default function RealAddEditProductPage({
+  editingProductId = "",
+  initialProduct,
+}: {
+  editingProductId?: string;
+  initialProduct?: ProductRecord | null;
+}) {
+  const router = useRouter();
   const [productType, setProductType] = useState<"single" | "variant">(
     "single",
   );
+  const [product, setProduct] = useState<ProductRecord>(() =>
+    initialProduct ?? createEmptyProduct(),
+  );
+  const [saveMessage, setSaveMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const resolvedEditingProductId = initialProduct?.id || editingProductId;
+
+  async function handleSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const nextProduct = productFromFormData(
+      new FormData(event.currentTarget),
+      product,
+    );
+    const isEditing = Boolean(resolvedEditingProductId);
+    const productToSave = {
+      ...nextProduct,
+      id: isEditing ? resolvedEditingProductId : "",
+    };
+
+    setIsSaving(true);
+    setSaveMessage("");
+
+    try {
+      const response = await fetch("/api/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(productToSave),
+      });
+      const result = (await response.json()) as {
+        product?: ProductRecord;
+        error?: string;
+      };
+
+      if (!response.ok || !result.product) {
+        throw new Error(result.error ?? "Product could not be saved.");
+      }
+
+      setProduct(result.product);
+      setSaveMessage("Product saved to Supabase.");
+      router.refresh();
+      router.push("/products");
+    } catch (error) {
+      setSaveMessage(
+        error instanceof Error ? error.message : "Product could not be saved.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <div className="p-4 md:p-6">
-      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+      <form
+        key={resolvedEditingProductId || "new-product"}
+        onSubmit={handleSave}
+        className="grid gap-6 xl:grid-cols-[1fr_360px]"
+      >
         <div className="space-y-6">
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
             <div className="text-sm font-medium text-slate-500">
@@ -21,14 +99,22 @@ export default function RealAddEditProductPage() {
               Product Details
             </h2>
             <div className="mt-5 grid gap-4">
+              <input
+                name="id"
+                type="hidden"
+                defaultValue={resolvedEditingProductId}
+              />
+              <input name="image" type="hidden" defaultValue={product.image} />
+
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-900">
                   Product Name
                 </label>
                 <input
+                  name="name"
                   className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none"
                   placeholder="Product Name"
-                  defaultValue="Acne Balance Facewash"
+                  defaultValue={product.name}
                 />
               </div>
 
@@ -37,11 +123,17 @@ export default function RealAddEditProductPage() {
                   <label className="mb-2 block text-sm font-semibold text-slate-900">
                     Brand
                   </label>
-                  <select className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">
+                  <select
+                    name="brand"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none"
+                    defaultValue={product.brand}
+                  >
                     <option>Brand</option>
-                    <option defaultValue="Some By Mi">Some By Mi</option>
+                    <option>Some By Mi</option>
                     <option>BrandnBeauty</option>
                     <option>COSRX</option>
+                    <option>Beauty of Joseon</option>
+                    <option>Simple</option>
                   </select>
                 </div>
 
@@ -49,9 +141,13 @@ export default function RealAddEditProductPage() {
                   <label className="mb-2 block text-sm font-semibold text-slate-900">
                     Category
                   </label>
-                  <select className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">
+                  <select
+                    name="category"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none"
+                    defaultValue={product.category}
+                  >
                     <option>Category</option>
-                    <option defaultValue="Skincare">Skincare</option>
+                    <option>Skincare</option>
                     <option>Hair Care</option>
                     <option>Body Care</option>
                   </select>
@@ -63,11 +159,18 @@ export default function RealAddEditProductPage() {
                   <label className="mb-2 block text-sm font-semibold text-slate-900">
                     Primary Concern
                   </label>
-                  <select className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">
+                  <select
+                    name="concern"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none"
+                    defaultValue={product.concern}
+                  >
                     <option>Concern</option>
-                    <option defaultValue="Acne">Acne</option>
+                    <option>Acne</option>
                     <option>Oily Skin</option>
                     <option>Brightening</option>
+                    <option>Sensitive Skin</option>
+                    <option>Sun Care</option>
+                    <option>Pores</option>
                   </select>
                 </div>
 
@@ -76,9 +179,10 @@ export default function RealAddEditProductPage() {
                     SKU
                   </label>
                   <input
+                    name="sku"
                     className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none"
                     placeholder="Auto-generated after save"
-                    defaultValue="BNB-SMB-ACNE-100"
+                    defaultValue={product.sku}
                   />
                   <div className="mt-2 text-xs text-slate-500">
                     SKU should auto-generate from brand + product + variant.
@@ -127,9 +231,10 @@ export default function RealAddEditProductPage() {
                   Short Description
                 </label>
                 <textarea
+                  name="shortDescription"
                   className="min-h-[120px] w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none"
                   placeholder="Short Description"
-                  defaultValue="A gentle acne-focused facewash designed to cleanse excess oil, dirt and buildup without leaving the skin feeling stripped."
+                  defaultValue={product.shortDescription}
                 />
               </div>
             </div>
@@ -227,9 +332,11 @@ export default function RealAddEditProductPage() {
                     Selling Price
                   </label>
                   <input
+                    name="price"
+                    type="number"
                     className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none"
                     placeholder="Selling Price"
-                    defaultValue="890"
+                    defaultValue={product.price}
                   />
                 </div>
                 <div>
@@ -237,9 +344,11 @@ export default function RealAddEditProductPage() {
                     Regular Price
                   </label>
                   <input
+                    name="oldPrice"
+                    type="number"
                     className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none"
                     placeholder="Regular Price"
-                    defaultValue="1050"
+                    defaultValue={product.oldPrice ?? ""}
                   />
                 </div>
                 <div>
@@ -247,6 +356,7 @@ export default function RealAddEditProductPage() {
                     Buying Price
                   </label>
                   <input
+                    type="number"
                     className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none"
                     placeholder="Buying Price"
                     defaultValue="420"
@@ -257,9 +367,11 @@ export default function RealAddEditProductPage() {
                     Stock Quantity
                   </label>
                   <input
+                    name="stock"
+                    type="number"
                     className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none"
                     placeholder="Stock Quantity"
-                    defaultValue="124"
+                    defaultValue={product.stock}
                   />
                 </div>
               </div>
@@ -277,11 +389,19 @@ export default function RealAddEditProductPage() {
                   <label className="mb-2 block text-sm font-semibold text-slate-900">
                     Status
                   </label>
-                  <select className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">
-                    <option>Status</option>
-                    <option defaultValue="Active">Active</option>
-                    <option>Draft</option>
-                    <option>Out of Stock</option>
+                  <select
+                    name="status"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none"
+                    defaultValue={product.status}
+                  >
+                    <option value="">Status</option>
+                    {(Object.keys(statusLabels) as ProductStatus[]).map(
+                      (status) => (
+                        <option key={status} value={status}>
+                          {statusLabels[status]}
+                        </option>
+                      ),
+                    )}
                   </select>
                 </div>
                 <div>
@@ -325,7 +445,14 @@ export default function RealAddEditProductPage() {
                     </thead>
                     <tbody>
                       {[
-                        ["Size", "100ml", "BNB-SMB-ACNE-100", "890", "420", "124"],
+                        [
+                          "Size",
+                          "100ml",
+                          product.sku,
+                          String(product.price),
+                          "420",
+                          String(product.stock),
+                        ],
                         ["Size", "150ml", "BNB-SMB-ACNE-150", "1190", "560", "48"],
                       ].map(([type, option, sku, sell, buy, stock]) => (
                         <tr key={sku} className="border-t border-slate-100 bg-white">
@@ -344,10 +471,16 @@ export default function RealAddEditProductPage() {
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap gap-3">
-                <button className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800">
+                <button
+                  type="button"
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800"
+                >
                   Add Size Variant
                 </button>
-                <button className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800">
+                <button
+                  type="button"
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800"
+                >
                   Add Color / Shade Variant
                 </button>
               </div>
@@ -401,9 +534,10 @@ export default function RealAddEditProductPage() {
                 defaultValue="Shop Acne Balance Facewash at BrandnBeauty. A gentle facewash for acne-prone and oily skin with nationwide delivery in Bangladesh."
               />
               <input
+                name="slug"
                 className="rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none"
                 placeholder="URL Slug"
-                defaultValue="acne-balance-facewash"
+                defaultValue={product.slug}
               />
             </div>
           </div>
@@ -428,7 +562,10 @@ export default function RealAddEditProductPage() {
                   <div className="flex aspect-square items-center justify-center rounded-xl bg-white text-xs text-slate-400 ring-1 ring-slate-200">
                     {label}
                   </div>
-                  <button className="mt-3 w-full rounded-xl border border-slate-300 bg-white py-2 text-xs font-semibold text-slate-700">
+                  <button
+                    type="button"
+                    className="mt-3 w-full rounded-xl border border-slate-300 bg-white py-2 text-xs font-semibold text-slate-700"
+                  >
                     Upload
                   </button>
                 </div>
@@ -444,6 +581,17 @@ export default function RealAddEditProductPage() {
               Upsell & PDP Settings
             </h2>
             <div className="mt-5 space-y-4">
+              <button
+                disabled={isSaving}
+                className="w-full rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {isSaving ? "Saving..." : "Save Product"}
+              </button>
+              {saveMessage ? (
+                <div className="rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
+                  {saveMessage}
+                </div>
+              ) : null}
               <select className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">
                 <option>Routine Upsell Step</option>
                 <option defaultValue="Step 1 - Cleanser">
@@ -478,9 +626,15 @@ export default function RealAddEditProductPage() {
               Quick Product Snapshot
             </h2>
             <div className="mt-5 space-y-3 text-sm text-slate-600">
-              <div className="rounded-2xl bg-stone-50 p-4">Brand: Some By Mi</div>
-              <div className="rounded-2xl bg-stone-50 p-4">Category: Skincare</div>
-              <div className="rounded-2xl bg-stone-50 p-4">Concern: Acne</div>
+              <div className="rounded-2xl bg-stone-50 p-4">
+                Brand: {product.brand}
+              </div>
+              <div className="rounded-2xl bg-stone-50 p-4">
+                Category: {product.category}
+              </div>
+              <div className="rounded-2xl bg-stone-50 p-4">
+                Concern: {product.concern}
+              </div>
               <div className="rounded-2xl bg-stone-50 p-4">
                 Estimated Profit: Tk 470 per sale
               </div>
@@ -490,7 +644,7 @@ export default function RealAddEditProductPage() {
             </div>
           </div>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

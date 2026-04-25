@@ -1,80 +1,78 @@
 "use client";
 
-export default function RealInventoryPage() {
-  const kpis = [
-    { label: "Total SKUs", value: "248", sub: "Across all categories" },
-    { label: "Low Stock", value: "14", sub: "Need reorder soon" },
-    { label: "Out of Stock", value: "6", sub: "Sales blocked" },
-    { label: "Today Stock Movement", value: "182", sub: "In + out combined" },
-  ];
+import { useEffect, useState } from "react";
 
-  const inventoryRows = [
+import { mockProducts } from "@/lib/mock/products";
+import {
+  getLocalProducts,
+  updateLocalProductStock,
+} from "@/lib/products/localProducts";
+import type { ProductRecord } from "@/lib/types/product";
+
+const inventoryMeta: Record<
+  string,
+  { reserved: number; reorderLevel: number }
+> = {
+  prd_acne_balance_facewash: { reserved: 6, reorderLevel: 20 },
+  prd_barrier_calm_serum: { reserved: 4, reorderLevel: 15 },
+  prd_daily_sun_gel: { reserved: 0, reorderLevel: 12 },
+  prd_hydra_gel_moisturizer: { reserved: 8, reorderLevel: 18 },
+  prd_tea_tree_spot_gel: { reserved: 2, reorderLevel: 10 },
+};
+
+export default function RealInventoryPage() {
+  const [products, setProducts] = useState<ProductRecord[]>(mockProducts);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setProducts(getLocalProducts());
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  const inventoryRows = products.map((product) => {
+    const meta = inventoryMeta[product.id] ?? { reserved: 0, reorderLevel: 15 };
+    const available = Math.max(product.stock - meta.reserved, 0);
+
+    return {
+      id: product.id,
+      product: product.name,
+      sku: product.sku,
+      category: product.category,
+      stock: product.stock,
+      reserved: meta.reserved,
+      available,
+      reorderLevel: meta.reorderLevel,
+      supplier: product.brand,
+      status:
+        product.stock <= 0
+          ? "Out of Stock"
+          : available <= meta.reorderLevel
+            ? "Low Stock"
+            : "Healthy",
+    };
+  });
+
+  const kpis = [
     {
-      product: "Acne Balance Facewash",
-      sku: "BNB-SMB-ACNE-100",
-      category: "Skincare",
-      stock: 44,
-      reserved: 6,
-      available: 38,
-      reorderLevel: 20,
-      supplier: "Some By Mi",
-      status: "Healthy",
+      label: "Total SKUs",
+      value: String(products.length),
+      sub: "Across all categories",
     },
     {
-      product: "Barrier Calm Serum",
-      sku: "BNB-BNB-SERUM-30",
-      category: "Skincare",
-      stock: 18,
-      reserved: 4,
-      available: 14,
-      reorderLevel: 15,
-      supplier: "BrandnBeauty",
-      status: "Low Stock",
+      label: "Low Stock",
+      value: String(inventoryRows.filter((row) => row.status === "Low Stock").length),
+      sub: "Need reorder soon",
     },
     {
-      product: "Daily Sun Gel",
-      sku: "BNB-BOJ-SPF-50",
-      category: "Skincare",
-      stock: 0,
-      reserved: 0,
-      available: 0,
-      reorderLevel: 12,
-      supplier: "Beauty of Joseon",
-      status: "Out of Stock",
+      label: "Out of Stock",
+      value: String(
+        inventoryRows.filter((row) => row.status === "Out of Stock").length,
+      ),
+      sub: "Sales blocked",
     },
-    {
-      product: "Hydra Gel Moisturizer",
-      sku: "BNB-SMP-MOIST-01",
-      category: "Skincare",
-      stock: 72,
-      reserved: 8,
-      available: 64,
-      reorderLevel: 18,
-      supplier: "Simple",
-      status: "Healthy",
-    },
-    {
-      product: "Tea Tree Spot Gel",
-      sku: "BNB-SMB-SPOT-15",
-      category: "Skincare",
-      stock: 11,
-      reserved: 2,
-      available: 9,
-      reorderLevel: 10,
-      supplier: "Some By Mi",
-      status: "Low Stock",
-    },
-    {
-      product: "Goat Milk Facewash",
-      sku: "BNB-GMF-100",
-      category: "Skincare",
-      stock: 95,
-      reserved: 5,
-      available: 90,
-      reorderLevel: 20,
-      supplier: "BrandnBeauty",
-      status: "Healthy",
-    },
+    { label: "Today Stock Movement", value: "182", sub: "In + out combined" },
   ];
 
   const movements = [
@@ -84,6 +82,26 @@ export default function RealInventoryPage() {
     ["1:45 PM", "Adjustment", "-2", "Tea Tree Spot Gel", "Damaged units"],
     ["3:10 PM", "Stock In", "+60", "Goat Milk Facewash", "Factory batch added"],
   ];
+
+  function handleStockAdjust(productId: string, currentStock: number) {
+    const nextStockValue = window.prompt(
+      "Enter the new stock quantity for this product:",
+      String(currentStock),
+    );
+
+    if (nextStockValue === null) {
+      return;
+    }
+
+    const nextStock = Number(nextStockValue);
+
+    if (!Number.isFinite(nextStock) || nextStock < 0) {
+      return;
+    }
+
+    updateLocalProductStock(productId, nextStock);
+    setProducts(getLocalProducts());
+  }
 
   return (
     <div className="min-h-screen bg-stone-50 p-6 text-slate-900 space-y-6">
@@ -248,7 +266,10 @@ export default function RealInventoryPage() {
                         <button className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50">
                           View
                         </button>
-                        <button className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50">
+                        <button
+                          onClick={() => handleStockAdjust(row.id, row.stock)}
+                          className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50"
+                        >
                           Adjust
                         </button>
                         {row.reserved > row.available && (
