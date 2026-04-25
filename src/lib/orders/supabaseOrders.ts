@@ -50,6 +50,7 @@ type OrderRow = {
   payment_status?: string | null;
   order_status?: string | null;
   stock_deducted?: boolean | null;
+  stock_restored?: boolean | null;
   created_at?: string | null;
 };
 
@@ -115,6 +116,17 @@ export async function updateOrderStatusWithServiceRole(params: {
 
   if (!normalizedOrderStatus) {
     throw new OrderSaveError("Order status is not supported.", 400);
+  }
+
+  if (
+    normalizedOrderStatus === "cancelled" ||
+    normalizedOrderStatus === "returned"
+  ) {
+    return restoreOrderStockAndUpdateStatus(
+      supabase,
+      params.id,
+      normalizedOrderStatus,
+    );
   }
 
   if (normalizedOrderStatus !== "confirmed") {
@@ -242,6 +254,67 @@ async function ensureOrderStockSyncReady(
       "Order stock sync is not ready yet. Missing column `orders.stock_deducted`. Run the latest Supabase SQL migration.",
     );
   }
+}
+
+async function ensureOrderStockRestoreReady(
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+) {
+  const { error } = await supabase
+    .from("orders")
+    .select("stock_deducted, stock_restored")
+    .limit(1);
+
+  if (
+    error &&
+    (error.message.includes("stock_restored") || error.code === "42703")
+  ) {
+    throw new OrderSaveError(
+      "Order stock restore is not ready yet. Missing column `orders.stock_restored`. Run the latest Supabase SQL migration.",
+    );
+  }
+}
+
+async function restoreOrderStockAndUpdateStatus(
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  orderId: string,
+  orderStatus: "cancelled" | "returned",
+) {
+  await ensureOrderStockRestoreReady(supabase);
+
+  const numericOrderId = Number(orderId);
+
+  if (!Number.isInteger(numericOrderId) || numericOrderId <= 0) {
+    throw new OrderSaveError(
+      "Order stock restore requires a numeric order id for `restore_order_stock(target_order_id bigint, restore_reason text)`.",
+    );
+  }
+
+  const { error } = await supabase.rpc("restore_order_stock", {
+    target_order_id: numericOrderId,
+    restore_reason: orderStatus,
+  });
+
+  if (error) {
+    if (error.message.includes("stock_restored") || error.code === "42703") {
+      throw new OrderSaveError(
+        "Order stock restore is not ready yet. Missing column `orders.stock_restored`. Run the latest Supabase SQL migration.",
+      );
+    }
+
+    if (
+      error.message.includes("Could not find the function") ||
+      error.message.includes("restore_order_stock") ||
+      error.code === "42883"
+    ) {
+      throw new OrderSaveError(
+        "Order stock restore is not ready yet. Missing RPC function `restore_order_stock(target_order_id bigint, restore_reason text)`.",
+      );
+    }
+
+    throw new OrderSaveError(error.message);
+  }
+
+  return updateOrderStatusWithoutStockSync(supabase, orderId, orderStatus);
 }
 
 async function confirmOrderWithStockSync(
