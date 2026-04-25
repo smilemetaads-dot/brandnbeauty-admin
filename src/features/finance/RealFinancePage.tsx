@@ -1,41 +1,17 @@
-"use client";
+import type { FinanceData } from "@/lib/finance/supabaseFinance";
 
-const settlementLines = [
-  ["Delivered Items Total", "Tk 1,880"],
-  ["Delivery Charge", "-Tk 80"],
-  ["COD Charge", "-Tk 18"],
-  ["Expected Settlement", "Tk 1,782"],
-  ["Received Settlement", "Tk 1,842"],
-  ["Difference", "+Tk 60"],
-];
-
-const reconciliationLog = [
-  [
-    "2:10 PM",
-    "Courier settlement imported from batch ST-18MAR-A by Finance Admin.",
-  ],
-  [
-    "2:16 PM",
-    "System detected difference of +Tk 60 against expected amount.",
-  ],
-  [
-    "2:24 PM",
-    "Accounts reviewed partial delivery note and courier sheet.",
-  ],
-  [
-    "2:32 PM",
-    "Order kept in manual review until finance closes reconciliation.",
-  ],
-];
-
-export default function RealFinancePage() {
+export default function RealFinancePage({
+  financeData,
+}: {
+  financeData: FinanceData;
+}) {
   return (
     <div className="min-h-screen bg-stone-50 p-4 text-slate-900 md:p-6">
       <div className="space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="text-sm text-slate-500">
-              Admin / Finance Reconciliation / #BNB-240400
+              Admin / Finance / Live Business Summary
             </div>
             <h1 className="mt-1 text-3xl font-bold tracking-tight">
               Finance Reconciliation Details
@@ -47,7 +23,7 @@ export default function RealFinancePage() {
               Export Sheet
             </button>
             <button className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-sm">
-              Open Order
+              Open Orders
             </button>
             <button className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white shadow-sm">
               Close Reconciliation
@@ -64,15 +40,15 @@ export default function RealFinancePage() {
                     Reconciliation Snapshot
                   </div>
                   <h2 className="mt-1 text-xl font-bold tracking-tight">
-                    Order #BNB-240400
+                    Live Finance Overview
                   </h2>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                    Check Required
+                    Receivable Check
                   </span>
                   <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
-                    Batch ST-18MAR-A
+                    Supabase Live
                   </span>
                   <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
                     Finance Review
@@ -81,22 +57,13 @@ export default function RealFinancePage() {
               </div>
 
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {[
-                  ["Customer", "Sadia Akter"],
-                  ["Courier", "Steadfast"],
-                  ["Tracking ID", "SA-940021"],
-                  ["Payment Type", "bKash + COD"],
-                  ["Settlement Batch", "ST-18MAR-A"],
-                  ["Batch Date", "18 Mar 2026"],
-                  ["Accounts Owner", "Finance Admin"],
-                  ["Order Result", "Partial Delivered"],
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-2xl bg-stone-50 p-4">
+                {financeData.snapshotItems.map((item) => (
+                  <div key={item.label} className="rounded-2xl bg-stone-50 p-4">
                     <div className="text-xs uppercase tracking-[0.16em] text-slate-500">
-                      {label}
+                      {item.label}
                     </div>
                     <div className="mt-2 text-sm font-semibold text-slate-900">
-                      {value}
+                      {item.value}
                     </div>
                   </div>
                 ))}
@@ -115,24 +82,22 @@ export default function RealFinancePage() {
                     </h2>
                   </div>
                   <div className="rounded-2xl bg-stone-100 px-4 py-3 text-sm text-slate-600">
-                    Delivered items only - no false partial-delivery flag
+                    Live paid, receivable and order value metrics
                   </div>
                 </div>
 
                 <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {settlementLines.map(([label, value]) => (
-                    <div key={label} className="rounded-2xl bg-stone-50 p-4">
+                  {financeData.lineItems.map((item) => (
+                    <div key={item.label} className="rounded-2xl bg-stone-50 p-4">
                       <div className="text-xs uppercase tracking-[0.16em] text-slate-500">
-                        {label}
+                        {item.label}
                       </div>
                       <div
                         className={`mt-2 text-lg font-bold ${
-                          label === "Difference"
-                            ? "text-amber-700"
-                            : "text-slate-900"
+                          item.highlight ? "text-amber-700" : "text-slate-900"
                         }`}
                       >
-                        {value}
+                        {item.value}
                       </div>
                     </div>
                   ))}
@@ -148,30 +113,26 @@ export default function RealFinancePage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {[
-                        [
-                          "Delivered total updated from item-level order details",
-                          "Tk 1,880",
-                          "Matched",
-                        ],
-                        ["Courier delivery charge", "Tk 80", "Matched"],
-                        ["COD charge", "Tk 18", "Matched"],
-                        ["Received settlement amount", "Tk 1,842", "Needs review"],
-                      ].map(([label, value, status]) => (
-                        <tr key={label} className="border-t border-slate-100 bg-white">
-                          <td className="px-4 py-3 text-slate-700">{label}</td>
+                      {financeData.checkItems.map((item) => (
+                        <tr
+                          key={item.label}
+                          className="border-t border-slate-100 bg-white"
+                        >
+                          <td className="px-4 py-3 text-slate-700">{item.label}</td>
                           <td className="px-4 py-3 font-medium text-slate-900">
-                            {value}
+                            {item.value}
                           </td>
                           <td className="px-4 py-3">
                             <span
                               className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                status === "Matched"
+                                item.status === "Matched" ||
+                                item.status === "Live" ||
+                                item.status === "Clear"
                                   ? "bg-emerald-50 text-emerald-700"
                                   : "bg-amber-50 text-amber-700"
                               }`}
                             >
-                              {status}
+                              {item.status}
                             </span>
                           </td>
                         </tr>
@@ -192,21 +153,21 @@ export default function RealFinancePage() {
                   <div className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-800">
                     <div className="font-semibold">Difference detected</div>
                     <div className="mt-2">
-                      Reason should be selected before reconciliation can be
-                      closed.
+                      Pending receivable and cancelled or returned values should be
+                      reviewed before reconciliation is closed.
                     </div>
                   </div>
                   <select className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">
                     <option>Select difference reason</option>
                     <option>Courier overpaid</option>
                     <option>Manual finance adjustment</option>
-                    <option>Partial delivery correction</option>
-                    <option>Courier sheet mismatch</option>
+                    <option>Cancelled order adjustment</option>
+                    <option>Returned order adjustment</option>
                   </select>
                   <textarea
                     className="min-h-[120px] w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none"
                     placeholder="Write finance note / explanation for audit trail"
-                    defaultValue="Courier sheet shows one manual adjustment. Accounts needs final confirmation before closure."
+                    defaultValue="Live finance metrics are now sourced from Supabase orders and payment workflow."
                   />
                   <div className="grid gap-3">
                     <button className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white shadow-sm">
@@ -229,12 +190,12 @@ export default function RealFinancePage() {
                   Reconciliation Log
                 </h2>
                 <div className="mt-5 space-y-4">
-                  {reconciliationLog.map(([time, text]) => (
-                    <div key={time} className="rounded-2xl bg-stone-50 p-4">
+                  {financeData.logItems.map((item) => (
+                    <div key={`${item.time}-${item.text}`} className="rounded-2xl bg-stone-50 p-4">
                       <div className="text-xs uppercase tracking-[0.16em] text-slate-500">
-                        {time}
+                        {item.time}
                       </div>
-                      <div className="mt-2 text-sm text-slate-700">{text}</div>
+                      <div className="mt-2 text-sm text-slate-700">{item.text}</div>
                     </div>
                   ))}
                 </div>
@@ -249,17 +210,16 @@ export default function RealFinancePage() {
                 </h2>
                 <div className="mt-5 space-y-3 text-sm text-slate-600">
                   <div className="rounded-2xl bg-stone-50 p-4">
-                    Imported by: Finance Admin
+                    Delivered orders tracked: {financeData.metrics.deliveredOrderCount}
                   </div>
                   <div className="rounded-2xl bg-stone-50 p-4">
-                    Checked by: Accounts Team
+                    Pending receivable: Tk {financeData.metrics.pendingReceivable.toLocaleString()}
                   </div>
                   <div className="rounded-2xl bg-stone-50 p-4">
-                    Needs approval: Senior Finance
+                    Cancelled value: Tk {financeData.metrics.cancelledOrderValue.toLocaleString()}
                   </div>
                   <div className="rounded-2xl bg-amber-50 p-4 text-amber-800">
-                    Reconciliation close button should stay locked until reason +
-                    note + approval are completed.
+                    Review unpaid COD and return values before closing finance checks.
                   </div>
                 </div>
               </div>
@@ -280,8 +240,8 @@ export default function RealFinancePage() {
                   "Flag Difference",
                   "Attach Settlement Proof",
                   "Send to Accounts Review",
-                  "Open Courier Batch",
-                  "Open Order Details",
+                  "Open Delivered Orders",
+                  "Open Pending COD Orders",
                 ].map((action) => (
                   <button
                     key={action}
@@ -295,9 +255,9 @@ export default function RealFinancePage() {
               <div className="mt-6 rounded-2xl bg-[#f7fbfb] p-4 text-sm text-slate-700">
                 <div className="font-semibold text-slate-900">Close Checklist</div>
                 <div className="mt-3 space-y-2 text-xs leading-6">
-                  <div>Delivered items reviewed</div>
-                  <div>Charges matched</div>
-                  <div>Difference reason pending final approval</div>
+                  <div>Paid revenue reviewed</div>
+                  <div>Pending COD reviewed</div>
+                  <div>Cancelled and returned values checked</div>
                 </div>
               </div>
             </div>
@@ -311,16 +271,16 @@ export default function RealFinancePage() {
               </h2>
               <div className="mt-5 space-y-3 text-sm text-slate-600">
                 <div className="rounded-2xl bg-stone-50 p-4">
-                  Expected amount must come from delivered items only.
+                  Paid revenue comes from delivered and paid orders only.
                 </div>
                 <div className="rounded-2xl bg-stone-50 p-4">
-                  Order details item-status change should be locked in log history.
+                  Pending receivable reflects unpaid COD orders.
                 </div>
                 <div className="rounded-2xl bg-stone-50 p-4">
-                  Finance cannot close settlement if difference remains unresolved.
+                  Cancelled and returned orders stay visible for finance review.
                 </div>
                 <div className="rounded-2xl bg-amber-50 p-4 text-amber-800">
-                  Current difference: +Tk 60 - verify before closing.
+                  Current pending receivable: Tk {financeData.metrics.pendingReceivable.toLocaleString()}
                 </div>
               </div>
             </div>
@@ -332,17 +292,16 @@ export default function RealFinancePage() {
               </h2>
               <div className="mt-5 space-y-3 text-sm text-slate-600">
                 <div className="rounded-2xl bg-stone-50 p-4">
-                  Courier settlement CSV imported
+                  Live order totals imported from Supabase
                 </div>
                 <div className="rounded-2xl bg-stone-50 p-4">
-                  Manual finance note added
+                  Payment workflow linked to delivered COD orders
                 </div>
                 <div className="rounded-2xl bg-stone-50 p-4">
-                  Order details page linked for product-level review
+                  Cancelled and returned values available for review
                 </div>
                 <div className="rounded-2xl bg-stone-50 p-4">
-                  Future ready: image/pdf proof attachment slot for courier
-                  settlement evidence
+                  Future ready: charting and settlement proof attachment slots
                 </div>
               </div>
             </div>
