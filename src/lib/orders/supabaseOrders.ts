@@ -118,36 +118,42 @@ export async function updateOrderStatusWithServiceRole(params: {
     throw new OrderSaveError("Order status is not supported.", 400);
   }
 
+  let updatedOrder: AdminOrderRecord;
+
   if (
     normalizedOrderStatus === "cancelled" ||
     normalizedOrderStatus === "returned"
   ) {
-    return restoreOrderStockAndUpdateStatus(
+    updatedOrder = await restoreOrderStockAndUpdateStatus(
       supabase,
       params.id,
       normalizedOrderStatus,
     );
+  } else if (normalizedOrderStatus !== "confirmed") {
+    updatedOrder = await updateOrderStatusWithoutStockSync(
+      supabase,
+      params.id,
+      normalizedOrderStatus,
+    );
+  } else {
+    await ensureOrderStockSyncReady(supabase);
+
+    const rpcResult = await confirmOrderWithStockSync(supabase, params.id);
+
+    if (rpcResult.error) {
+      throw buildStockSyncError(rpcResult.error);
+    }
+
+    const orderRow = await getOrderRowById(supabase, params.id);
+
+    if (!orderRow) {
+      throw new OrderSaveError("This order could not be found for updating.", 404);
+    }
+
+    updatedOrder = mapOrderRow(orderRow);
   }
 
-  if (normalizedOrderStatus !== "confirmed") {
-    return updateOrderStatusWithoutStockSync(supabase, params.id, normalizedOrderStatus);
-  }
-
-  await ensureOrderStockSyncReady(supabase);
-
-  const rpcResult = await confirmOrderWithStockSync(supabase, params.id);
-
-  if (rpcResult.error) {
-    throw buildStockSyncError(rpcResult.error);
-  }
-
-  const orderRow = await getOrderRowById(supabase, params.id);
-
-  if (!orderRow) {
-    throw new OrderSaveError("This order could not be found for updating.", 404);
-  }
-
-  return mapOrderRow(orderRow);
+  return syncCodPaymentStatus(supabase, updatedOrder, normalizedOrderStatus);
 }
 
 export async function getOrderDetailsFromSupabase(params: {
@@ -315,6 +321,50 @@ async function restoreOrderStockAndUpdateStatus(
   }
 
   return updateOrderStatusWithoutStockSync(supabase, orderId, orderStatus);
+}
+
+async function syncCodPaymentStatus(
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  order: AdminOrderRecord,
+  orderStatus: string,
+) {
+  if (order.paymentMethod !== "COD") {
+    return order;
+  }
+
+  let nextPaymentStatus: "paid" | "unpaid" | null = null;
+
+  if (orderStatus === "delivered") {
+    nextPaymentStatus = "paid";
+  } else if (orderStatus === "cancelled" || orderStatus === "returned") {
+    nextPaymentStatus = "unpaid";
+  }
+
+  if (!nextPaymentStatus) {
+    return order;
+  }
+
+  const { data, error } = await supabase
+    .from("orders")
+    .update({ payment_status: nextPaymentStatus })
+    .eq("id", order.id)
+    .select(
+      "id, order_number, customer_name, customer_phone, total, payment_method, payment_status, order_status, created_at",
+    )
+    .maybeSingle();
+
+  if (error) {
+    throw new OrderSaveError(error.message);
+  }
+
+  if (!data) {
+    throw new OrderSaveError(
+      "This order could not be found after payment status update.",
+      404,
+    );
+  }
+
+  return mapOrderRow(data);
 }
 
 async function confirmOrderWithStockSync(
