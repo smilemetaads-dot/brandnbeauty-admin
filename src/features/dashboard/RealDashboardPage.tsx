@@ -1,28 +1,49 @@
-"use client";
-
 import Link from "next/link";
 
-export default function RealDashboardPage() {
+import type { DashboardData } from "@/lib/dashboard/supabaseDashboard";
+
+function formatCurrency(amount: number) {
+  return `Tk ${amount.toLocaleString()}`;
+}
+
+function getOrderStatusClasses(status: string) {
+  if (status === "New") return "bg-amber-50 text-amber-700";
+  if (status === "Confirmed") return "bg-sky-50 text-sky-700";
+  if (status === "Processing") return "bg-violet-50 text-violet-700";
+  if (status === "Shipped") return "bg-indigo-50 text-indigo-700";
+  if (status === "Cancelled" || status === "Returned") {
+    return "bg-rose-50 text-rose-700";
+  }
+
+  return "bg-emerald-50 text-emerald-700";
+}
+
+export default function RealDashboardPage({
+  dashboardData,
+}: {
+  dashboardData: DashboardData;
+}) {
   const stats = [
-    ["Today Orders", "128", "+12%"],
-    ["Today Revenue", "৳84,500", "+8.4%"],
-    ["Pending Confirmations", "37", "Needs action"],
-    ["Low Stock Products", "14", "Restock soon"],
-  ];
-
-  const recentOrders = [
-    ["#BNB-10241", "Ismail H.", "Dhaka", "COD", "৳1,260", "New"],
-    ["#BNB-10240", "Nusrat J.", "Gazipur", "bKash", "৳2,140", "Confirmed"],
-    ["#BNB-10239", "Sadia A.", "Chattogram", "COD", "৳980", "Packed"],
-    ["#BNB-10238", "Mehedi R.", "Dhaka", "COD", "৳1,540", "Shipped"],
-    ["#BNB-10237", "Tania K.", "Sylhet", "bKash", "৳1,890", "Delivered"],
-  ];
-
-  const lowStock = [
-    ["Acne Patch Duo", "COSRX", "8 left"],
-    ["Daily Sun Gel", "Beauty of Joseon", "11 left"],
-    ["Barrier Calm Serum", "BrandnBeauty", "6 left"],
-    ["Pore Clay Mask", "COSRX", "9 left"],
+    [
+      "Total Orders",
+      String(dashboardData.stats.totalOrders),
+      `${dashboardData.stats.newPendingOrders} new / pending`,
+    ],
+    [
+      "Total Revenue",
+      formatCurrency(dashboardData.stats.totalRevenue),
+      `${dashboardData.stats.deliveredOrders} delivered & paid`,
+    ],
+    [
+      "Unpaid COD",
+      formatCurrency(dashboardData.stats.unpaidCodAmount),
+      `${dashboardData.stats.inFlightOrders} confirmed / processing / shipped`,
+    ],
+    [
+      "Products Overview",
+      String(dashboardData.stats.totalProducts),
+      `${dashboardData.stats.lowStockProductCount} low stock, ${dashboardData.stats.outOfStockProductCount} out of stock`,
+    ],
   ];
 
   return (
@@ -71,38 +92,47 @@ export default function RealDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentOrders.map(
-                    ([id, customer, location, payment, amount, status]) => (
-                      <tr key={id} className="border-t border-slate-100 bg-white">
-                        <td className="px-4 py-3 font-semibold text-slate-900">
-                          {id}
-                        </td>
-                        <td className="px-4 py-3 text-slate-700">{customer}</td>
-                        <td className="px-4 py-3 text-slate-600">{location}</td>
-                        <td className="px-4 py-3 text-slate-600">{payment}</td>
-                        <td className="px-4 py-3 font-medium text-slate-900">
-                          {amount}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                              status === "New"
-                                ? "bg-amber-50 text-amber-700"
-                                : status === "Confirmed"
-                                  ? "bg-sky-50 text-sky-700"
-                                  : status === "Packed"
-                                    ? "bg-violet-50 text-violet-700"
-                                    : status === "Shipped"
-                                      ? "bg-indigo-50 text-indigo-700"
-                                      : "bg-emerald-50 text-emerald-700"
-                            }`}
-                          >
-                            {status}
-                          </span>
-                        </td>
-                      </tr>
-                    ),
-                  )}
+                  {dashboardData.recentOrders.length === 0 ? (
+                    <tr className="border-t border-slate-100 bg-white">
+                      <td
+                        colSpan={6}
+                        className="px-4 py-10 text-center text-sm text-slate-500"
+                      >
+                        No orders found yet.
+                      </td>
+                    </tr>
+                  ) : null}
+                  {dashboardData.recentOrders.map((order) => (
+                    <tr
+                      key={order.id}
+                      className="border-t border-slate-100 bg-white"
+                    >
+                      <td className="px-4 py-3 font-semibold text-slate-900">
+                        #{order.id}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {order.customer}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {order.location}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {order.payment}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-slate-900">
+                        {formatCurrency(order.amount)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getOrderStatusClasses(
+                            order.status,
+                          )}`}
+                        >
+                          {order.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -116,14 +146,19 @@ export default function RealDashboardPage() {
               Low Stock Alert
             </h2>
             <div className="mt-5 space-y-3">
-              {lowStock.map(([name, brand, stock]) => (
-                <div key={name} className="rounded-2xl bg-stone-50 p-4">
-                  <div className="text-xs text-slate-500">{brand}</div>
+              {dashboardData.lowStock.length === 0 ? (
+                <div className="rounded-2xl bg-stone-50 p-4 text-sm text-slate-500">
+                  No low stock products right now.
+                </div>
+              ) : null}
+              {dashboardData.lowStock.map((item) => (
+                <div key={item.name} className="rounded-2xl bg-stone-50 p-4">
+                  <div className="text-xs text-slate-500">{item.brand}</div>
                   <div className="mt-1 text-sm font-semibold text-slate-900">
-                    {name}
+                    {item.name}
                   </div>
                   <div className="mt-2 text-xs font-medium text-rose-600">
-                    {stock}
+                    {item.stock} left
                   </div>
                 </div>
               ))}
@@ -177,19 +212,22 @@ export default function RealDashboardPage() {
             </Link>
           </div>
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {[
-              ["Acne Balance Facewash", "৳38,500 sales"],
-              ["Barrier Calm Serum", "৳31,900 sales"],
-              ["Daily Sun Gel", "৳29,200 sales"],
-            ].map(([name, sales]) => (
-              <div key={name} className="rounded-2xl bg-stone-50 p-4">
+            {dashboardData.topProducts.length === 0 ? (
+              <div className="rounded-2xl bg-stone-50 p-4 text-sm text-slate-500">
+                No product sales data yet.
+              </div>
+            ) : null}
+            {dashboardData.topProducts.map((item) => (
+              <div key={item.name} className="rounded-2xl bg-stone-50 p-4">
                 <div className="flex h-24 items-center justify-center rounded-2xl bg-white text-xs text-slate-400 ring-1 ring-slate-200">
                   Product Image
                 </div>
                 <div className="mt-4 text-sm font-semibold text-slate-900">
-                  {name}
+                  {item.name}
                 </div>
-                <div className="mt-1 text-xs text-slate-500">{sales}</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {formatCurrency(item.sales)} sales
+                </div>
               </div>
             ))}
           </div>
