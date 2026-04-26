@@ -24,7 +24,7 @@ const navGroups: SidebarGroup[] = [
     items: [
       { label: "Orders", href: "/orders" },
       { label: "Order Details", href: "/orders/details" },
-      { label: "Courier & Payment Tracking" },
+      { label: "Courier & Payment Tracking", href: "/courier" },
     ],
   },
   {
@@ -39,7 +39,7 @@ const navGroups: SidebarGroup[] = [
     label: "Inventory",
     items: [
       { label: "Stock Movement", href: "/inventory" },
-      { label: "Purchase Stock Entry" },
+      { label: "Purchase Stock Entry", href: "/purchases" },
     ],
   },
   {
@@ -53,28 +53,28 @@ const navGroups: SidebarGroup[] = [
     label: "Finance",
     items: [
       { label: "Finance Overview", href: "/finance" },
-      { label: "Reconciliation Details" },
+      { label: "Reconciliation Details", href: "/finance/reconciliation" },
     ],
   },
   {
     label: "Reports",
     items: [
       { label: "Business Analytics", href: "/reports" },
-      { label: "Supplier Analytics" },
+      { label: "Supplier Analytics", href: "/reports/suppliers" },
     ],
   },
   {
     label: "Suppliers",
     items: [
-      { label: "Supplier Profiles" },
-      { label: "Supplier Purchase Stock" },
+      { label: "Supplier Profiles", href: "/suppliers" },
+      { label: "Supplier Purchase Stock", href: "/purchases" },
     ],
   },
   {
     label: "System",
     items: [
       { label: "Settings", href: "/settings" },
-      { label: "Admin Roles & Permissions" },
+      { label: "Admin Roles & Permissions", href: "/roles" },
     ],
   },
 ] as const;
