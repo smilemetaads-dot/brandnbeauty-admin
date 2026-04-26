@@ -1,61 +1,40 @@
 "use client";
 
-const customer = {
-  name: "Sadia Akter",
-  phone: "01822XXXXXX",
-  email: "sadia@email.com",
-  location: "Gazipur",
-  totalOrders: 4,
-  totalSpent: 4200,
-  score: 78,
-  tag: "Acne Buyer",
-  risk: "Medium",
-  lastActivity: "Messaged 2h ago",
+import type { CustomerProfileData } from "@/lib/customers/supabaseCustomers";
+
+const emptyCustomer = {
+  name: "No customer selected",
+  phone: "Add ?phone= to view profile",
+  email: "N/A",
+  location: "N/A",
+  address: "N/A",
+  totalOrders: 0,
+  deliveredOrders: 0,
+  cancelledOrders: 0,
+  totalSpent: 0,
+  score: 0,
+  tag: "N/A",
+  risk: "Low",
+  lastActivity: "Open a customer from the Customers page.",
 };
 
-const orders = [
-  {
-    id: "#1021",
-    amount: 1200,
-    status: "Delivered",
-    paid: 1000,
-    expected: 1100,
-    courierStatus: "Delivered",
-  },
-  {
-    id: "#1018",
-    amount: 980,
-    status: "Returned",
-    paid: 0,
-    expected: 980,
-    courierStatus: "Returned",
-  },
-  {
-    id: "#1012",
-    amount: 2020,
-    status: "Partial",
-    paid: 1400,
-    expected: 1600,
-    courierStatus: "Partial Delivered",
-  },
-];
+export default function RealCustomerProfilePage({
+  customerProfile,
+}: {
+  customerProfile: CustomerProfileData;
+}) {
+  const customer = customerProfile.customer ?? emptyCustomer;
+  const orders = customerProfile.orders;
+  const notes = customerProfile.customer
+    ? customerProfile.notes
+    : ["No phone was provided or no matching orders were found."];
+  const aiSuggestions = customerProfile.customer
+    ? customerProfile.aiSuggestions
+    : ["Select a customer from the Customers page to view live order history."];
+  const totalExpected = customerProfile.totalExpected;
+  const totalReceived = customerProfile.totalReceived;
+  const totalDifference = customerProfile.totalDifference;
 
-const notes = [
-  "Customer confirmed but delayed delivery",
-  "Prefers evening calls",
-];
-
-const aiSuggestions = [
-  "High chance of partial delivery",
-  "Call before dispatch",
-  "Recommend low-ticket combo",
-];
-
-const totalExpected = orders.reduce((total, order) => total + order.expected, 0);
-const totalReceived = orders.reduce((total, order) => total + order.paid, 0);
-const totalDifference = totalExpected - totalReceived;
-
-export default function RealCustomerProfilePage() {
   return (
     <div className="min-h-screen bg-stone-50 p-4 text-slate-900 md:p-6">
       <div className="space-y-6">
@@ -94,11 +73,14 @@ export default function RealCustomerProfilePage() {
             <div className="text-lg font-semibold text-slate-900">
               {customer.totalOrders}
             </div>
+            <div className="text-xs text-slate-500">
+              {customer.deliveredOrders} delivered / {customer.cancelledOrders} cancelled
+            </div>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="text-sm text-slate-500">Spent</div>
             <div className="text-lg font-semibold text-slate-900">
-              Tk {customer.totalSpent}
+              Tk {customer.totalSpent.toLocaleString()}
             </div>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -131,7 +113,12 @@ export default function RealCustomerProfilePage() {
             Order Intelligence
           </h2>
           <div className="space-y-3">
-            {orders.map((order) => (
+            {orders.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 p-4 text-sm text-slate-500">
+                No order history found for this customer.
+              </div>
+            ) : (
+              orders.map((order) => (
               <div
                 key={order.id}
                 className="space-y-2 rounded-xl border border-slate-200 p-4"
@@ -141,6 +128,9 @@ export default function RealCustomerProfilePage() {
                     <div className="font-semibold text-slate-900">{order.id}</div>
                     <div className="text-xs text-slate-500">
                       Status: {order.status}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      Date: {order.date}
                     </div>
                     <div className="text-xs text-sky-600">
                       Courier: {order.courierStatus}
@@ -162,7 +152,8 @@ export default function RealCustomerProfilePage() {
                   </div>
                 )}
               </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 

@@ -189,7 +189,9 @@ export default function RealCustomersPage({
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
                           <Link
-                            href="/customers/profile"
+                            href={`/customers/profile?phone=${encodeURIComponent(
+                              customer.phone,
+                            )}`}
                             className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50"
                           >
                             View Profile

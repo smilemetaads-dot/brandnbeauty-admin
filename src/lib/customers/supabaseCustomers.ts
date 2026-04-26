@@ -22,9 +22,45 @@ export type CustomersData = {
   customers: CustomerSummary[];
 };
 
+export type CustomerProfileOrder = {
+  id: string;
+  amount: number;
+  status: string;
+  paid: number;
+  expected: number;
+  courierStatus: string;
+  date: string;
+};
+
+export type CustomerProfileData = {
+  customer: {
+    name: string;
+    phone: string;
+    email: string;
+    location: string;
+    address: string;
+    totalOrders: number;
+    deliveredOrders: number;
+    cancelledOrders: number;
+    totalSpent: number;
+    score: number;
+    tag: string;
+    risk: string;
+    lastActivity: string;
+  } | null;
+  orders: CustomerProfileOrder[];
+  notes: string[];
+  aiSuggestions: string[];
+  totalExpected: number;
+  totalReceived: number;
+  totalDifference: number;
+};
+
 type OrderRow = {
+  order_number?: string | null;
   customer_name?: string | null;
   customer_phone?: string | null;
+  customer_address?: string | null;
   customer_city?: string | null;
   total?: number | string | null;
   payment_method?: string | null;
@@ -34,8 +70,10 @@ type OrderRow = {
 };
 
 type NormalizedOrder = {
+  orderNumber: string;
   customerName: string;
   customerPhone: string;
+  customerAddress: string;
   customerCity: string;
   total: number;
   paymentMethod: string;
@@ -58,7 +96,7 @@ export async function getCustomersDataFromSupabase(): Promise<CustomersData> {
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "customer_name, customer_phone, customer_city, total, payment_method, payment_status, order_status, created_at",
+      "order_number, customer_name, customer_phone, customer_address, customer_city, total, payment_method, payment_status, order_status, created_at",
     )
     .order("created_at", { ascending: false });
 
@@ -72,6 +110,58 @@ export async function getCustomersDataFromSupabase(): Promise<CustomersData> {
   }
 
   return buildCustomersData(((data ?? []) as OrderRow[]).map(mapOrderRow));
+}
+
+export async function getCustomerProfileFromSupabase(
+  phone?: string,
+): Promise<CustomerProfileData> {
+  const emptyProfile: CustomerProfileData = {
+    customer: null,
+    orders: [],
+    notes: [],
+    aiSuggestions: [],
+    totalExpected: 0,
+    totalReceived: 0,
+    totalDifference: 0,
+  };
+  const phoneKey = normalizePhoneKey(phone ?? "");
+
+  if (!phoneKey) {
+    return emptyProfile;
+  }
+
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    console.warn("[admin-customer-profile] Supabase service role config missing.");
+    return emptyProfile;
+  }
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select(
+      "order_number, customer_name, customer_phone, customer_address, customer_city, total, payment_method, payment_status, order_status, created_at",
+    )
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[admin-customer-profile] Orders query failed:", {
+      table: "public.orders",
+      code: error.code,
+      message: error.message,
+    });
+    return emptyProfile;
+  }
+
+  const customerOrders = ((data ?? []) as OrderRow[])
+    .map(mapOrderRow)
+    .filter((order) => normalizePhoneKey(order.customerPhone) === phoneKey);
+
+  if (customerOrders.length === 0) {
+    return emptyProfile;
+  }
+
+  return buildCustomerProfileData(customerOrders);
 }
 
 function buildCustomersData(orders: NormalizedOrder[]): CustomersData {
@@ -156,13 +246,80 @@ function buildCustomerSummary(customerOrders: NormalizedOrder[]): CustomerSummar
   };
 }
 
+function buildCustomerProfileData(
+  customerOrders: NormalizedOrder[],
+): CustomerProfileData {
+  const sortedOrders = [...customerOrders].sort(
+    (left, right) =>
+      (right.createdAtDate?.getTime() ?? 0) - (left.createdAtDate?.getTime() ?? 0),
+  );
+  const latestOrder = sortedOrders[0];
+  const summary = buildCustomerSummary(customerOrders);
+  const profileOrders = sortedOrders.map((order) => {
+    const isPaidDelivered =
+      order.orderStatus === "delivered" &&
+      ["paid", "verified"].includes(order.paymentStatus);
+
+    return {
+      id: order.orderNumber,
+      amount: order.total,
+      status: toTitleCase(order.orderStatus),
+      paid: isPaidDelivered ? order.total : 0,
+      expected: order.total,
+      courierStatus: toTitleCase(order.orderStatus),
+      date: formatDate(order.createdAt),
+    };
+  });
+  const totalExpected = profileOrders.reduce(
+    (total, order) => total + order.expected,
+    0,
+  );
+  const totalReceived = profileOrders.reduce(
+    (total, order) => total + order.paid,
+    0,
+  );
+
+  return {
+    customer: {
+      name: summary.name,
+      phone: summary.phone,
+      email: "N/A",
+      location: summary.location,
+      address: latestOrder.customerAddress,
+      totalOrders: summary.orders,
+      deliveredOrders: summary.deliveredOrders,
+      cancelledOrders: summary.cancelledOrders,
+      totalSpent: summary.spent,
+      score: calculateCustomerScore(summary.orders, summary.cancelledOrders),
+      tag: summary.status,
+      risk: summary.risk,
+      lastActivity: `Last order: ${summary.lastOrder}`,
+    },
+    orders: profileOrders,
+    notes: [
+      `Latest address: ${latestOrder.customerAddress}`,
+      `Latest city: ${latestOrder.customerCity}`,
+    ],
+    aiSuggestions: [
+      `${summary.deliveredOrders} delivered orders`,
+      `${summary.cancelledOrders} cancelled/returned orders`,
+      `Latest order status: ${summary.latestOrderStatus}`,
+    ],
+    totalExpected,
+    totalReceived,
+    totalDifference: totalExpected - totalReceived,
+  };
+}
+
 function mapOrderRow(row: OrderRow): NormalizedOrder {
   const createdAt = toText(row.created_at, "");
   const createdAtDate = createdAt ? new Date(createdAt) : null;
 
   return {
+    orderNumber: toText(row.order_number, "BNB-UNKNOWN"),
     customerName: toText(row.customer_name, "Unknown Customer"),
     customerPhone: toText(row.customer_phone, ""),
+    customerAddress: toText(row.customer_address, "N/A"),
     customerCity: toText(row.customer_city, "N/A"),
     total: toNumber(row.total),
     paymentMethod: toPaymentMethod(row.payment_method),
@@ -172,6 +329,12 @@ function mapOrderRow(row: OrderRow): NormalizedOrder {
     createdAtDate:
       createdAtDate && !Number.isNaN(createdAtDate.getTime()) ? createdAtDate : null,
   };
+}
+
+function calculateCustomerScore(totalOrders: number, cancelledOrders: number) {
+  const score = 60 + totalOrders * 8 - cancelledOrders * 15;
+
+  return Math.max(0, Math.min(100, score));
 }
 
 function formatPaymentMethods(orders: NormalizedOrder[]) {
