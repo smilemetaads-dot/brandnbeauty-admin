@@ -67,7 +67,7 @@ const navGroups: SidebarGroup[] = [
     label: "Suppliers",
     items: [
       { label: "Supplier Profiles", href: "/suppliers" },
-      { label: "Supplier Purchase Stock", href: "/purchases" },
+      { label: "Supplier Purchases", href: "/purchases" },
     ],
   },
   {
