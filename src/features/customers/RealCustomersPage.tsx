@@ -2,125 +2,7 @@
 
 import Link from "next/link";
 
-const customerStats = [
-  ["Total Customers", "1,240", "+86 this month"],
-  ["Returning Customers", "680", "54.8% repeat rate"],
-  ["VIP Customers", "240", "High value buyers"],
-  ["COD Risk Customers", "37", "Need review"],
-];
-
-const customers = [
-  {
-    name: "Sadia Akter",
-    phone: "01822XXXXXX",
-    orders: 4,
-    spent: 4200,
-    lastOrder: "2 days ago",
-    location: "Gazipur",
-    payment: "bKash + COD",
-    status: "Returning",
-    risk: "Low",
-  },
-  {
-    name: "Nusrat Jahan",
-    phone: "01711XXXXXX",
-    orders: 1,
-    spent: 1260,
-    lastOrder: "5 min ago",
-    location: "Dhaka",
-    payment: "COD",
-    status: "New",
-    risk: "Medium",
-  },
-  {
-    name: "Raisa Khan",
-    phone: "01555XXXXXX",
-    orders: 6,
-    spent: 8450,
-    lastOrder: "1 day ago",
-    location: "Dhaka",
-    payment: "bKash",
-    status: "VIP",
-    risk: "Low",
-  },
-  {
-    name: "Imran Hossain",
-    phone: "01899XXXXXX",
-    orders: 2,
-    spent: 2640,
-    lastOrder: "2 days ago",
-    location: "Bogura",
-    payment: "COD",
-    status: "Returning",
-    risk: "Medium",
-  },
-  {
-    name: "Mahinur Rahman",
-    phone: "01577XXXXXX",
-    orders: 3,
-    spent: 3990,
-    lastOrder: "2 days ago",
-    location: "Sylhet",
-    payment: "COD",
-    status: "Returning",
-    risk: "High",
-  },
-  {
-    name: "Ayesha Siddika",
-    phone: "01511XXXXXX",
-    orders: 5,
-    spent: 9260,
-    lastOrder: "Yesterday",
-    location: "Dhaka",
-    payment: "bKash",
-    status: "VIP",
-    risk: "Low",
-  },
-  {
-    name: "Mim Akter",
-    phone: "01988XXXXXX",
-    orders: 1,
-    spent: 1480,
-    lastOrder: "4 hr ago",
-    location: "Cumilla",
-    payment: "bKash",
-    status: "New",
-    risk: "Low",
-  },
-  {
-    name: "Tanvir Alam",
-    phone: "01366XXXXXX",
-    orders: 2,
-    spent: 1890,
-    lastOrder: "2 hr ago",
-    location: "Rajshahi",
-    payment: "COD",
-    status: "Returning",
-    risk: "High",
-  },
-  {
-    name: "Nadia Tabassum",
-    phone: "01944XXXXXX",
-    orders: 4,
-    spent: 5730,
-    lastOrder: "2 days ago",
-    location: "Mymensingh",
-    payment: "bKash + COD",
-    status: "VIP",
-    risk: "Low",
-  },
-  {
-    name: "Farzana Karim",
-    phone: "01766XXXXXX",
-    orders: 2,
-    spent: 1930,
-    lastOrder: "Yesterday",
-    location: "Barishal",
-    payment: "COD",
-    status: "Returning",
-    risk: "Medium",
-  },
-];
+import type { CustomersData } from "@/lib/customers/supabaseCustomers";
 
 function getStatusClasses(status: string) {
   if (status === "VIP") {
@@ -146,7 +28,14 @@ function getRiskClasses(risk: string) {
   return "bg-emerald-50 text-emerald-700";
 }
 
-export default function RealCustomersPage() {
+export default function RealCustomersPage({
+  customersData,
+}: {
+  customersData: CustomersData;
+}) {
+  const { customers } = customersData;
+  const displayedCustomers = customers.slice(0, 10);
+
   return (
     <div className="min-h-screen bg-stone-50 p-4 text-slate-900 md:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -168,7 +57,7 @@ export default function RealCustomersPage() {
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {customerStats.map(([label, value, sub]) => (
+        {customersData.stats.map(([label, value, sub]) => (
           <div
             key={label}
             className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm"
@@ -231,73 +120,88 @@ export default function RealCustomersPage() {
                 </tr>
               </thead>
               <tbody>
-                {customers.map((customer) => (
-                  <tr
-                    key={customer.phone}
-                    className="border-t border-slate-100 bg-white"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-slate-900">
-                        {customer.name}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        Customer profile
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      <div className="flex items-center gap-2">
-                        <span>{customer.phone}</span>
-                        <span className="text-xs text-sky-600">Call</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {customer.orders}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      Tk {customer.spent}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {customer.lastOrder}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {customer.location}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {customer.payment}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
-                          customer.status,
-                        )}`}
-                      >
-                        {customer.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${getRiskClasses(
-                          customer.risk,
-                        )}`}
-                      >
-                        {customer.risk}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <Link
-                          href="/customers/profile"
-                          className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50"
-                        >
-                          View Profile
-                        </Link>
-                        <button className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50">
-                          Message
-                        </button>
-                      </div>
+                {customers.length === 0 ? (
+                  <tr className="border-t border-slate-100 bg-white">
+                    <td
+                      className="px-4 py-8 text-center text-sm text-slate-500"
+                      colSpan={10}
+                    >
+                      No customers found from orders yet.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  displayedCustomers.map((customer) => (
+                    <tr
+                      key={customer.phone}
+                      className="border-t border-slate-100 bg-white"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-slate-900">
+                          {customer.name}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          Latest: {customer.latestOrderStatus}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        <div className="flex items-center gap-2">
+                          <span>{customer.phone}</span>
+                          <span className="text-xs text-sky-600">Call</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-medium text-slate-900">
+                        <div>{customer.orders}</div>
+                        <div className="text-xs font-normal text-slate-500">
+                          {customer.deliveredOrders} delivered /{" "}
+                          {customer.cancelledOrders} cancelled
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-medium text-slate-900">
+                        Tk {customer.spent.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {customer.lastOrder}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {customer.location}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {customer.payment}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
+                            customer.status,
+                          )}`}
+                        >
+                          {customer.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getRiskClasses(
+                            customer.risk,
+                          )}`}
+                        >
+                          {customer.risk}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <Link
+                            href="/customers/profile"
+                            className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50"
+                          >
+                            View Profile
+                          </Link>
+                          <button className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50">
+                            Message
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -305,7 +209,8 @@ export default function RealCustomersPage() {
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-slate-600">
-            Showing 1-10 of 1,240 customers
+            Showing {customers.length > 0 ? "1" : "0"}-
+            {displayedCustomers.length} of {customers.length.toLocaleString()} customers
           </div>
           <div className="flex items-center gap-2">
             {[1, 2, 3, 4].map((page) => (
