@@ -1,27 +1,12 @@
 "use client";
 
-const reports = [
-  { title: "Sales Report", desc: "Track daily, weekly, monthly revenue" },
-  { title: "Order Report", desc: "Order volume, success vs return" },
-  { title: "Product Report", desc: "Top selling & low performing products" },
-  { title: "Customer Report", desc: "VIP, repeat & risky customers" },
-];
+import type { ReportsData } from "@/lib/reports/supabaseReports";
 
-const insights = [
-  "Sales increased 12% compared to last week",
-  "COD return rate is rising in Dhaka region",
-  "Top 3 products generate 65% revenue",
-  "VIP customers contribute 48% total sales",
-];
-
-const kpis = [
-  { label: "Revenue", value: "Tk 84,500", sub: "+12%" },
-  { label: "Orders", value: "128", sub: "37 pending" },
-  { label: "Return Rate", value: "14.8%", sub: "Up risk" },
-  { label: "Profit", value: "Tk 21,640", sub: "after cost" },
-];
-
-export default function RealReportsPage() {
+export default function RealReportsPage({
+  reportsData,
+}: {
+  reportsData: ReportsData;
+}) {
   return (
     <div className="min-h-screen bg-stone-50 p-4 text-slate-900 md:p-6">
       <div className="space-y-6">
@@ -46,7 +31,7 @@ export default function RealReportsPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {kpis.map((kpi) => (
+          {reportsData.kpis.map((kpi) => (
             <div
               key={kpi.label}
               className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
@@ -59,7 +44,7 @@ export default function RealReportsPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {reports.map((report) => (
+          {reportsData.reports.map((report) => (
             <div
               key={report.title}
               className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md"
@@ -76,7 +61,7 @@ export default function RealReportsPage() {
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-bold">AI Business Insights</h2>
           <div className="mt-4 space-y-3">
-            {insights.map((item) => (
+            {reportsData.insights.map((item) => (
               <div
                 key={item}
                 className="rounded-xl bg-stone-50 p-4 text-sm text-slate-700"
@@ -106,15 +91,11 @@ export default function RealReportsPage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-bold">Smart Recommendation</h2>
             <div className="mt-4 space-y-3 text-sm">
-              <div className="rounded-xl bg-stone-50 p-4">
-                Increase budget on top 3 performing products
-              </div>
-              <div className="rounded-xl bg-stone-50 p-4">
-                Reduce COD orders in high-risk zones
-              </div>
-              <div className="rounded-xl bg-stone-50 p-4">
-                Focus on repeat customer retention
-              </div>
+              {reportsData.recommendations.map((item) => (
+                <div key={item} className="rounded-xl bg-stone-50 p-4">
+                  {item}
+                </div>
+              ))}
             </div>
           </div>
         </div>
