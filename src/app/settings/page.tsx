@@ -1,10 +1,15 @@
 import AdminLayout from "@/components/layout/AdminLayout";
 import RealSettingsPage from "@/features/settings/RealSettingsPage";
+import { getStoreSettingsFromSupabase } from "@/lib/settings/supabaseSettings";
 
-export default function SettingsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function SettingsPage() {
+  const storeSettings = await getStoreSettingsFromSupabase();
+
   return (
     <AdminLayout title="Settings">
-      <RealSettingsPage />
+      <RealSettingsPage storeSettings={storeSettings} />
     </AdminLayout>
   );
 }

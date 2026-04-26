@@ -1,19 +1,9 @@
 "use client";
 
-const quickStats = [
-  { label: "Active Admins", value: "7", sub: "Team members with access" },
-  {
-    label: "Live Integrations",
-    value: "5",
-    sub: "Payment, courier, analytics",
-  },
-  { label: "Security Alerts", value: "2", sub: "Need review" },
-  {
-    label: "System Status",
-    value: "Healthy",
-    sub: "All core modules online",
-  },
-];
+import { useActionState } from "react";
+
+import { saveStoreSettings, type SettingsSaveState } from "@/app/settings/actions";
+import type { StoreSettingsData } from "@/lib/settings/supabaseSettings";
 
 const roles = [
   { role: "Super Admin", users: 1, access: "Full access" },
@@ -71,7 +61,33 @@ const securityChecks = [
   ["Audit log retention", "Enabled", "180-day history active"],
 ];
 
-const toggles = [
+function getQuickStats(storeSettings: StoreSettingsData) {
+  return [
+    {
+      label: "Store Name",
+      value: storeSettings.storeName,
+      sub: storeSettings.storeEmail || "Store profile loaded",
+    },
+    {
+      label: "Inside Dhaka",
+      value: `Tk ${storeSettings.insideDhakaDelivery.toLocaleString()}`,
+      sub: "Delivery charge",
+    },
+    {
+      label: "Outside Dhaka",
+      value: `Tk ${storeSettings.outsideDhakaDelivery.toLocaleString()}`,
+      sub: "Delivery charge",
+    },
+    {
+      label: "System Status",
+      value: "Healthy",
+      sub: "All core modules online",
+    },
+  ];
+}
+
+function getToggles(storeSettings: StoreSettingsData) {
+  return [
   {
     title: "Maintenance Mode",
     desc: "Temporarily hide storefront for customers",
@@ -89,14 +105,37 @@ const toggles = [
   },
   {
     title: "COD Risk Warning",
-    desc: "Show warning before risky order approval",
-    enabled: true,
+    desc: "Cash on delivery checkout availability",
+    enabled: storeSettings.codEnabled,
   },
-];
+  {
+    title: "Online Payment",
+    desc: "Online payment checkout availability",
+    enabled: storeSettings.onlinePaymentEnabled,
+  },
+  ];
+}
 
-export default function RealSettingsPage() {
+const initialSaveState: SettingsSaveState = {
+  status: "idle",
+  message: "",
+};
+
+export default function RealSettingsPage({
+  storeSettings,
+}: {
+  storeSettings: StoreSettingsData;
+}) {
+  const [saveState, formAction, isPending] = useActionState(
+    saveStoreSettings,
+    initialSaveState,
+  );
+  const quickStats = getQuickStats(storeSettings);
+  const toggles = getToggles(storeSettings);
+
   return (
-    <div className="min-h-screen bg-stone-50 p-4 text-slate-900 md:p-6">
+    <form action={formAction} className="min-h-screen bg-stone-50 p-4 text-slate-900 md:p-6">
+      <input name="id" type="hidden" value={storeSettings.id} />
       <div className="space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -107,14 +146,33 @@ export default function RealSettingsPage() {
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <button className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-sm">
+            <button
+              className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-sm"
+              type="button"
+            >
               Export Settings
             </button>
-            <button className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white shadow-sm">
-              Save System Changes
+            <button
+              className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white shadow-sm"
+              disabled={isPending}
+              type="submit"
+            >
+              {isPending ? "Saving..." : "Save System Changes"}
             </button>
           </div>
         </div>
+
+        {saveState.message ? (
+          <div
+            className={`rounded-2xl border p-4 text-sm ${
+              saveState.status === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-rose-200 bg-rose-50 text-rose-800"
+            }`}
+          >
+            {saveState.message}
+          </div>
+        ) : null}
 
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           <div className="font-semibold">System Control Note</div>
@@ -155,6 +213,127 @@ export default function RealSettingsPage() {
 
         <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
           <div className="space-y-6">
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+              <div>
+                <div className="text-sm font-medium text-slate-500">
+                  Store Settings
+                </div>
+                <h2 className="mt-1 text-xl font-bold tracking-tight">
+                  Store Info & Delivery
+                </h2>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Store Name
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal text-slate-900"
+                    defaultValue={storeSettings.storeName}
+                    name="storeName"
+                  />
+                </label>
+                <label className="text-sm font-medium text-slate-700">
+                  Store Phone
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal text-slate-900"
+                    defaultValue={storeSettings.storePhone}
+                    name="storePhone"
+                  />
+                </label>
+                <label className="text-sm font-medium text-slate-700">
+                  Store Email
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal text-slate-900"
+                    defaultValue={storeSettings.storeEmail}
+                    name="storeEmail"
+                    type="email"
+                  />
+                </label>
+                <label className="text-sm font-medium text-slate-700">
+                  WhatsApp Number
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal text-slate-900"
+                    defaultValue={storeSettings.whatsappNumber}
+                    name="whatsappNumber"
+                  />
+                </label>
+                <label className="text-sm font-medium text-slate-700 md:col-span-2">
+                  Store Address
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal text-slate-900"
+                    defaultValue={storeSettings.storeAddress}
+                    name="storeAddress"
+                  />
+                </label>
+                <label className="text-sm font-medium text-slate-700">
+                  Inside Dhaka Delivery
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal text-slate-900"
+                    defaultValue={storeSettings.insideDhakaDelivery}
+                    min="0"
+                    name="insideDhakaDelivery"
+                    type="number"
+                  />
+                </label>
+                <label className="text-sm font-medium text-slate-700">
+                  Outside Dhaka Delivery
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal text-slate-900"
+                    defaultValue={storeSettings.outsideDhakaDelivery}
+                    min="0"
+                    name="outsideDhakaDelivery"
+                    type="number"
+                  />
+                </label>
+                <label className="text-sm font-medium text-slate-700">
+                  Free Delivery Minimum
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal text-slate-900"
+                    defaultValue={storeSettings.freeDeliveryMinAmount}
+                    min="0"
+                    name="freeDeliveryMinAmount"
+                    type="number"
+                  />
+                </label>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="flex items-center gap-3 rounded-2xl bg-stone-50 p-4 text-sm font-semibold text-slate-900">
+                    <input
+                      className="h-4 w-4"
+                      defaultChecked={storeSettings.codEnabled}
+                      name="codEnabled"
+                      type="checkbox"
+                    />
+                    COD Enabled
+                  </label>
+                  <label className="flex items-center gap-3 rounded-2xl bg-stone-50 p-4 text-sm font-semibold text-slate-900">
+                    <input
+                      className="h-4 w-4"
+                      defaultChecked={storeSettings.onlinePaymentEnabled}
+                      name="onlinePaymentEnabled"
+                      type="checkbox"
+                    />
+                    Online Payment
+                  </label>
+                </div>
+                <label className="text-sm font-medium text-slate-700">
+                  Facebook Page URL
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal text-slate-900"
+                    defaultValue={storeSettings.facebookPageUrl}
+                    name="facebookPageUrl"
+                  />
+                </label>
+                <label className="text-sm font-medium text-slate-700">
+                  Messenger URL
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal text-slate-900"
+                    defaultValue={storeSettings.messengerUrl}
+                    name="messengerUrl"
+                  />
+                </label>
+              </div>
+            </div>
+
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-center justify-between">
                 <div>
@@ -427,6 +606,6 @@ export default function RealSettingsPage() {
           </div>
         </div>
       </div>
-    </div>
+    </form>
   );
 }
