@@ -1,8 +1,13 @@
+"use client";
+
+import { useActionState } from "react";
+
 import { AdminShell } from "@/components/admin/AdminShell";
 
 import type { BrandRecord } from "@/features/catalog/brands-data";
 import type { CategoryRecord } from "@/features/catalog/categories-data";
 import type { ConcernRecord } from "@/features/catalog/concerns-data";
+import { saveProduct } from "@/features/products/product-actions";
 
 type RealAddEditProductPageProps = {
   categories: CategoryRecord[];
@@ -20,6 +25,11 @@ export function RealAddEditProductPage({
   concerns,
   brands,
 }: RealAddEditProductPageProps) {
+  const [state, formAction, isPending] = useActionState(
+    saveProduct,
+    { ok: false, message: "" },
+  );
+
   return (
     <AdminShell>
       <div className="space-y-6">
@@ -33,7 +43,7 @@ export function RealAddEditProductPage({
                 Add/Edit Product
               </h1>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                Product form connection coming next.
+                Product create/save is connected. Edit flow is coming next.
               </p>
             </div>
             <div className="grid gap-2 text-sm font-semibold text-[#527B86] sm:grid-cols-3">
@@ -51,13 +61,25 @@ export function RealAddEditProductPage({
         </section>
 
         <section className="rounded-lg border border-slate-200 bg-white p-5 sm:p-6">
-          <form className="grid gap-5 sm:grid-cols-2">
+          <form action={formAction} className="grid gap-5 sm:grid-cols-2">
             <label className={labelClassName}>
               Product name
               <input
                 className={inputClassName}
                 name="name"
                 placeholder="Product name"
+                required
+                type="text"
+              />
+            </label>
+
+            <label className={labelClassName}>
+              Slug
+              <input
+                className={inputClassName}
+                name="slug"
+                placeholder="product-slug"
+                required
                 type="text"
               />
             </label>
@@ -79,6 +101,19 @@ export function RealAddEditProductPage({
                 min="0"
                 name="price"
                 placeholder="0"
+                required
+                step="0.01"
+                type="number"
+              />
+            </label>
+
+            <label className={labelClassName}>
+              Old price
+              <input
+                className={inputClassName}
+                min="0"
+                name="oldPrice"
+                placeholder="0"
                 step="0.01"
                 type="number"
               />
@@ -91,6 +126,7 @@ export function RealAddEditProductPage({
                 min="0"
                 name="stock"
                 placeholder="0"
+                required
                 step="1"
                 type="number"
               />
@@ -137,13 +173,53 @@ export function RealAddEditProductPage({
               </select>
             </label>
 
+            <label className={labelClassName}>
+              Image
+              <input
+                className={inputClassName}
+                name="image"
+                placeholder="Image URL"
+                type="text"
+              />
+            </label>
+
+            <label className={`${labelClassName} sm:col-span-2`}>
+              Short description
+              <textarea
+                className={`${inputClassName} min-h-28 resize-y`}
+                name="shortDescription"
+                placeholder="Short product description"
+              />
+            </label>
+
+            <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
+              <input
+                className="h-4 w-4 rounded border-slate-300 text-[#527B86]"
+                name="featured"
+                type="checkbox"
+              />
+              Featured product
+            </label>
+
+            {state.message ? (
+              <div
+                className={`rounded-md px-3 py-2 text-sm font-medium ${
+                  state.ok
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-rose-50 text-rose-700"
+                }`}
+              >
+                {state.message}
+              </div>
+            ) : null}
+
             <div className="flex items-end">
               <button
-                className="w-full rounded-md bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500"
-                disabled
+                className="w-full rounded-md bg-[#527B86] px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
+                disabled={isPending}
                 type="submit"
               >
-                Save not connected yet
+                {isPending ? "Saving..." : "Save product"}
               </button>
             </div>
           </form>
