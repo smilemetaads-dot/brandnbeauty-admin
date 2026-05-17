@@ -8,11 +8,13 @@ import type { BrandRecord } from "@/features/catalog/brands-data";
 import type { CategoryRecord } from "@/features/catalog/categories-data";
 import type { ConcernRecord } from "@/features/catalog/concerns-data";
 import { saveProduct } from "@/features/products/product-actions";
+import type { ProductRecord } from "@/features/products/products-data";
 
 type RealAddEditProductPageProps = {
   categories: CategoryRecord[];
   concerns: ConcernRecord[];
   brands: BrandRecord[];
+  product: ProductRecord | null;
 };
 
 const inputClassName =
@@ -24,11 +26,13 @@ export function RealAddEditProductPage({
   categories,
   concerns,
   brands,
+  product,
 }: RealAddEditProductPageProps) {
   const [state, formAction, isPending] = useActionState(
     saveProduct,
     { ok: false, message: "" },
   );
+  const isEditing = Boolean(product);
 
   return (
     <AdminShell>
@@ -40,10 +44,10 @@ export function RealAddEditProductPage({
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h1 className="text-2xl font-semibold text-slate-950">
-                Add/Edit Product
+                {isEditing ? "Edit Product" : "Add Product"}
               </h1>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                Product create/save is connected. Edit flow is coming next.
+                Create and update product records in Supabase.
               </p>
             </div>
             <div className="grid gap-2 text-sm font-semibold text-[#527B86] sm:grid-cols-3">
@@ -62,10 +66,13 @@ export function RealAddEditProductPage({
 
         <section className="rounded-lg border border-slate-200 bg-white p-5 sm:p-6">
           <form action={formAction} className="grid gap-5 sm:grid-cols-2">
+            {product ? <input name="id" type="hidden" value={product.id} /> : null}
+
             <label className={labelClassName}>
               Product name
               <input
                 className={inputClassName}
+                defaultValue={product?.name ?? ""}
                 name="name"
                 placeholder="Product name"
                 required
@@ -77,6 +84,7 @@ export function RealAddEditProductPage({
               Slug
               <input
                 className={inputClassName}
+                defaultValue={product?.slug ?? ""}
                 name="slug"
                 placeholder="product-slug"
                 required
@@ -88,6 +96,7 @@ export function RealAddEditProductPage({
               SKU
               <input
                 className={inputClassName}
+                defaultValue={product?.sku ?? ""}
                 name="sku"
                 placeholder="SKU"
                 type="text"
@@ -98,6 +107,7 @@ export function RealAddEditProductPage({
               Price
               <input
                 className={inputClassName}
+                defaultValue={product?.price ?? ""}
                 min="0"
                 name="price"
                 placeholder="0"
@@ -111,6 +121,7 @@ export function RealAddEditProductPage({
               Old price
               <input
                 className={inputClassName}
+                defaultValue={product?.old_price ?? ""}
                 min="0"
                 name="oldPrice"
                 placeholder="0"
@@ -123,6 +134,7 @@ export function RealAddEditProductPage({
               Stock
               <input
                 className={inputClassName}
+                defaultValue={product?.stock ?? ""}
                 min="0"
                 name="stock"
                 placeholder="0"
@@ -134,7 +146,11 @@ export function RealAddEditProductPage({
 
             <label className={labelClassName}>
               Brand
-              <select className={inputClassName} defaultValue="" name="brandId">
+              <select
+                className={inputClassName}
+                defaultValue={product?.brand_id ?? ""}
+                name="brandId"
+              >
                 <option value="">Select brand</option>
                 {brands.map((brand) => (
                   <option key={brand.id} value={brand.id}>
@@ -148,7 +164,7 @@ export function RealAddEditProductPage({
               Category
               <select
                 className={inputClassName}
-                defaultValue=""
+                defaultValue={product?.category_id ?? ""}
                 name="categoryId"
               >
                 <option value="">Select category</option>
@@ -164,7 +180,7 @@ export function RealAddEditProductPage({
               Status
               <select
                 className={inputClassName}
-                defaultValue="draft"
+                defaultValue={product?.status ?? "draft"}
                 name="status"
               >
                 <option value="draft">Draft</option>
@@ -177,6 +193,7 @@ export function RealAddEditProductPage({
               Image
               <input
                 className={inputClassName}
+                defaultValue={product?.image ?? ""}
                 name="image"
                 placeholder="Image URL"
                 type="text"
@@ -187,6 +204,7 @@ export function RealAddEditProductPage({
               Short description
               <textarea
                 className={`${inputClassName} min-h-28 resize-y`}
+                defaultValue={product?.short_description ?? ""}
                 name="shortDescription"
                 placeholder="Short product description"
               />
@@ -195,6 +213,7 @@ export function RealAddEditProductPage({
             <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
               <input
                 className="h-4 w-4 rounded border-slate-300 text-[#527B86]"
+                defaultChecked={product?.featured ?? false}
                 name="featured"
                 type="checkbox"
               />
@@ -219,7 +238,11 @@ export function RealAddEditProductPage({
                 disabled={isPending}
                 type="submit"
               >
-                {isPending ? "Saving..." : "Save product"}
+                {isPending
+                  ? "Saving..."
+                  : isEditing
+                    ? "Update Product"
+                    : "Save Product"}
               </button>
             </div>
           </form>

@@ -17,6 +17,8 @@ export type ProductRecord = {
   name: string;
   slug: string;
   sku: string | null;
+  brand_id: string | null;
+  category_id: string | null;
   price: number;
   old_price: number | null;
   stock: number;
@@ -43,7 +45,7 @@ export async function getProductsFromSupabase(): Promise<ProductRecord[]> {
     const { data, error } = await supabase
       .from("products")
       .select(
-        "id, name, slug, sku, price, old_price, stock, image, short_description, status, featured, attributes, created_at, updated_at, brands(name, slug), categories(name, slug)",
+        "id, name, slug, sku, brand_id, category_id, price, old_price, stock, image, short_description, status, featured, attributes, created_at, updated_at, brands(name, slug), categories(name, slug)",
       )
       .order("created_at", { ascending: false });
 
@@ -60,5 +62,38 @@ export async function getProductsFromSupabase(): Promise<ProductRecord[]> {
   } catch {
     console.error("Failed to initialize products data source.");
     return [];
+  }
+}
+
+export async function getProductByIdFromSupabase(
+  id: string,
+): Promise<ProductRecord | null> {
+  try {
+    const supabase = createAdminSupabaseClient();
+    const { data, error } = await supabase
+      .from("products")
+      .select(
+        "id, name, slug, sku, brand_id, category_id, price, old_price, stock, image, short_description, status, featured, attributes, created_at, updated_at",
+      )
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Failed to load product from Supabase.");
+      return null;
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    return {
+      ...data,
+      brands: null,
+      categories: null,
+    } as ProductRecord;
+  } catch {
+    console.error("Failed to initialize product detail data source.");
+    return null;
   }
 }

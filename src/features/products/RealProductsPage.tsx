@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AdminShell } from "@/components/admin/AdminShell";
 
 import type { ProductRecord } from "./products-data";
@@ -61,6 +63,9 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                   <th className="px-4 py-3 text-left font-semibold text-slate-600">
                     Status
                   </th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-600">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -88,13 +93,21 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                       <td className="px-4 py-3 text-slate-600">
                         {product.status ?? "unknown"}
                       </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          className="font-semibold text-[#527B86] hover:text-slate-950"
+                          href={`/products/edit?id=${product.id}`}
+                        >
+                          Edit
+                        </Link>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td
                       className="px-4 py-8 text-center text-slate-500"
-                      colSpan={7}
+                      colSpan={8}
                     >
                       No products found.
                     </td>

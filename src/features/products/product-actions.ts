@@ -64,6 +64,7 @@ export async function saveProduct(
   _previousState: ProductActionState,
   formData: FormData,
 ): Promise<ProductActionState> {
+  const id = getString(formData, "id");
   const name = getString(formData, "name");
   const slug = getString(formData, "slug");
   const price = getRequiredNumber(formData, "price");
@@ -92,7 +93,7 @@ export async function saveProduct(
 
   try {
     const supabase = createAdminSupabaseClient();
-    const { error } = await supabase.from("products").insert({
+    const productValues = {
       name,
       slug,
       sku: getNullableString(formData, "sku"),
@@ -105,7 +106,11 @@ export async function saveProduct(
       short_description: getNullableString(formData, "shortDescription"),
       status: getString(formData, "status") || "draft",
       featured: formData.get("featured") === "on",
-    });
+    };
+
+    const { error } = id
+      ? await supabase.from("products").update(productValues).eq("id", id)
+      : await supabase.from("products").insert(productValues);
 
     if (error) {
       console.error("Failed to save product.", error);
@@ -119,7 +124,12 @@ export async function saveProduct(
     revalidatePath("/products");
     revalidatePath("/products/edit");
 
-    return { ok: true, message: "Product saved successfully." };
+    return {
+      ok: true,
+      message: id
+        ? "Product updated successfully."
+        : "Product saved successfully.",
+    };
   } catch (error) {
     console.error("Failed to initialize product save action.", error);
 
