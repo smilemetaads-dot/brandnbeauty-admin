@@ -1,6 +1,7 @@
 import { AdminShell } from "@/components/admin/AdminShell";
 
 import type { InventoryProductRecord } from "./inventory-data";
+import { StockAdjustmentForm } from "./StockAdjustmentForm";
 
 type RealInventoryPageProps = {
   products: InventoryProductRecord[];
@@ -169,7 +170,9 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
             </div>
             <div className="flex flex-wrap gap-2">
               <DisabledAction>Import CSV Not Connected</DisabledAction>
-              <DisabledAction>Add Stock Not Connected</DisabledAction>
+              <div className="rounded-2xl bg-[#527B86] px-4 py-3 text-sm font-semibold text-white">
+                Manual Adjustment Connected
+              </div>
             </div>
           </div>
           <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-4">
@@ -177,13 +180,13 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
               Read mode: <b className="text-[#527B86]">Live products</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Stock adjustment: <b className="text-amber-700">Not connected</b>
+              Stock adjustment: <b className="text-emerald-700">Connected</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Movement history: <b className="text-amber-700">Not connected</b>
+              Movement logging: <b className="text-emerald-700">Connected</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Safety: <b className="text-emerald-700">No mutation</b>
+              Safety: <b className="text-emerald-700">No hard delete</b>
             </div>
           </div>
         </section>
@@ -212,6 +215,8 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
           />
         </section>
 
+        <StockAdjustmentForm products={products} />
+
         <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-3 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -227,7 +232,9 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DisabledAction>Adjust Not Connected</DisabledAction>
+              <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                Manual Adjust Connected
+              </div>
               <DisabledAction>Export Not Connected</DisabledAction>
             </div>
           </div>
@@ -382,10 +389,10 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
                   : ""}
               </div>
               <div className="rounded-2xl bg-white/70 p-4">
-                Stock adjustment is not connected yet.
+                Stock adjustment is connected with negative-stock prevention.
               </div>
               <div className="rounded-2xl bg-white/70 p-4">
-                Movement history will come after stock workflow design.
+                Movement rows are logged in inventory_movements.
               </div>
             </div>
           </section>
@@ -395,19 +402,19 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
               Today Stock Movement
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Movement history is intentionally disabled until the stock entry
-              workflow exists.
+              New manual adjustments are logged. A full movement history view
+              will come later.
             </p>
             <div className="mt-5 space-y-3">
               {[
-                "Stock In Not Connected",
-                "Reserved Stock Not Connected",
-                "Manual Adjustment Not Connected",
+                "Stock In Logged",
+                "Stock Out Logged",
+                "Correction Logged",
               ].map((item) => (
                 <div className="rounded-2xl bg-stone-50 p-4 text-sm" key={item}>
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-semibold text-slate-900">{item}</span>
-                    <Badge tone="default">Later</Badge>
+                    <Badge tone="brand">Action Log</Badge>
                   </div>
                 </div>
               ))}
@@ -423,20 +430,39 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
             </p>
             <div className="mt-5 space-y-3">
               {[
-                "Add Stock Not Connected",
-                "Stock Adjustment Not Connected",
-                "Bulk Update Not Connected",
-                "Export Report Not Connected",
+                {
+                  label: "Manual Stock Adjustment",
+                  status: "Connected",
+                  connected: true,
+                },
+                {
+                  label: "Bulk Update",
+                  status: "Not Connected",
+                  connected: false,
+                },
+                {
+                  label: "Export Report",
+                  status: "Not Connected",
+                  connected: false,
+                },
               ].map((item) => (
                 <button
-                  className="flex w-full items-center justify-between rounded-2xl bg-stone-50 p-4 text-left text-sm font-semibold text-slate-400"
+                  className={`flex w-full items-center justify-between rounded-2xl p-4 text-left text-sm font-semibold ${
+                    item.connected
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-stone-50 text-slate-400"
+                  }`}
                   disabled
-                  key={item}
+                  key={item.label}
                   type="button"
                 >
-                  <span>{item}</span>
-                  <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-slate-400">
-                    Not Connected
+                  <span>{item.label}</span>
+                  <span
+                    className={`rounded-full bg-white px-3 py-1 text-[11px] font-bold ${
+                      item.connected ? "text-emerald-700" : "text-slate-400"
+                    }`}
+                  >
+                    {item.status}
                   </span>
                 </button>
               ))}
