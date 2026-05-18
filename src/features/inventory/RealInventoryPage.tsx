@@ -1,9 +1,13 @@
 import { AdminShell } from "@/components/admin/AdminShell";
 
-import type { InventoryProductRecord } from "./inventory-data";
+import type {
+  InventoryMovementRecord,
+  InventoryProductRecord,
+} from "./inventory-data";
 import { StockAdjustmentForm } from "./StockAdjustmentForm";
 
 type RealInventoryPageProps = {
+  movements: InventoryMovementRecord[];
   products: InventoryProductRecord[];
 };
 
@@ -123,6 +127,19 @@ function formatStatus(status: string | null) {
   return status ? status.replaceAll("_", " ") : "unknown";
 }
 
+function formatMovementType(value: string) {
+  const labels: Record<string, string> = {
+    stock_in: "Stock In",
+    stock_out: "Stock Out",
+    correction: "Correction",
+    order_deduction: "Order Deduction",
+    order_restore: "Order Restore",
+    manual_adjustment: "Manual Adjustment",
+  };
+
+  return labels[value] ?? value.replaceAll("_", " ");
+}
+
 function DisabledAction({ children }: { children: React.ReactNode }) {
   return (
     <button
@@ -135,7 +152,10 @@ function DisabledAction({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function RealInventoryPage({ products }: RealInventoryPageProps) {
+export function RealInventoryPage({
+  movements,
+  products,
+}: RealInventoryPageProps) {
   const totalSkus = products.length;
   const lowStockCount = products.filter(
     (product) => product.stock > 0 && product.stock <= LOW_STOCK_THRESHOLD,
@@ -373,6 +393,94 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
           </div>
         </section>
 
+        <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-bold tracking-tight text-slate-950">
+                  Recent Stock Movements
+                </h2>
+                <Badge tone="brand">Connected</Badge>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Latest read-only movement rows from inventory_movements.
+              </p>
+            </div>
+            <Badge tone="default">Recent {movements.length}</Badge>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="sticky top-0 z-10 bg-stone-50 text-slate-500">
+                <tr>
+                  {[
+                    "Product",
+                    "Movement Type",
+                    "Quantity",
+                    "Previous Stock",
+                    "New Stock",
+                    "Note",
+                    "Created At",
+                  ].map((head) => (
+                    <th className="px-5 py-4 font-medium" key={head}>
+                      {head}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {movements.length > 0 ? (
+                  movements.map((movement) => (
+                    <tr
+                      className="border-t border-slate-100 bg-white transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#527B86]"
+                      key={movement.id}
+                    >
+                      <td className="px-5 py-4">
+                        <div className="font-bold text-slate-950">
+                          {movement.products?.name ?? "Unknown product"}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {movement.products?.sku ?? "No SKU"} /{" "}
+                          {movement.products?.slug ?? movement.product_id}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <Badge tone="brand">
+                          {formatMovementType(movement.movement_type)}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-4 font-semibold text-slate-700">
+                        {movement.quantity}
+                      </td>
+                      <td className="px-5 py-4 text-slate-600">
+                        {movement.previous_stock}
+                      </td>
+                      <td className="px-5 py-4 font-semibold text-slate-950">
+                        {movement.new_stock}
+                      </td>
+                      <td className="max-w-[260px] px-5 py-4 text-slate-600">
+                        {movement.note ?? "No note"}
+                      </td>
+                      <td className="px-5 py-4 text-slate-600">
+                        {formatDate(movement.created_at)}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      className="px-5 py-14 text-center text-sm text-slate-500"
+                      colSpan={7}
+                    >
+                      No inventory movements found yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
             <h2 className="text-xl font-bold text-amber-900">Smart Alerts</h2>
@@ -402,8 +510,8 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
               Today Stock Movement
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              New manual adjustments are logged. A full movement history view
-              will come later.
+              New manual adjustments are logged and shown in the recent movement
+              history table above.
             </p>
             <div className="mt-5 space-y-3">
               {[

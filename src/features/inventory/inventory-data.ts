@@ -15,6 +15,16 @@ type InventoryProductRow = Omit<
   categories: InventoryRelation | InventoryRelation[];
 };
 
+type InventoryProductSummary = {
+  name: string | null;
+  sku: string | null;
+  slug: string | null;
+} | null;
+
+type InventoryMovementRow = Omit<InventoryMovementRecord, "products"> & {
+  products: InventoryProductSummary | InventoryProductSummary[];
+};
+
 export type InventoryProductRecord = {
   id: string;
   name: string;
@@ -29,9 +39,27 @@ export type InventoryProductRecord = {
   categories: InventoryRelation;
 };
 
+export type InventoryMovementRecord = {
+  id: string;
+  product_id: string | null;
+  movement_type: string;
+  quantity: number;
+  previous_stock: number;
+  new_stock: number;
+  note: string | null;
+  created_at: string | null;
+  products: InventoryProductSummary;
+};
+
 function getSingleRelation(
   relation: InventoryRelation | InventoryRelation[],
 ): InventoryRelation {
+  return Array.isArray(relation) ? (relation[0] ?? null) : relation;
+}
+
+function getSingleProductSummary(
+  relation: InventoryProductSummary | InventoryProductSummary[],
+): InventoryProductSummary {
   return Array.isArray(relation) ? (relation[0] ?? null) : relation;
 }
 
@@ -60,6 +88,34 @@ export async function getInventoryProductsFromSupabase(): Promise<
     }));
   } catch {
     console.error("Failed to initialize inventory data source.");
+    return [];
+  }
+}
+
+export async function getRecentInventoryMovementsFromSupabase(
+  limit = 10,
+): Promise<InventoryMovementRecord[]> {
+  try {
+    const supabase = createAdminSupabaseClient();
+    const { data, error } = await supabase
+      .from("inventory_movements")
+      .select(
+        "id, product_id, movement_type, quantity, previous_stock, new_stock, note, created_at, products(name, sku, slug)",
+      )
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error("Failed to load inventory movements from Supabase.");
+      return [];
+    }
+
+    return ((data ?? []) as InventoryMovementRow[]).map((movement) => ({
+      ...movement,
+      products: getSingleProductSummary(movement.products),
+    }));
+  } catch {
+    console.error("Failed to initialize inventory movement data source.");
     return [];
   }
 }
