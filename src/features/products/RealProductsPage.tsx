@@ -15,6 +15,9 @@ const formatPrice = (price: number) =>
     minimumFractionDigits: 0,
   }).format(price);
 
+const hasAttributes = (attributes: ProductRecord["attributes"]) =>
+  Boolean(attributes && Object.keys(attributes).length > 0);
+
 async function submitProductStatus(formData: FormData) {
   "use server";
 
@@ -80,6 +83,9 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                     Status
                   </th>
                   <th className="px-4 py-3 text-left font-semibold text-slate-600">
+                    Attributes
+                  </th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-600">
                     Actions
                   </th>
                 </tr>
@@ -108,6 +114,9 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                       </td>
                       <td className="px-4 py-3 text-slate-600">
                         {product.status ?? "unknown"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        Attributes: {hasAttributes(product.attributes) ? "yes" : "no"}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex min-w-[280px] flex-wrap items-center gap-3">
@@ -160,7 +169,7 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                   <tr>
                     <td
                       className="px-4 py-8 text-center text-slate-500"
-                      colSpan={8}
+                      colSpan={9}
                     >
                       No products found.
                     </td>

@@ -12,6 +12,10 @@ type ProductRow = Omit<ProductRecord, "brands" | "categories"> & {
   categories: ProductRelation | ProductRelation[];
 };
 
+type ProductConcernRow = {
+  concern_id: string | null;
+};
+
 export type ProductRecord = {
   id: string;
   name: string;
@@ -27,6 +31,7 @@ export type ProductRecord = {
   status: string | null;
   featured: boolean | null;
   attributes: Record<string, unknown> | null;
+  concernIds: string[];
   created_at: string | null;
   updated_at: string | null;
   brands: ProductRelation;
@@ -58,6 +63,7 @@ export async function getProductsFromSupabase(): Promise<ProductRecord[]> {
       ...product,
       brands: getSingleRelation(product.brands),
       categories: getSingleRelation(product.categories),
+      concernIds: [],
     }));
   } catch {
     console.error("Failed to initialize products data source.");
@@ -87,10 +93,22 @@ export async function getProductByIdFromSupabase(
       return null;
     }
 
+    const { data: concernRows, error: concernError } = await supabase
+      .from("product_concerns")
+      .select("concern_id")
+      .eq("product_id", id);
+
+    if (concernError) {
+      console.error("Failed to load product concerns from Supabase.");
+    }
+
     return {
       ...data,
       brands: null,
       categories: null,
+      concernIds: ((concernRows ?? []) as ProductConcernRow[])
+        .map((row) => row.concern_id)
+        .filter((concernId): concernId is string => Boolean(concernId)),
     } as ProductRecord;
   } catch {
     console.error("Failed to initialize product detail data source.");

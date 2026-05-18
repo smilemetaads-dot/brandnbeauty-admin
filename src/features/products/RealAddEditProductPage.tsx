@@ -22,6 +22,21 @@ const inputClassName =
 
 const labelClassName = "text-sm font-medium text-slate-700";
 
+const attributesPlaceholder = `{
+  "skin_type": "oily",
+  "color": "gold",
+  "material": "leather",
+  "size": "medium"
+}`;
+
+function formatAttributes(attributes: ProductRecord["attributes"]) {
+  if (!attributes || Object.keys(attributes).length === 0) {
+    return "";
+  }
+
+  return JSON.stringify(attributes, null, 2);
+}
+
 export function RealAddEditProductPage({
   categories,
   concerns,
@@ -185,7 +200,8 @@ export function RealAddEditProductPage({
               >
                 <option value="draft">Draft</option>
                 <option value="active">Active</option>
-                <option value="archived">Archived</option>
+                <option value="low_stock">Low Stock</option>
+                <option value="out_of_stock">Out of Stock</option>
               </select>
             </label>
 
@@ -207,6 +223,45 @@ export function RealAddEditProductPage({
                 defaultValue={product?.short_description ?? ""}
                 name="shortDescription"
                 placeholder="Short product description"
+              />
+            </label>
+
+            <fieldset className="sm:col-span-2">
+              <legend className={labelClassName}>Concerns</legend>
+              <div className="mt-2 grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                {concerns.length > 0 ? (
+                  concerns.map((concern) => (
+                    <label
+                      className="flex items-center gap-2 text-sm font-medium text-slate-700"
+                      key={concern.id}
+                    >
+                      <input
+                        className="h-4 w-4 rounded border-slate-300 text-[#527B86]"
+                        defaultChecked={
+                          product?.concernIds.includes(concern.id) ?? false
+                        }
+                        name="concernIds"
+                        type="checkbox"
+                        value={concern.id}
+                      />
+                      {concern.name}
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    No concerns available.
+                  </p>
+                )}
+              </div>
+            </fieldset>
+
+            <label className={`${labelClassName} sm:col-span-2`}>
+              Attributes JSON
+              <textarea
+                className={`${inputClassName} min-h-40 resize-y font-mono text-xs leading-5`}
+                defaultValue={formatAttributes(product?.attributes ?? null)}
+                name="attributesJson"
+                placeholder={attributesPlaceholder}
               />
             </label>
 

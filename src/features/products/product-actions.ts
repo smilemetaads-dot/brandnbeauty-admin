@@ -9,6 +9,16 @@ export type ProductActionState = {
   message: string;
 };
 
+type AttributesParseResult =
+  | {
+      ok: true;
+      attributes: unknown;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
+
 const PRODUCT_STATUSES = ["active", "draft", "low_stock", "out_of_stock"];
 
 function getString(formData: FormData, key: string) {
@@ -62,6 +72,28 @@ function getNullableNumber(formData: FormData, key: string) {
   return Number.isNaN(numberValue) || numberValue < 0 ? null : numberValue;
 }
 
+function getStringList(formData: FormData, key: string) {
+  return formData
+    .getAll(key)
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function getAttributes(formData: FormData): AttributesParseResult {
+  const attributesJson = getString(formData, "attributesJson");
+
+  if (!attributesJson) {
+    return { ok: true, attributes: {} };
+  }
+
+  try {
+    return { ok: true, attributes: JSON.parse(attributesJson) };
+  } catch {
+    return { ok: false, message: "Attributes must be valid JSON." };
+  }
+}
+
 export async function saveProduct(
   _previousState: ProductActionState,
   formData: FormData,
@@ -72,6 +104,8 @@ export async function saveProduct(
   const price = getRequiredNumber(formData, "price");
   const stock = getRequiredInteger(formData, "stock");
   const oldPrice = getNullableNumber(formData, "oldPrice");
+  const attributesResult = getAttributes(formData);
+  const concernIds = Array.from(new Set(getStringList(formData, "concernIds")));
 
   if (!name) {
     return { ok: false, message: "Product name is required." };
@@ -93,6 +127,10 @@ export async function saveProduct(
     return { ok: false, message: "Old price must be a number of 0 or more." };
   }
 
+  if (!attributesResult.ok) {
+    return attributesResult;
+  }
+
   try {
     const supabase = createAdminSupabaseClient();
     const productValues = {
@@ -108,19 +146,67 @@ export async function saveProduct(
       short_description: getNullableString(formData, "shortDescription"),
       status: getString(formData, "status") || "draft",
       featured: formData.get("featured") === "on",
+      attributes: attributesResult.attributes,
     };
 
-    const { error } = id
-      ? await supabase.from("products").update(productValues).eq("id", id)
-      : await supabase.from("products").insert(productValues);
+    const productResult = id
+      ? await supabase
+          .from("products")
+          .update(productValues)
+          .eq("id", id)
+          .select("id")
+          .single()
+      : await supabase
+          .from("products")
+          .insert(productValues)
+          .select("id")
+          .single();
 
-    if (error) {
-      console.error("Failed to save product.", error);
+    if (productResult.error || !productResult.data?.id) {
+      console.error("Failed to save product.", productResult.error);
 
       return {
         ok: false,
         message: "Product could not be saved. Check the fields and try again.",
       };
+    }
+
+    const productId = productResult.data.id as string;
+    const { error: deleteConcernsError } = await supabase
+      .from("product_concerns")
+      .delete()
+      .eq("product_id", productId);
+
+    if (deleteConcernsError) {
+      console.error("Failed to reset product concerns.", deleteConcernsError);
+
+      return {
+        ok: false,
+        message: "Product saved, but concerns could not be updated.",
+      };
+    }
+
+    if (concernIds.length > 0) {
+      const { error: insertConcernsError } = await supabase
+        .from("product_concerns")
+        .insert(
+          concernIds.map((concernId) => ({
+            product_id: productId,
+            concern_id: concernId,
+          })),
+        );
+
+      if (insertConcernsError) {
+        console.error(
+          "Failed to insert product concerns.",
+          insertConcernsError,
+        );
+
+        return {
+          ok: false,
+          message: "Product saved, but concerns could not be updated.",
+        };
+      }
     }
 
     revalidatePath("/products");
