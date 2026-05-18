@@ -9,6 +9,7 @@ type RealInventoryPageProps = {
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
 const LOW_STOCK_THRESHOLD = 10;
+const HEALTHY_STOCK_SCALE = 50;
 
 function Badge({
   children,
@@ -74,6 +75,22 @@ function getStockTone(stock: number): BadgeTone {
   return "good";
 }
 
+function getStockLabel(stock: number) {
+  if (stock <= 0) {
+    return "Out";
+  }
+
+  if (stock <= LOW_STOCK_THRESHOLD) {
+    return "Low";
+  }
+
+  return "Healthy";
+}
+
+function getStockPercentage(stock: number) {
+  return Math.min(Math.max((stock / HEALTHY_STOCK_SCALE) * 100, 0), 100);
+}
+
 function getStatusTone(status: string | null): BadgeTone {
   if (status === "active") {
     return "good";
@@ -105,6 +122,18 @@ function formatStatus(status: string | null) {
   return status ? status.replaceAll("_", " ") : "unknown";
 }
 
+function DisabledAction({ children }: { children: React.ReactNode }) {
+  return (
+    <button
+      className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-400"
+      disabled
+      type="button"
+    >
+      {children}
+    </button>
+  );
+}
+
 export function RealInventoryPage({ products }: RealInventoryPageProps) {
   const totalSkus = products.length;
   const lowStockCount = products.filter(
@@ -115,6 +144,10 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
   const activeProductsCount = products.filter(
     (product) => product.status === "active",
   ).length;
+  const lowStockProducts = products.filter(
+    (product) => product.stock > 0 && product.stock <= LOW_STOCK_THRESHOLD,
+  );
+  const outOfStockProducts = products.filter((product) => product.stock <= 0);
 
   return (
     <AdminShell>
@@ -126,38 +159,31 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
                 Catalog Operations
               </div>
               <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
-                Inventory
+                Inventory Control Center
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                Read-only stock overview from live product records. Stock
-                adjustment and movement history will be added in later steps.
+                Clean live stock view from Supabase products with source-style
+                health badges, low-stock awareness, and future-safe operational
+                placeholders.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-400"
-                disabled
-                type="button"
-              >
-                Stock Adjustment Not Connected
-              </button>
-              <button
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-400"
-                disabled
-                type="button"
-              >
-                Movement History Later
-              </button>
+              <DisabledAction>Import CSV Not Connected</DisabledAction>
+              <DisabledAction>Add Stock Not Connected</DisabledAction>
             </div>
           </div>
-          <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-2">
+          <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-4">
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Stock adjustment:{" "}
-              <b className="text-amber-700">Not connected yet</b>
+              Read mode: <b className="text-[#527B86]">Live products</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Stock movement history:{" "}
-              <b className="text-amber-700">Will come later</b>
+              Stock adjustment: <b className="text-amber-700">Not connected</b>
+            </div>
+            <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
+              Movement history: <b className="text-amber-700">Not connected</b>
+            </div>
+            <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
+              Safety: <b className="text-emerald-700">No mutation</b>
             </div>
           </div>
         </section>
@@ -191,15 +217,40 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
             <div>
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-bold tracking-tight text-slate-950">
-                  Product Stock List
+                  Inventory Stock Directory
                 </h2>
-                <Badge tone="brand">Read Only</Badge>
+                <Badge tone="brand">Automation Ready</Badge>
               </div>
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                Ordered by lowest stock first, then product name.
+                Ordered by lowest stock first, then product name. Progress bars
+                are derived from live stock only.
               </p>
             </div>
-            <Badge tone="default">No stock mutation in this step</Badge>
+            <div className="flex flex-wrap gap-2">
+              <DisabledAction>Adjust Not Connected</DisabledAction>
+              <DisabledAction>Export Not Connected</DisabledAction>
+            </div>
+          </div>
+
+          <div className="border-b border-slate-100 p-5">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+              <div className="rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-500 xl:min-w-[320px]">
+                Search/filter UI will connect after inventory workflows are
+                built.
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  ["All", products.length, "default"],
+                  ["Healthy", products.length - lowStockCount - outOfStockCount, "good"],
+                  ["Low", lowStockCount, "warn"],
+                  ["Out", outOfStockCount, "bad"],
+                ].map(([label, count, tone]) => (
+                  <Badge key={label} tone={tone as BadgeTone}>
+                    {label}: {count}
+                  </Badge>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -212,8 +263,10 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
                     "Brand",
                     "Category",
                     "Stock",
+                    "Health",
                     "Status",
                     "Updated",
+                    "Action",
                   ].map((head) => (
                     <th className="px-5 py-4 font-medium" key={head}>
                       {head}
@@ -223,55 +276,86 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
               </thead>
               <tbody>
                 {products.length > 0 ? (
-                  products.map((product) => (
-                    <tr
-                      className="border-t border-slate-100 bg-white transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#527B86]"
-                      key={product.id}
-                    >
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#527B86]/10 text-xs font-black text-[#527B86]">
-                            {product.name.slice(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-950">
-                              {product.name}
+                  products.map((product) => {
+                    const stockPercentage = getStockPercentage(product.stock);
+                    const stockLabel = getStockLabel(product.stock);
+
+                    return (
+                      <tr
+                        className={`border-t border-slate-100 transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#527B86] ${
+                          stockLabel === "Out"
+                            ? "bg-rose-50/40"
+                            : stockLabel === "Low"
+                              ? "bg-amber-50/40"
+                              : "bg-white"
+                        }`}
+                        key={product.id}
+                      >
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#527B86]/10 text-xs font-black text-[#527B86]">
+                              {product.name.slice(0, 2).toUpperCase()}
                             </div>
-                            <div className="mt-1 text-xs text-slate-500">
-                              {product.slug} / BDT {product.price}
+                            <div>
+                              <div className="font-bold text-slate-950">
+                                {product.name}
+                              </div>
+                              <div className="mt-1 text-xs text-slate-500">
+                                {product.slug} / BDT {product.price}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-slate-600">
-                        {product.sku ?? "No SKU"}
-                      </td>
-                      <td className="px-5 py-4 text-slate-600">
-                        {product.brands?.name ?? "No brand"}
-                      </td>
-                      <td className="px-5 py-4 text-slate-600">
-                        {product.categories?.name ?? "No category"}
-                      </td>
-                      <td className="px-5 py-4">
-                        <Badge tone={getStockTone(product.stock)}>
-                          {product.stock}
-                        </Badge>
-                      </td>
-                      <td className="px-5 py-4">
-                        <Badge tone={getStatusTone(product.status)}>
-                          {formatStatus(product.status)}
-                        </Badge>
-                      </td>
-                      <td className="px-5 py-4 text-slate-600">
-                        {formatDate(product.updated_at)}
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="px-5 py-4 text-slate-600">
+                          {product.sku ?? "No SKU"}
+                        </td>
+                        <td className="px-5 py-4 text-slate-600">
+                          {product.brands?.name ?? "No brand"}
+                        </td>
+                        <td className="px-5 py-4 text-slate-600">
+                          {product.categories?.name ?? "No category"}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="font-bold text-slate-950">
+                            {product.stock}
+                          </div>
+                          <div className="mt-2 h-2 w-24 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className="h-full rounded-full bg-[#527B86]"
+                              style={{ width: `${stockPercentage}%` }}
+                            />
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <Badge tone={getStockTone(product.stock)}>
+                            {stockLabel}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-4">
+                          <Badge tone={getStatusTone(product.status)}>
+                            {formatStatus(product.status)}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-4 text-slate-600">
+                          {formatDate(product.updated_at)}
+                        </td>
+                        <td className="px-5 py-4">
+                          <button
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400"
+                            disabled
+                            type="button"
+                          >
+                            Open Later
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td
                       className="px-5 py-14 text-center text-sm text-slate-500"
-                      colSpan={7}
+                      colSpan={9}
                     >
                       No inventory products found.
                     </td>
@@ -280,6 +364,84 @@ export function RealInventoryPage({ products }: RealInventoryPageProps) {
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
+            <h2 className="text-xl font-bold text-amber-900">Smart Alerts</h2>
+            <div className="mt-4 space-y-3 text-sm text-amber-900">
+              <div className="rounded-2xl bg-white/70 p-4">
+                {lowStockCount} SKUs are at or below {LOW_STOCK_THRESHOLD}{" "}
+                units.
+                {lowStockProducts[0] ? ` Watch: ${lowStockProducts[0].name}.` : ""}
+              </div>
+              <div className="rounded-2xl bg-white/70 p-4">
+                {outOfStockCount} products are out of stock.
+                {outOfStockProducts[0]
+                  ? ` First blocked item: ${outOfStockProducts[0].name}.`
+                  : ""}
+              </div>
+              <div className="rounded-2xl bg-white/70 p-4">
+                Stock adjustment is not connected yet.
+              </div>
+              <div className="rounded-2xl bg-white/70 p-4">
+                Movement history will come after stock workflow design.
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-bold tracking-tight text-slate-950">
+              Today Stock Movement
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Movement history is intentionally disabled until the stock entry
+              workflow exists.
+            </p>
+            <div className="mt-5 space-y-3">
+              {[
+                "Stock In Not Connected",
+                "Reserved Stock Not Connected",
+                "Manual Adjustment Not Connected",
+              ].map((item) => (
+                <div className="rounded-2xl bg-stone-50 p-4 text-sm" key={item}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-semibold text-slate-900">{item}</span>
+                    <Badge tone="default">Later</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:col-span-2 xl:col-span-1">
+            <h2 className="text-xl font-bold tracking-tight text-slate-950">
+              Quick Actions
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Source actions are visible as disabled placeholders only.
+            </p>
+            <div className="mt-5 space-y-3">
+              {[
+                "Add Stock Not Connected",
+                "Stock Adjustment Not Connected",
+                "Bulk Update Not Connected",
+                "Export Report Not Connected",
+              ].map((item) => (
+                <button
+                  className="flex w-full items-center justify-between rounded-2xl bg-stone-50 p-4 text-left text-sm font-semibold text-slate-400"
+                  disabled
+                  key={item}
+                  type="button"
+                >
+                  <span>{item}</span>
+                  <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-slate-400">
+                    Not Connected
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
         </section>
       </div>
     </AdminShell>
