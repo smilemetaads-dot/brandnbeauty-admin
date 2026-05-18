@@ -9,6 +9,8 @@ export type ProductActionState = {
   message: string;
 };
 
+const PRODUCT_STATUSES = ["active", "draft", "low_stock", "out_of_stock"];
+
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
 
@@ -136,6 +138,49 @@ export async function saveProduct(
     return {
       ok: false,
       message: "Product could not be saved right now. Try again shortly.",
+    };
+  }
+}
+
+export async function updateProductStatus(
+  formData: FormData,
+): Promise<ProductActionState> {
+  const id = getString(formData, "id");
+  const status = getString(formData, "status");
+
+  if (!id) {
+    return { ok: false, message: "Product ID is required." };
+  }
+
+  if (!PRODUCT_STATUSES.includes(status)) {
+    return { ok: false, message: "Choose a valid product status." };
+  }
+
+  try {
+    const supabase = createAdminSupabaseClient();
+    const { error } = await supabase
+      .from("products")
+      .update({ status })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Failed to update product status.", error);
+
+      return {
+        ok: false,
+        message: "Product status could not be updated. Try again.",
+      };
+    }
+
+    revalidatePath("/products");
+
+    return { ok: true, message: "Product status updated." };
+  } catch (error) {
+    console.error("Failed to initialize product status action.", error);
+
+    return {
+      ok: false,
+      message: "Product status could not be updated right now.",
     };
   }
 }

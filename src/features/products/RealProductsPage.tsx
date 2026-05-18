@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 
+import { updateProductStatus } from "./product-actions";
 import type { ProductRecord } from "./products-data";
 
 type RealProductsPageProps = {
@@ -13,6 +14,12 @@ const formatPrice = (price: number) =>
     maximumFractionDigits: 2,
     minimumFractionDigits: 0,
   }).format(price);
+
+async function submitProductStatus(formData: FormData) {
+  "use server";
+
+  await updateProductStatus(formData);
+}
 
 export function RealProductsPage({ products }: RealProductsPageProps) {
   return (
@@ -38,6 +45,15 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
         </section>
 
         <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <div className="border-b border-slate-200 px-4 py-4 sm:px-5">
+            <h2 className="text-base font-semibold text-slate-950">
+              Status Control / Archive Safe
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Products are not deleted; use Draft or Out of Stock to
+              hide/disable later.
+            </p>
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
@@ -94,12 +110,49 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                         {product.status ?? "unknown"}
                       </td>
                       <td className="px-4 py-3">
-                        <Link
-                          className="font-semibold text-[#527B86] hover:text-slate-950"
-                          href={`/products/edit?id=${product.id}`}
-                        >
-                          Edit
-                        </Link>
+                        <div className="flex min-w-[280px] flex-wrap items-center gap-3">
+                          <Link
+                            className="font-semibold text-[#527B86] hover:text-slate-950"
+                            href={`/products/edit?id=${product.id}`}
+                          >
+                            Edit
+                          </Link>
+                          <form
+                            action={submitProductStatus}
+                            className="flex items-center gap-2"
+                          >
+                            <input
+                              name="id"
+                              type="hidden"
+                              value={product.id}
+                            />
+                            <label
+                              className="sr-only"
+                              htmlFor={`status-${product.id}`}
+                            >
+                              Product status
+                            </label>
+                            <select
+                              className="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 shadow-sm outline-none transition focus:border-[#527B86] focus:ring-2 focus:ring-[#527B86]/20"
+                              defaultValue={product.status ?? "draft"}
+                              id={`status-${product.id}`}
+                              name="status"
+                            >
+                              <option value="active">Active</option>
+                              <option value="draft">Draft</option>
+                              <option value="low_stock">Low Stock</option>
+                              <option value="out_of_stock">
+                                Out of Stock
+                              </option>
+                            </select>
+                            <button
+                              className="rounded-md bg-[#527B86] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-950"
+                              type="submit"
+                            >
+                              Update
+                            </button>
+                          </form>
+                        </div>
                       </td>
                     </tr>
                   ))
