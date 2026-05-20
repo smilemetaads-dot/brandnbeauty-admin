@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 
+import { OrderDocumentsPreview } from "./OrderDocumentsPreview";
 import { OrderStatusForm } from "./OrderStatusForm";
 import type { OrderDetailsRecord } from "./orders-data";
 
@@ -497,6 +498,8 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
                 </div>
               )}
             </section>
+
+            <OrderDocumentsPreview order={order} />
 
             <Card
               action={<Badge tone="brand">Live</Badge>}
