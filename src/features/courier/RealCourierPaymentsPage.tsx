@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 
+import { MarkCourierSentForm } from "./MarkCourierSentForm";
 import type { CourierPaymentOrderRecord } from "./courier-data";
 
 type RealCourierPaymentsPageProps = {
@@ -448,13 +449,20 @@ export function RealCourierPaymentsPage({
                           ) : null}
                         </td>
                         <td className="px-5 py-4">
-                          <div className="flex min-w-[130px] flex-col gap-2">
+                          <div className="flex min-w-[220px] flex-col gap-2">
                             <Link
                               className="rounded-xl bg-[#527B86]/10 px-3 py-2 text-center text-xs font-bold text-[#527B86] transition hover:bg-[#527B86] hover:text-white"
                               href={`/orders/details?id=${order.id}`}
                             >
                               Open
                             </Link>
+                            <MarkCourierSentForm
+                              currentCourierName={order.courier_name}
+                              currentCourierNote={order.courier_note}
+                              currentOrderStatus={order.order_status}
+                              currentTrackingId={order.courier_tracking_id}
+                              orderId={order.id}
+                            />
                             <DisabledButton small>Sync N/C</DisabledButton>
                           </div>
                         </td>
