@@ -9,9 +9,20 @@ export type MarkCourierSentActionState = {
   message: string;
 };
 
+export type MarkDeliveredCodPaidActionState = {
+  ok: boolean;
+  message: string;
+};
+
 type CourierOrderStatusRow = {
   order_status: string;
   shipped_at: string | null;
+};
+
+type DeliveredCodPaidOrderRow = {
+  delivered_at: string | null;
+  order_status: string;
+  total: number;
 };
 
 type CourierSentUpdatePayload = {
@@ -21,6 +32,15 @@ type CourierSentUpdatePayload = {
   courier_tracking_id: string | null;
   order_status?: "shipped";
   shipped_at?: string;
+};
+
+type DeliveredCodPaidUpdatePayload = {
+  courier_status: "delivered";
+  delivered_at?: string;
+  due_amount: number;
+  order_status: "delivered";
+  paid_amount: number;
+  payment_status: "paid";
 };
 
 function getString(formData: FormData, key: string) {
@@ -34,6 +54,14 @@ function revalidateCourierPaths() {
   revalidatePath("/orders");
   revalidatePath("/orders/details");
   revalidatePath("/packing");
+}
+
+function revalidateDeliveredCodPaidPaths() {
+  revalidatePath("/courier");
+  revalidatePath("/orders");
+  revalidatePath("/orders/details");
+  revalidatePath("/inventory");
+  revalidatePath("/products");
 }
 
 export async function markCourierSent(
@@ -120,6 +148,85 @@ export async function markCourierSent(
       ok: false,
       message:
         "Order could not be marked sent to courier right now. Try again shortly.",
+    };
+  }
+}
+
+export async function markOrderDeliveredCodPaid(
+  _previousState: MarkDeliveredCodPaidActionState,
+  formData: FormData,
+): Promise<MarkDeliveredCodPaidActionState> {
+  const orderId = getString(formData, "orderId");
+
+  if (!orderId) {
+    return { ok: false, message: "Order is required." };
+  }
+
+  try {
+    const supabase = createAdminSupabaseClient();
+    const { data: order, error: loadError } = await supabase
+      .from("orders")
+      .select("order_status, total, delivered_at")
+      .eq("id", orderId)
+      .maybeSingle<DeliveredCodPaidOrderRow>();
+
+    if (loadError || !order) {
+      console.error("Failed to load delivery order.", loadError);
+
+      return {
+        ok: false,
+        message: "Order could not be loaded. Try again.",
+      };
+    }
+
+    if (order.order_status === "delivered") {
+      return { ok: true, message: "Order already delivered." };
+    }
+
+    if (order.order_status !== "shipped") {
+      return {
+        ok: false,
+        message: "Only shipped orders can be marked delivered.",
+      };
+    }
+
+    const payload: DeliveredCodPaidUpdatePayload = {
+      order_status: "delivered",
+      courier_status: "delivered",
+      payment_status: "paid",
+      paid_amount: order.total,
+      due_amount: 0,
+    };
+
+    if (!order.delivered_at) {
+      payload.delivered_at = new Date().toISOString();
+    }
+
+    const { error: updateError } = await supabase
+      .from("orders")
+      .update(payload)
+      .eq("id", orderId);
+
+    if (updateError) {
+      console.error("Failed to mark order delivered and COD paid.", updateError);
+
+      return {
+        ok: false,
+        message:
+          "Order could not be marked delivered and COD paid. Try again.",
+      };
+    }
+
+    revalidateDeliveredCodPaidPaths();
+
+    return { ok: true, message: "Order marked delivered and COD paid." };
+  } catch (error) {
+    console.error("Failed to mark order delivered and COD paid.", error);
+
+    return {
+      ok: false,
+      message:
+        "Order could not be marked delivered and COD paid right now. Try again shortly.",
     };
   }
 }

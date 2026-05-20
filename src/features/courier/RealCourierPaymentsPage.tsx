@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 
 import { MarkCourierSentForm } from "./MarkCourierSentForm";
+import { MarkDeliveredCodPaidButton } from "./MarkDeliveredCodPaidButton";
 import type { CourierPaymentOrderRecord } from "./courier-data";
 
 type RealCourierPaymentsPageProps = {
@@ -461,6 +462,10 @@ export function RealCourierPaymentsPage({
                               currentCourierNote={order.courier_note}
                               currentOrderStatus={order.order_status}
                               currentTrackingId={order.courier_tracking_id}
+                              orderId={order.id}
+                            />
+                            <MarkDeliveredCodPaidButton
+                              currentOrderStatus={order.order_status}
                               orderId={order.id}
                             />
                             <DisabledButton small>Sync N/C</DisabledButton>
