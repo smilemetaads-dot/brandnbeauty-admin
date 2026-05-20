@@ -1,45 +1,38 @@
+import Link from "next/link";
+import type { ReactNode } from "react";
+
 import { AdminShell } from "@/components/admin/AdminShell";
+import { getDashboardSummaryFromSupabase } from "@/features/dashboard/dashboard-data";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
-const priorityItems = [
-  ["Connect live orders module", "Orders", "Not Connected"],
-  ["Connect inventory alerts", "Inventory", "Not Connected"],
-  ["Connect courier settlement", "Courier", "Not Connected"],
-  ["Connect finance reconciliation", "Finance", "Not Connected"],
+type KpiCardProps = {
+  helper: string;
+  label: string;
+  tone?: BadgeTone;
+  value: ReactNode;
+};
+
+const quickLinks = [
+  ["Products", "/products", "Catalog list and editor"],
+  ["Inventory", "/inventory", "Stock and movement history"],
+  ["Orders", "/orders", "Live order command center"],
+  ["Packing Desk", "/packing", "Ready-to-pack operations"],
+  ["Courier & Payments", "/courier", "Courier and COD queue"],
 ];
 
-const recentOrders = [
-  ["Setup preview", "Orders module", "BDT --", "Not connected", "Preview"],
-  ["Setup preview", "Courier module", "BDT --", "Not connected", "Preview"],
-  ["Setup preview", "Finance module", "BDT --", "Not connected", "Preview"],
-  ["Setup preview", "Inventory module", "BDT --", "Not connected", "Preview"],
-];
-
-const lowStock = [
-  ["Inventory alerts", "Not connected", "Live stock rules come later"],
-  ["Purchase stock entry", "Not connected", "Supplier flow comes later"],
-  ["Out of stock blocking", "Not connected", "Product status exists first"],
-];
-
-const topProducts = [
-  ["Products module", "Live catalog list connected", "Ready"],
-  ["Product editor", "Create/update flow connected", "Ready"],
-  ["Product status", "Archive-safe status flow connected", "Ready"],
-];
-
-const health = [
-  ["Catalog Foundation", "96%", "Products, categories, concerns and brands connected"],
-  ["Order Flow", "18%", "Orders module is a future live connection"],
-  ["Stock Health", "32%", "Inventory module is a future live connection"],
-  ["Finance Match", "12%", "Finance module is a future live connection"],
+const disabledActions = [
+  "Print Invoices",
+  "Bulk Courier Upload",
+  "Payment Gateway Sync",
+  "Advanced COD Settlement",
 ];
 
 function Badge({
   children,
   tone = "default",
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   tone?: BadgeTone;
 }) {
   const className = {
@@ -59,56 +52,34 @@ function Badge({
   );
 }
 
-function ChartCard() {
-  const values = [42, 56, 61, 48, 72, 66, 58];
-  const max = Math.max(...values);
+function KpiCard({ helper, label, tone = "brand", value }: KpiCardProps) {
+  const helperClassName = {
+    brand: "bg-[#527B86]/10 text-[#527B86]",
+    good: "bg-emerald-50 text-emerald-700",
+    warn: "bg-amber-50 text-amber-700",
+    bad: "bg-rose-50 text-rose-700",
+    default: "bg-stone-50 text-slate-600",
+  }[tone];
 
   return (
-    <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <div className="text-sm font-medium text-slate-500">
-            Sales Trend
-          </div>
-          <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-            Weekly Revenue Preview
-          </h2>
-        </div>
-        <Badge tone="brand">Setup Preview</Badge>
+    <section className="rounded-[1.7rem] border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="text-sm font-medium text-slate-500">{label}</div>
+      <div className="mt-3 text-2xl font-black tracking-tight text-slate-950">
+        {value}
       </div>
-      <div className="mt-6 flex h-72 items-end gap-4 overflow-x-auto rounded-3xl bg-stone-50 p-5">
-        {values.map((value, index) => (
-          <div
-            className="flex min-w-[70px] flex-1 flex-col items-center gap-3"
-            key={index}
-          >
-            <div className="text-xs font-semibold text-slate-500">
-              BDT {value}k
-            </div>
-            <div className="flex h-48 w-full items-end justify-center rounded-2xl bg-white p-2">
-              <div
-                className="w-8 rounded-2xl bg-[#527B86]"
-                style={{ height: `${(value / max) * 100}%` }}
-              />
-            </div>
-            <div className="text-xs text-slate-500">
-              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index]}
-            </div>
-          </div>
-        ))}
+      <div
+        className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-bold ${helperClassName}`}
+      >
+        {helper}
       </div>
-      <p className="mt-4 text-xs font-semibold text-slate-500">
-        Static setup preview only. Live order and finance analytics are not
-        connected yet.
-      </p>
     </section>
   );
 }
 
-function DisabledQuickAction({ children }: { children: React.ReactNode }) {
+function DisabledQuickAction({ children }: { children: ReactNode }) {
   return (
     <button
-      className="group flex w-full items-center justify-between rounded-2xl bg-stone-50 p-4 text-left text-sm font-semibold text-slate-400"
+      className="flex w-full items-center justify-between rounded-2xl bg-stone-50 p-4 text-left text-sm font-semibold text-slate-400"
       disabled
       type="button"
     >
@@ -120,7 +91,33 @@ function DisabledQuickAction({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function Home() {
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("en-BD", {
+    currency: "BDT",
+    maximumFractionDigits: 0,
+    style: "currency",
+  }).format(value);
+}
+
+function formatStatus(value: string) {
+  return value.replaceAll("_", " ");
+}
+
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const summary = await getDashboardSummaryFromSupabase();
+  const flowItems = [
+    ["Orders", summary.totalOrders, `${summary.newOrders} new`],
+    ["Packing", summary.packingQueue, `${summary.packedOrders} packed`],
+    ["Courier", summary.courierQueue, `${summary.shippedOrders} shipped`],
+    [
+      "Delivery/Return",
+      summary.deliveredOrders + summary.returnedOrders,
+      `${summary.deliveredOrders} delivered / ${summary.returnedOrders} returned`,
+    ],
+  ];
+
   return (
     <AdminShell>
       <div className="space-y-6">
@@ -135,57 +132,128 @@ export default function Home() {
                   Admin Command Dashboard
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-white/85">
-                  A clean summary-only control room for the Zero Start admin
-                  build. Detailed work stays inside the catalog, orders,
-                  inventory, courier and finance modules as they come online.
+                  Live operations snapshot for catalog, orders, inventory,
+                  packing, courier, COD, and stock movement workflows.
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl bg-white/15 px-4 py-3 backdrop-blur">
-                  <div className="text-xs text-white/70">Today Focus</div>
-                  <div className="mt-1 text-lg font-black">Catalog Polish</div>
+                  <div className="text-xs text-white/70">Orders</div>
+                  <div className="mt-1 text-lg font-black">
+                    {summary.totalOrders}
+                  </div>
                 </div>
                 <div className="rounded-2xl bg-white/15 px-4 py-3 backdrop-blur">
-                  <div className="text-xs text-white/70">Dispatch</div>
-                  <div className="mt-1 text-lg font-black">Not Connected</div>
+                  <div className="text-xs text-white/70">Products</div>
+                  <div className="mt-1 text-lg font-black">
+                    {summary.totalProducts}
+                  </div>
                 </div>
                 <div className="rounded-2xl bg-white/15 px-4 py-3 backdrop-blur">
-                  <div className="text-xs text-white/70">Profit</div>
-                  <div className="mt-1 text-lg font-black">Not Connected</div>
+                  <div className="text-xs text-white/70">COD Due</div>
+                  <div className="mt-1 text-lg font-black">
+                    {formatMoney(summary.codDue)}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <ChartCard />
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <KpiCard
+            helper={`${summary.newOrders} new`}
+            label="Total Orders"
+            value={summary.totalOrders}
+          />
+          <KpiCard
+            helper="Confirmed to packed"
+            label="Packing Queue"
+            tone="warn"
+            value={summary.packingQueue}
+          />
+          <KpiCard
+            helper="Packed, shipped, courier-active"
+            label="Courier Queue"
+            value={summary.courierQueue}
+          />
+          <KpiCard
+            helper="Open customer balance"
+            label="COD Due"
+            tone={summary.codDue > 0 ? "warn" : "good"}
+            value={formatMoney(summary.codDue)}
+          />
+          <KpiCard
+            helper={`${summary.outOfStockProducts} out of stock`}
+            label="Low Stock"
+            tone={
+              summary.lowStockProducts || summary.outOfStockProducts
+                ? "bad"
+                : "good"
+            }
+            value={`${summary.lowStockProducts} / ${summary.outOfStockProducts}`}
+          />
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[1fr_390px]">
           <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium text-slate-500">
-                  Action Priority
+                  Operations Flow
                 </div>
                 <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                  Today Must Do
+                  Orders to Delivery
                 </h2>
               </div>
-              <Badge tone="warn">Setup Preview</Badge>
+              <Badge tone="good">Live Summary</Badge>
             </div>
-            <div className="mt-5 space-y-3">
-              {priorityItems.map(([title, sub, level]) => (
+            <div className="mt-6 grid gap-3 md:grid-cols-4">
+              {flowItems.map(([label, count, helper]) => (
                 <div
-                  className="flex items-center justify-between gap-4 rounded-2xl bg-stone-50 px-4 py-4 text-sm"
-                  key={title}
+                  className="rounded-2xl border border-slate-200 bg-stone-50 p-4"
+                  key={label}
                 >
-                  <div>
-                    <div className="font-bold text-slate-950">{title}</div>
-                    <div className="mt-1 text-xs font-semibold text-slate-500">
-                      {sub}
-                    </div>
+                  <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                    {label}
                   </div>
-                  <Badge tone="default">{level}</Badge>
+                  <div className="mt-3 text-3xl font-black text-slate-950">
+                    {count}
+                  </div>
+                  <div className="mt-2 text-xs font-semibold text-slate-500">
+                    {helper}
+                  </div>
                 </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="text-sm font-medium text-slate-500">
+              Quick Links
+            </div>
+            <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
+              Open Live Modules
+            </h2>
+            <div className="mt-5 space-y-3">
+              {quickLinks.map(([label, href, helper]) => (
+                <Link
+                  className="flex items-center justify-between gap-4 rounded-2xl bg-stone-50 px-4 py-3 text-sm transition hover:bg-[#527B86]/10"
+                  href={href}
+                  key={href}
+                >
+                  <span>
+                    <span className="block font-bold text-slate-950">
+                      {label}
+                    </span>
+                    <span className="mt-1 block text-xs font-semibold text-slate-500">
+                      {helper}
+                    </span>
+                  </span>
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#527B86]">
+                    Open
+                  </span>
+                </Link>
               ))}
             </div>
           </section>
@@ -196,160 +264,111 @@ export default function Home() {
             <div className="flex items-center justify-between gap-4 border-b border-slate-100 p-6">
               <div>
                 <div className="text-sm font-medium text-slate-500">
-                  Operations
+                  Recent Activity
                 </div>
                 <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                  Recent Orders Preview
+                  Inventory Movements
                 </h2>
               </div>
-              <Badge tone="default">Demo Setup Data</Badge>
+              <Badge tone="brand">Latest 5</Badge>
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="sticky top-0 z-10 bg-stone-50 text-slate-500">
-                  <tr>
-                    {["Record", "Module", "Amount", "Status", "Action"].map(
-                      (head) => (
-                        <th className="px-5 py-4 font-medium" key={head}>
-                          {head}
-                        </th>
-                      ),
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentOrders.map((row) => (
-                    <tr
-                      className="border-t border-slate-100 bg-white transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#527B86]"
-                      key={`${row[0]}-${row[1]}`}
-                    >
-                      <td className="px-5 py-4 font-bold text-slate-950">
-                        {row[0]}
-                      </td>
-                      <td className="px-5 py-4 text-slate-600">{row[1]}</td>
-                      <td className="px-5 py-4 font-semibold text-slate-700">
-                        {row[2]}
-                      </td>
-                      <td className="px-5 py-4">
-                        <Badge tone="default">{row[3]}</Badge>
-                      </td>
-                      <td className="px-5 py-4">
-                        <button
-                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400"
-                          disabled
-                          type="button"
-                        >
-                          {row[4]}
-                        </button>
-                      </td>
+            {summary.latestInventoryMovements.length ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-stone-50 text-slate-500">
+                    <tr>
+                      {["Product", "Movement", "Quantity", "Stock"].map(
+                        (heading) => (
+                          <th className="px-5 py-4 font-medium" key={heading}>
+                            {heading}
+                          </th>
+                        ),
+                      )}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {summary.latestInventoryMovements.map((movement) => (
+                      <tr
+                        className="border-t border-slate-100 transition hover:bg-stone-50"
+                        key={movement.id}
+                      >
+                        <td className="px-5 py-4">
+                          <div className="font-bold text-slate-950">
+                            {movement.product_name ?? "Unknown product"}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            {movement.product_sku ?? "No SKU"}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <Badge tone="default">
+                            {formatStatus(movement.movement_type)}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-4 font-bold text-slate-800">
+                          {movement.quantity}
+                        </td>
+                        <td className="px-5 py-4 text-slate-600">
+                          {movement.previous_stock} to {movement.new_stock}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="px-6 py-12 text-sm font-semibold text-slate-500">
+                No inventory movement rows found yet.
+              </div>
+            )}
           </section>
 
           <div className="space-y-6">
             <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
               <div className="text-sm font-medium text-slate-500">
-                Business Health
+                Inventory Watch
               </div>
               <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                Snapshot
+                Stock Health
               </h2>
-              <div className="mt-5 space-y-4">
-                {health.map(([label, value, note]) => (
-                  <div key={label}>
-                    <div className="mb-2 flex justify-between text-xs font-bold text-slate-500">
-                      <span>{label}</span>
-                      <span>{value}</span>
-                    </div>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-stone-100">
-                      <div
-                        className="h-full rounded-full bg-[#527B86]"
-                        style={{ width: value }}
-                      />
-                    </div>
-                    <div className="mt-1 text-xs text-slate-500">{note}</div>
-                  </div>
+              <div className="mt-5 space-y-3 text-sm">
+                <div className="flex justify-between rounded-2xl bg-stone-50 px-4 py-3">
+                  <span className="font-semibold text-slate-500">
+                    Total products
+                  </span>
+                  <b>{summary.totalProducts}</b>
+                </div>
+                <div className="flex justify-between rounded-2xl bg-amber-50 px-4 py-3">
+                  <span className="font-semibold text-amber-700">
+                    Low stock
+                  </span>
+                  <b className="text-amber-700">{summary.lowStockProducts}</b>
+                </div>
+                <div className="flex justify-between rounded-2xl bg-rose-50 px-4 py-3">
+                  <span className="font-semibold text-rose-700">
+                    Out of stock
+                  </span>
+                  <b className="text-rose-700">
+                    {summary.outOfStockProducts}
+                  </b>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="text-sm font-medium text-slate-500">
+                Quick Actions
+              </div>
+              <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
+                Still Not Connected
+              </h2>
+              <div className="mt-5 space-y-3">
+                {disabledActions.map((item) => (
+                  <DisabledQuickAction key={item}>{item}</DisabledQuickAction>
                 ))}
               </div>
             </section>
-
-            <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
-              <div className="text-sm font-bold text-amber-800">ERP Note</div>
-              <div className="mt-2 text-sm leading-6 text-amber-700">
-                Dashboard stays summary-only. Detailed actions will happen
-                later inside Orders, Inventory, Courier and Finance pages.
-              </div>
-            </section>
           </div>
-        </section>
-
-        <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="text-sm font-medium text-slate-500">
-              Low Stock Alert
-            </div>
-            <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-              Restock Watch
-            </h2>
-            <div className="mt-5 space-y-3">
-              {lowStock.map(([name, qty, note]) => (
-                <div className="rounded-2xl bg-stone-50 px-4 py-3 text-sm" key={name}>
-                  <div className="flex items-center justify-between gap-3">
-                    <b className="text-slate-950">{name}</b>
-                    <span className="font-bold text-amber-700">{qty}</span>
-                  </div>
-                  <div className="mt-1 text-xs text-slate-500">{note}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="text-sm font-medium text-slate-500">
-              Top Products
-            </div>
-            <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-              Catalog Winners
-            </h2>
-            <div className="mt-5 space-y-3">
-              {topProducts.map(([name, detail, status], index) => (
-                <div
-                  className="flex items-center justify-between rounded-2xl bg-stone-50 px-4 py-3 text-sm"
-                  key={name}
-                >
-                  <div>
-                    <div className="font-bold text-slate-950">
-                      #{index + 1} {name}
-                    </div>
-                    <div className="mt-1 text-xs text-slate-500">{detail}</div>
-                  </div>
-                  <b className="text-[#527B86]">{status}</b>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:col-span-2 xl:col-span-1">
-            <div className="text-sm font-medium text-slate-500">
-              Quick Actions
-            </div>
-            <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-              Control Shortcuts
-            </h2>
-            <div className="mt-5 space-y-3">
-              {[
-                "Confirm Orders",
-                "Print Invoices",
-                "Send Courier",
-                "Create Purchase Entry",
-              ].map((item) => (
-                <DisabledQuickAction key={item}>{item}</DisabledQuickAction>
-              ))}
-            </div>
-          </section>
         </section>
       </div>
     </AdminShell>
