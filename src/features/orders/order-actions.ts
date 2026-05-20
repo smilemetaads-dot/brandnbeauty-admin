@@ -38,6 +38,12 @@ const COURIER_STATUSES = [
   "failed",
 ] as const;
 
+const STOCK_DEDUCTION_ORDER_STATUSES = [
+  "confirmed",
+  "processing",
+  "ready_to_pack",
+] as const;
+
 type OrderStatus = (typeof ORDER_STATUSES)[number];
 type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 type CourierStatus = (typeof COURIER_STATUSES)[number];
@@ -63,6 +69,11 @@ type OrderStatusUpdatePayload = {
   cancelled_at?: string;
 };
 
+type StockDeductionResult = {
+  ok?: boolean;
+  message?: string;
+};
+
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
 
@@ -79,6 +90,49 @@ function isPaymentStatus(value: string): value is PaymentStatus {
 
 function isCourierStatus(value: string): value is CourierStatus {
   return COURIER_STATUSES.includes(value as CourierStatus);
+}
+
+function shouldDeductStock(orderStatus: OrderStatus) {
+  return STOCK_DEDUCTION_ORDER_STATUSES.includes(
+    orderStatus as (typeof STOCK_DEDUCTION_ORDER_STATUSES)[number],
+  );
+}
+
+function getSafeStockDeductionErrorMessage(errorMessage: string | undefined) {
+  if (!errorMessage) {
+    return "Stock deduction could not be completed.";
+  }
+
+  if (errorMessage.includes("Insufficient stock")) {
+    return errorMessage;
+  }
+
+  if (
+    errorMessage === "Order not found." ||
+    errorMessage === "Order has no items to deduct." ||
+    errorMessage ===
+      "Every order item must have a product before stock can be deducted." ||
+    errorMessage === "One or more order products could not be found."
+  ) {
+    return errorMessage;
+  }
+
+  return "Stock deduction could not be completed.";
+}
+
+function getStockDeductionMessage(data: StockDeductionResult | null) {
+  if (data?.message === "Stock already deducted.") {
+    return "Stock already deducted.";
+  }
+
+  return "Stock deducted successfully.";
+}
+
+function revalidateOrderStatusPaths() {
+  revalidatePath("/orders");
+  revalidatePath("/orders/details");
+  revalidatePath("/inventory");
+  revalidatePath("/products");
 }
 
 function addStatusTimestamp(
@@ -186,8 +240,36 @@ export async function updateOrderStatuses(
       };
     }
 
-    revalidatePath("/orders");
-    revalidatePath("/orders/details");
+    if (shouldDeductStock(orderStatus)) {
+      const { data: stockResult, error: stockError } = await supabase.rpc(
+        "deduct_order_stock",
+        { p_order_id: orderId },
+      );
+
+      revalidateOrderStatusPaths();
+
+      if (stockError) {
+        console.error("Failed to deduct order stock.", stockError);
+
+        const safeMessage = getSafeStockDeductionErrorMessage(
+          stockError.message,
+        );
+
+        return {
+          ok: false,
+          message: `Order status updated, but stock deduction failed: ${safeMessage}`,
+        };
+      }
+
+      return {
+        ok: true,
+        message: `Order status updated successfully. ${getStockDeductionMessage(
+          stockResult as StockDeductionResult | null,
+        )}`,
+      };
+    }
+
+    revalidateOrderStatusPaths();
 
     return { ok: true, message: "Order status updated successfully." };
   } catch (error) {
