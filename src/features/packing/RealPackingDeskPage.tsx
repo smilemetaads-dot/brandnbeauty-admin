@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 
+import { MarkPackedButton } from "./MarkPackedButton";
 import type { PackingOrderRecord } from "./packing-data";
 
 type RealPackingDeskPageProps = {
@@ -395,7 +396,10 @@ export function RealPackingDeskPage({ orders }: RealPackingDeskPageProps) {
 
                     <div className="mt-auto grid gap-3 pt-5 sm:grid-cols-2">
                       <DisabledButton>Print Slip N/C</DisabledButton>
-                      <DisabledButton primary>Mark Packed N/C</DisabledButton>
+                      <MarkPackedButton
+                        currentStatus={order.order_status}
+                        orderId={order.id}
+                      />
                       <Link
                         className="rounded-2xl border border-[#527B86]/30 bg-[#527B86]/10 px-4 py-3 text-center text-sm font-bold text-[#527B86] transition hover:bg-[#527B86] hover:text-white sm:col-span-2"
                         href={`/orders/details?id=${order.id}`}
