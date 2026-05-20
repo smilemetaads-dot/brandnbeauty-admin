@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 
+import { OrderStatusForm } from "./OrderStatusForm";
 import type { OrderDetailsRecord } from "./orders-data";
 
 type RealOrderDetailsPageProps = {
@@ -342,16 +343,13 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
                 {formatStatus(order.payment_status)}
               </div>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-                Live read-only order details. Status updates, courier actions,
-                stock deduction, and hard delete are not connected.
+                Live order details with controlled status updates. Courier
+                actions, stock deduction, and hard delete are not connected.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <DisabledButton>Print Invoice · Not Connected</DisabledButton>
               <DisabledButton tone="good">WhatsApp · Not Connected</DisabledButton>
-              <DisabledButton tone="brand">
-                Confirm / Update · Not Connected
-              </DisabledButton>
             </div>
           </div>
         </section>
@@ -575,31 +573,19 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
                   Next Step
                 </div>
                 <div className="mt-1 text-sm font-semibold text-slate-800">
-                  Review order details before operational actions are connected.
+                  Update order, payment, and courier status safely.
                 </div>
                 <div className="mt-1 text-xs text-slate-500">
-                  Mutations, courier send, stock deduction, and cancellation are
-                  intentionally unavailable.
+                  Stock deduction, courier send, and cancellation are
+                  intentionally unavailable in this step.
                 </div>
               </div>
-              <div className="mt-4 grid gap-3">
-                <label
-                  className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400"
-                  htmlFor="order-status-preview"
-                >
-                  Change Status
-                </label>
-                <select
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-500 outline-none"
-                  defaultValue={order.order_status}
-                  disabled
-                  id="order-status-preview"
-                >
-                  <option value={order.order_status}>
-                    {formatStatus(order.order_status)} · Not Connected
-                  </option>
-                </select>
-              </div>
+              <OrderStatusForm
+                courierStatus={order.courier_status}
+                orderId={order.id}
+                orderStatus={order.order_status}
+                paymentStatus={order.payment_status}
+              />
               <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 <DisabledButton>Call Customer · Not Connected</DisabledButton>
                 <DisabledButton tone="good">
