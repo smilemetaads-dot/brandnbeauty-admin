@@ -14,6 +14,11 @@ export type MarkDeliveredCodPaidActionState = {
   message: string;
 };
 
+export type MarkReturnedActionState = {
+  ok: boolean;
+  message: string;
+};
+
 type CourierOrderStatusRow = {
   order_status: string;
   shipped_at: string | null;
@@ -23,6 +28,15 @@ type DeliveredCodPaidOrderRow = {
   delivered_at: string | null;
   order_status: string;
   total: number;
+};
+
+type ReturnedOrderRow = {
+  courier_note: string | null;
+  due_amount: number;
+  order_status: string;
+  paid_amount: number;
+  payment_status: string;
+  returned_at: string | null;
 };
 
 type CourierSentUpdatePayload = {
@@ -41,6 +55,19 @@ type DeliveredCodPaidUpdatePayload = {
   order_status: "delivered";
   paid_amount: number;
   payment_status: "paid";
+};
+
+type ReturnedUpdatePayload = {
+  courier_note?: string;
+  courier_status: "returned";
+  order_status: "returned";
+  payment_status?: "failed";
+  returned_at?: string;
+};
+
+type StockRestoreRpcResult = {
+  message?: string;
+  ok?: boolean;
 };
 
 function getString(formData: FormData, key: string) {
@@ -62,6 +89,41 @@ function revalidateDeliveredCodPaidPaths() {
   revalidatePath("/orders/details");
   revalidatePath("/inventory");
   revalidatePath("/products");
+}
+
+function getSafeStockRestoreMessage(data: unknown) {
+  const message =
+    data && typeof data === "object" && "message" in data
+      ? (data as StockRestoreRpcResult).message
+      : null;
+
+  if (message === "Stock restored successfully.") {
+    return "Stock restored successfully.";
+  }
+
+  if (message === "Stock already restored.") {
+    return "Stock already restored.";
+  }
+
+  if (message === "Stock was not deducted for this order.") {
+    return "Stock was not deducted for this order.";
+  }
+
+  return "Stock restoration completed.";
+}
+
+function getReturnedNote(currentNote: string | null, returnNote: string) {
+  if (!returnNote) {
+    return undefined;
+  }
+
+  const stampedNote = `Return note: ${returnNote}`;
+
+  if (!currentNote) {
+    return stampedNote;
+  }
+
+  return `${currentNote}\n${stampedNote}`;
 }
 
 export async function markCourierSent(
@@ -148,6 +210,121 @@ export async function markCourierSent(
       ok: false,
       message:
         "Order could not be marked sent to courier right now. Try again shortly.",
+    };
+  }
+}
+
+export async function markOrderReturned(
+  _previousState: MarkReturnedActionState,
+  formData: FormData,
+): Promise<MarkReturnedActionState> {
+  const orderId = getString(formData, "orderId");
+  const returnNote = getString(formData, "returnNote");
+
+  if (!orderId) {
+    return { ok: false, message: "Order is required." };
+  }
+
+  try {
+    const supabase = createAdminSupabaseClient();
+    const { data: order, error: loadError } = await supabase
+      .from("orders")
+      .select(
+        "order_status, payment_status, paid_amount, due_amount, returned_at, courier_note",
+      )
+      .eq("id", orderId)
+      .maybeSingle<ReturnedOrderRow>();
+
+    if (loadError || !order) {
+      console.error("Failed to load return order.", loadError);
+
+      return {
+        ok: false,
+        message: "Order could not be loaded. Try again.",
+      };
+    }
+
+    const isAlreadyReturned = order.order_status === "returned";
+
+    if (
+      !isAlreadyReturned &&
+      order.order_status !== "shipped" &&
+      order.order_status !== "delivered"
+    ) {
+      return {
+        ok: false,
+        message: "Only shipped or delivered orders can be marked returned.",
+      };
+    }
+
+    if (!isAlreadyReturned) {
+      const payload: ReturnedUpdatePayload = {
+        order_status: "returned",
+        courier_status: "returned",
+      };
+      const courierNote = getReturnedNote(order.courier_note, returnNote);
+
+      if (courierNote) {
+        payload.courier_note = courierNote;
+      }
+
+      if (!order.returned_at) {
+        payload.returned_at = new Date().toISOString();
+      }
+
+      if (order.payment_status !== "paid") {
+        payload.payment_status = "failed";
+      }
+
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update(payload)
+        .eq("id", orderId);
+
+      if (updateError) {
+        console.error("Failed to mark order returned.", updateError);
+
+        return {
+          ok: false,
+          message: "Order could not be marked returned. Try again.",
+        };
+      }
+    }
+
+    const { data: restoreResult, error: restoreError } = await supabase.rpc(
+      "restore_order_stock",
+      { p_order_id: orderId },
+    );
+
+    revalidateDeliveredCodPaidPaths();
+
+    if (restoreError) {
+      console.error("Failed to restore stock for returned order.", restoreError);
+
+      const prefix = isAlreadyReturned
+        ? "Order already returned"
+        : "Order marked returned";
+
+      return {
+        ok: false,
+        message: `${prefix}, but stock restoration failed: Stock could not be restored safely.`,
+      };
+    }
+
+    const prefix = isAlreadyReturned
+      ? "Order already returned."
+      : "Order marked returned.";
+
+    return {
+      ok: true,
+      message: `${prefix} ${getSafeStockRestoreMessage(restoreResult)}`,
+    };
+  } catch (error) {
+    console.error("Failed to mark order returned.", error);
+
+    return {
+      ok: false,
+      message: "Order could not be marked returned right now. Try again shortly.",
     };
   }
 }

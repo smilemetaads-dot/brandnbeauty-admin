@@ -5,6 +5,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 
 import { MarkCourierSentForm } from "./MarkCourierSentForm";
 import { MarkDeliveredCodPaidButton } from "./MarkDeliveredCodPaidButton";
+import { MarkReturnedButton } from "./MarkReturnedButton";
 import type { CourierPaymentOrderRecord } from "./courier-data";
 
 type RealCourierPaymentsPageProps = {
@@ -465,6 +466,10 @@ export function RealCourierPaymentsPage({
                               orderId={order.id}
                             />
                             <MarkDeliveredCodPaidButton
+                              currentOrderStatus={order.order_status}
+                              orderId={order.id}
+                            />
+                            <MarkReturnedButton
                               currentOrderStatus={order.order_status}
                               orderId={order.id}
                             />
