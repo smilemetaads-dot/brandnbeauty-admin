@@ -122,7 +122,8 @@ export function OrderStatusForm({
 
       <p className="rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-700">
         Stock deduction runs once when status is confirmed, processing, or
-        ready_to_pack. Stock restoration is not connected yet.
+        ready_to_pack. Stock restoration runs once when status is cancelled or
+        returned.
       </p>
 
       <button

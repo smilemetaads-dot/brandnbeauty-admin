@@ -344,8 +344,8 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
               </div>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
                 Live order details with controlled status updates and one-time
-                stock deduction on confirmation-stage statuses. Courier actions,
-                stock restoration, and hard delete are not connected.
+                stock deduction/restoration through guarded RPC calls. Courier
+                actions and hard delete are not connected.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -577,9 +577,10 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
                   Update order, payment, and courier status safely.
                 </div>
                 <div className="mt-1 text-xs text-slate-500">
-                  Stock deduction runs once for confirmation-stage statuses.
-                  Courier send, cancellation, and stock restoration are
-                  intentionally unavailable in this step.
+                  Stock deduction runs once for confirmation-stage statuses, and
+                  restoration runs once for cancelled or returned status.
+                  Courier send and separate cancellation actions remain
+                  unavailable in this step.
                 </div>
               </div>
               <OrderStatusForm

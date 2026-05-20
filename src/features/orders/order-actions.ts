@@ -44,6 +44,8 @@ const STOCK_DEDUCTION_ORDER_STATUSES = [
   "ready_to_pack",
 ] as const;
 
+const STOCK_RESTORE_ORDER_STATUSES = ["cancelled", "returned"] as const;
+
 type OrderStatus = (typeof ORDER_STATUSES)[number];
 type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 type CourierStatus = (typeof COURIER_STATUSES)[number];
@@ -69,7 +71,7 @@ type OrderStatusUpdatePayload = {
   cancelled_at?: string;
 };
 
-type StockDeductionResult = {
+type StockSyncResult = {
   ok?: boolean;
   message?: string;
 };
@@ -98,6 +100,12 @@ function shouldDeductStock(orderStatus: OrderStatus) {
   );
 }
 
+function shouldRestoreStock(orderStatus: OrderStatus) {
+  return STOCK_RESTORE_ORDER_STATUSES.includes(
+    orderStatus as (typeof STOCK_RESTORE_ORDER_STATUSES)[number],
+  );
+}
+
 function getSafeStockDeductionErrorMessage(errorMessage: string | undefined) {
   if (!errorMessage) {
     return "Stock deduction could not be completed.";
@@ -120,12 +128,42 @@ function getSafeStockDeductionErrorMessage(errorMessage: string | undefined) {
   return "Stock deduction could not be completed.";
 }
 
-function getStockDeductionMessage(data: StockDeductionResult | null) {
+function getSafeStockRestoreErrorMessage(errorMessage: string | undefined) {
+  if (!errorMessage) {
+    return "Stock restoration could not be completed.";
+  }
+
+  if (
+    errorMessage === "Order not found." ||
+    errorMessage === "Order has no items to restore." ||
+    errorMessage ===
+      "Every order item must have a product before stock can be restored." ||
+    errorMessage === "One or more order products could not be found."
+  ) {
+    return errorMessage;
+  }
+
+  return "Stock restoration could not be completed.";
+}
+
+function getStockDeductionMessage(data: StockSyncResult | null) {
   if (data?.message === "Stock already deducted.") {
     return "Stock already deducted.";
   }
 
   return "Stock deducted successfully.";
+}
+
+function getStockRestoreMessage(data: StockSyncResult | null) {
+  if (data?.message === "Stock already restored.") {
+    return "Stock already restored.";
+  }
+
+  if (data?.message === "Stock was not deducted for this order.") {
+    return "Stock was not deducted for this order.";
+  }
+
+  return "Stock restored successfully.";
 }
 
 function revalidateOrderStatusPaths() {
@@ -264,7 +302,36 @@ export async function updateOrderStatuses(
       return {
         ok: true,
         message: `Order status updated successfully. ${getStockDeductionMessage(
-          stockResult as StockDeductionResult | null,
+          stockResult as StockSyncResult | null,
+        )}`,
+      };
+    }
+
+    if (shouldRestoreStock(orderStatus)) {
+      const { data: stockResult, error: stockError } = await supabase.rpc(
+        "restore_order_stock",
+        { p_order_id: orderId },
+      );
+
+      revalidateOrderStatusPaths();
+
+      if (stockError) {
+        console.error("Failed to restore order stock.", stockError);
+
+        const safeMessage = getSafeStockRestoreErrorMessage(
+          stockError.message,
+        );
+
+        return {
+          ok: false,
+          message: `Order status updated, but stock restoration failed: ${safeMessage}`,
+        };
+      }
+
+      return {
+        ok: true,
+        message: `Order status updated successfully. ${getStockRestoreMessage(
+          stockResult as StockSyncResult | null,
         )}`,
       };
     }
