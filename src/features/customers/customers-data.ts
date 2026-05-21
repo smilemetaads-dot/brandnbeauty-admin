@@ -12,6 +12,20 @@ export type CustomerRecentOrderSummary = {
   total: number;
 };
 
+export type CustomerOrderSummaryRecord = {
+  courier_status: string | null;
+  created_at: string | null;
+  delivered_at: string | null;
+  due_amount: number;
+  id: string;
+  order_number: string | null;
+  order_status: string;
+  paid_amount: number;
+  payment_status: string;
+  returned_at: string | null;
+  total: number;
+};
+
 export type CustomerSummaryRecord = {
   address: string | null;
   area: string | null;
@@ -34,6 +48,28 @@ export type CustomerSummaryRecord = {
   totalSpent: number;
 };
 
+export type CustomerProfileRecord = {
+  address: string | null;
+  area: string | null;
+  cancelledCount: number;
+  deliveredCount: number;
+  delivery_zone: string | null;
+  district: string | null;
+  email: string | null;
+  firstOrderAt: string | null;
+  lastOrderAt: string | null;
+  name: string;
+  orderCount: number;
+  orders: CustomerOrderSummaryRecord[];
+  phone: string;
+  returnedCount: number;
+  riskLabel: CustomerSummaryRecord["riskLabel"];
+  shippedCount: number;
+  totalDue: number;
+  totalPaid: number;
+  totalSpent: number;
+};
+
 type CustomerOrderRow = {
   area: string | null;
   courier_status: string | null;
@@ -50,6 +86,8 @@ type CustomerOrderRow = {
   order_status: string;
   paid_amount: number;
   payment_status: string;
+  delivered_at?: string | null;
+  returned_at?: string | null;
   total: number;
 };
 
@@ -73,10 +111,11 @@ type CustomerAccumulator = {
   totalSpent: number;
 };
 
-function normalizePhone(phone: string) {
-  const digits = phone.replace(/\D/g, "");
+function normalizePhone(phone: string | null | undefined) {
+  const rawPhone = phone ?? "";
+  const digits = rawPhone.replace(/\D/g, "");
 
-  return digits || phone.trim().toLowerCase();
+  return digits || rawPhone.trim().toLowerCase();
 }
 
 function getRiskLabel(customer: CustomerAccumulator): CustomerSummaryRecord["riskLabel"] {
@@ -89,6 +128,26 @@ function getRiskLabel(customer: CustomerAccumulator): CustomerSummaryRecord["ris
   }
 
   if (customer.orders.length >= 2) {
+    return "Repeat Customer";
+  }
+
+  return "New Customer";
+}
+
+function getCustomerProfileRiskLabel(customer: {
+  orderCount: number;
+  returnedCount: number;
+  totalDue: number;
+}): CustomerSummaryRecord["riskLabel"] {
+  if (customer.returnedCount >= 2) {
+    return "High Return Risk";
+  }
+
+  if (customer.totalDue > 0) {
+    return "Due Pending";
+  }
+
+  if (customer.orderCount >= 2) {
     return "Repeat Customer";
   }
 
@@ -225,5 +284,127 @@ export async function getCustomersFromOrdersSupabase(): Promise<
   } catch {
     console.error("Failed to initialize customers from order data.");
     return [];
+  }
+}
+
+export async function getCustomerProfileFromOrdersSupabase(
+  phone: string,
+): Promise<CustomerProfileRecord | null> {
+  const normalizedPhone = normalizePhone(phone);
+
+  if (!normalizedPhone) {
+    return null;
+  }
+
+  try {
+    const supabase = createAdminSupabaseClient();
+    const { data, error } = await supabase
+      .from("orders")
+      .select(
+        [
+          "id",
+          "order_number",
+          "customer_name",
+          "customer_phone",
+          "customer_email",
+          "customer_address",
+          "district",
+          "area",
+          "delivery_zone",
+          "total",
+          "paid_amount",
+          "due_amount",
+          "order_status",
+          "payment_status",
+          "courier_status",
+          "created_at",
+          "delivered_at",
+          "returned_at",
+        ].join(", "),
+      )
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Failed to load customer profile from order data.");
+      return null;
+    }
+
+    const matchingOrders = ((data ?? []) as unknown as CustomerOrderRow[])
+      .filter((order) => normalizePhone(order.customer_phone) === normalizedPhone)
+      .toSorted(
+        (a, b) => getCreatedAtTime(b.created_at) - getCreatedAtTime(a.created_at),
+      );
+
+    if (!matchingOrders.length) {
+      return null;
+    }
+
+    const latestOrder = matchingOrders[0];
+    const oldestOrder = matchingOrders.toSorted(
+      (a, b) => getCreatedAtTime(a.created_at) - getCreatedAtTime(b.created_at),
+    )[0];
+    const totals = matchingOrders.reduce(
+      (summary, order) => {
+        summary.totalSpent += order.total;
+        summary.totalPaid += order.paid_amount;
+        summary.totalDue += order.due_amount;
+        summary.deliveredCount += order.order_status === "delivered" ? 1 : 0;
+        summary.returnedCount += order.order_status === "returned" ? 1 : 0;
+        summary.cancelledCount += order.order_status === "cancelled" ? 1 : 0;
+        summary.shippedCount += order.order_status === "shipped" ? 1 : 0;
+
+        return summary;
+      },
+      {
+        cancelledCount: 0,
+        deliveredCount: 0,
+        returnedCount: 0,
+        shippedCount: 0,
+        totalDue: 0,
+        totalPaid: 0,
+        totalSpent: 0,
+      },
+    );
+
+    return {
+      address: latestOrder.customer_address,
+      area: latestOrder.area,
+      cancelledCount: totals.cancelledCount,
+      deliveredCount: totals.deliveredCount,
+      delivery_zone: latestOrder.delivery_zone,
+      district: latestOrder.district,
+      email: latestOrder.customer_email,
+      firstOrderAt: oldestOrder.created_at,
+      lastOrderAt: latestOrder.created_at,
+      name: latestOrder.customer_name,
+      orderCount: matchingOrders.length,
+      orders: matchingOrders.map((order) => ({
+        courier_status: order.courier_status,
+        created_at: order.created_at,
+        delivered_at: order.delivered_at ?? null,
+        due_amount: order.due_amount,
+        id: order.id,
+        order_number: order.order_number,
+        order_status: order.order_status,
+        paid_amount: order.paid_amount,
+        payment_status: order.payment_status,
+        returned_at: order.returned_at ?? null,
+        total: order.total,
+      })),
+      phone: latestOrder.customer_phone,
+      returnedCount: totals.returnedCount,
+      riskLabel: getCustomerProfileRiskLabel({
+        orderCount: matchingOrders.length,
+        returnedCount: totals.returnedCount,
+        totalDue: totals.totalDue,
+      }),
+      shippedCount: totals.shippedCount,
+      totalDue: totals.totalDue,
+      totalPaid: totals.totalPaid,
+      totalSpent: totals.totalSpent,
+    };
+  } catch {
+    console.error("Failed to initialize customer profile from order data.");
+    return null;
   }
 }
