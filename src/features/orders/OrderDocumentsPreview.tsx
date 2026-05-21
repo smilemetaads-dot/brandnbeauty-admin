@@ -221,7 +221,15 @@ export function OrderDocumentsPreview({ order }: OrderDocumentsPreviewProps) {
       </DocumentShell>
 
       <DocumentShell
-        helper="This is a read-only packing slip preview. Print action is not connected yet."
+        actions={
+          <>
+            <DisabledDocumentButton>Download PDF - N/C</DisabledDocumentButton>
+            <DocumentLink href={`/orders/details/packing-slip?id=${order.id}`}>
+              Open Packing Slip Print View
+            </DocumentLink>
+          </>
+        }
+        helper="This is a read-only packing slip preview. PDF export is not connected yet."
         title="Packing Slip Preview"
       >
         <div className="grid gap-4 text-sm md:grid-cols-2">
