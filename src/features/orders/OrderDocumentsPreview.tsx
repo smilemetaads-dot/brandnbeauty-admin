@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { OrderDetailsRecord } from "./orders-data";
 
 type OrderDocumentsPreviewProps = {
@@ -43,11 +45,24 @@ function DisabledDocumentButton({ children }: { children: string }) {
   );
 }
 
+function DocumentLink({ children, href }: { children: string; href: string }) {
+  return (
+    <Link
+      className="rounded-xl border border-[#527B86]/20 bg-[#527B86]/10 px-3 py-2 text-xs font-bold text-[#527B86] transition hover:bg-[#527B86] hover:text-white"
+      href={href}
+    >
+      {children}
+    </Link>
+  );
+}
+
 function DocumentShell({
+  actions,
   children,
   helper,
   title,
 }: {
+  actions?: React.ReactNode;
   children: React.ReactNode;
   helper: string;
   title: string;
@@ -65,8 +80,12 @@ function DocumentShell({
           <p className="mt-2 text-sm font-medium text-slate-500">{helper}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <DisabledDocumentButton>Download PDF - N/C</DisabledDocumentButton>
-          <DisabledDocumentButton>Print - N/C</DisabledDocumentButton>
+          {actions ?? (
+            <>
+              <DisabledDocumentButton>Download PDF - N/C</DisabledDocumentButton>
+              <DisabledDocumentButton>Print - N/C</DisabledDocumentButton>
+            </>
+          )}
         </div>
       </div>
       <div className="mt-5">{children}</div>
@@ -96,7 +115,15 @@ export function OrderDocumentsPreview({ order }: OrderDocumentsPreviewProps) {
   return (
     <section className="grid gap-6 xl:grid-cols-2">
       <DocumentShell
-        helper="This is a read-only invoice preview. PDF/print is not connected yet."
+        actions={
+          <>
+            <DisabledDocumentButton>Download PDF - N/C</DisabledDocumentButton>
+            <DocumentLink href={`/orders/details/invoice?id=${order.id}`}>
+              Open Invoice Print View
+            </DocumentLink>
+          </>
+        }
+        helper="This is a read-only invoice preview. PDF export is not connected yet."
         title="Invoice Preview"
       >
         <div className="grid gap-4 text-sm md:grid-cols-2">
