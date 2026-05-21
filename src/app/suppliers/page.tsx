@@ -1,10 +1,10 @@
-import { ModulePlaceholderPage } from "@/features/placeholders/ModulePlaceholderPage";
+import { getSuppliersFromSupabase } from "@/features/suppliers/suppliers-data";
+import { RealSuppliersPage } from "@/features/suppliers/RealSuppliersPage";
 
-export default function SuppliersPage() {
-  return (
-    <ModulePlaceholderPage
-      plannedPurpose="Suppliers will manage vendor profiles, purchase relationships, contact information, and supplier status."
-      title="Suppliers"
-    />
-  );
+export const dynamic = "force-dynamic";
+
+export default async function SuppliersPage() {
+  const suppliers = await getSuppliersFromSupabase();
+
+  return <RealSuppliersPage suppliers={suppliers} />;
 }
