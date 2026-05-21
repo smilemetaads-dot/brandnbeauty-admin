@@ -4,6 +4,7 @@ import {
   getOrderDetailsFromSupabase,
   type OrderDetailsRecord,
 } from "@/features/orders/orders-data";
+import { PrintPageButton } from "@/features/orders/PrintPageButton";
 
 export const dynamic = "force-dynamic";
 
@@ -85,14 +86,18 @@ function PackingSlipPrintDocument({ order }: { order: OrderDetailsRecord }) {
     <main className="min-h-screen bg-stone-50 px-4 py-8 text-slate-950 print:bg-white print:px-0 print:py-0 print:text-black">
       <div className="mx-auto max-w-5xl">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
-          <Link
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-[#527B86] shadow-sm"
-            href={orderDetailsHref}
-          >
-            Back to Order Details
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-[#527B86] shadow-sm"
+              href={orderDetailsHref}
+            >
+              Back to Order Details
+            </Link>
+            <PrintPageButton />
+          </div>
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-500 shadow-sm">
-            Use browser print from this page. PDF export is not connected.
+            Use browser print dialog to save as PDF if needed. PDF export is not
+            connected.
           </div>
         </div>
 
