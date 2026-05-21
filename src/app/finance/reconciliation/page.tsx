@@ -1,10 +1,8 @@
-import { ModulePlaceholderPage } from "@/features/placeholders/ModulePlaceholderPage";
+import { getCodReconciliationSummaryFromSupabase } from "@/features/finance/reconciliation-data";
+import { RealCodReconciliationPage } from "@/features/finance/RealCodReconciliationPage";
 
-export default function FinanceReconciliationPage() {
-  return (
-    <ModulePlaceholderPage
-      plannedPurpose="Finance Reconciliation will support COD settlement review, courier payment matching, mismatch tracking, and future payment reconciliation."
-      title="Finance Reconciliation"
-    />
-  );
+export default async function FinanceReconciliationPage() {
+  const summary = await getCodReconciliationSummaryFromSupabase();
+
+  return <RealCodReconciliationPage summary={summary} />;
 }
