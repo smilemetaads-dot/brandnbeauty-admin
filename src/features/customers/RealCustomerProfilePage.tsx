@@ -59,15 +59,18 @@ function Card({
 
 function StatCard({
   helper,
+  index,
   label,
   tone = "brand",
   value,
 }: {
   helper: string;
+  index: number;
   label: string;
   tone?: BadgeTone;
   value: ReactNode;
 }) {
+  const icons = ["O", "T", "R", "L"];
   const helperClassName = {
     brand: "bg-[#527B86]/10 text-[#527B86]",
     good: "bg-emerald-50 text-emerald-700",
@@ -77,13 +80,21 @@ function StatCard({
   }[tone];
 
   return (
-    <section className="rounded-[1.7rem] border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="text-sm font-medium text-slate-500">{label}</div>
-      <div className="mt-3 text-2xl font-black tracking-tight text-slate-950">
-        {value}
+    <section className="group relative overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#527B86]/5 transition group-hover:bg-[#527B86]/10" />
+      <div className="relative flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium text-slate-500">{label}</div>
+          <div className="mt-3 truncate text-2xl font-black tracking-tight text-slate-950">
+            {value}
+          </div>
+        </div>
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#527B86]/10 text-sm font-black text-[#527B86]">
+          {icons[index % icons.length]}
+        </div>
       </div>
       <div
-        className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-bold ${helperClassName}`}
+        className={`relative mt-4 inline-flex rounded-full px-3 py-1 text-xs font-bold ${helperClassName}`}
       >
         {helper}
       </div>
@@ -105,6 +116,32 @@ function DetailRow({
         {value}
       </dd>
     </div>
+  );
+}
+
+function DisabledButton({
+  children,
+  tone = "default",
+}: {
+  children: ReactNode;
+  tone?: BadgeTone;
+}) {
+  const className = {
+    brand: "border-[#527B86]/20 bg-[#527B86]/10 text-[#527B86]",
+    good: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    warn: "border-amber-200 bg-amber-50 text-amber-700",
+    bad: "border-rose-200 bg-rose-50 text-rose-700",
+    default: "border-slate-200 bg-white text-slate-500",
+  }[tone];
+
+  return (
+    <button
+      className={`rounded-2xl border px-4 py-3 text-sm font-semibold opacity-75 ${className}`}
+      disabled
+      type="button"
+    >
+      {children}
+    </button>
   );
 }
 
@@ -190,6 +227,25 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const initials = parts
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+
+  return initials || "BN";
+}
+
+function getLocation(profile: CustomerProfileRecord) {
+  return [profile.district, profile.area].filter(Boolean).join(" / ");
+}
+
+function getLatestOrder(profile: CustomerProfileRecord) {
+  return profile.orders[0];
+}
+
 export function RealCustomerProfilePage({
   profile,
 }: RealCustomerProfilePageProps) {
@@ -202,10 +258,10 @@ export function RealCustomerProfilePage({
             <div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#527B86]">
-                  Customers
+                  Customer Profile
                 </div>
                 <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
-                  Customer Profile
+                  Profile Not Found
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
                   This customer profile could not be generated from order data.
@@ -221,195 +277,325 @@ export function RealCustomerProfilePage({
     );
   }
 
+  const latestOrder = getLatestOrder(profile);
+  const location = getLocation(profile) || "Location not available";
+
   return (
     <AdminShell>
       <div className="space-y-6">
         <BackLink />
 
-        <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight text-slate-950">
-                  Customer Profile
-                </h1>
-                <Badge tone={getRiskTone(profile.riskLabel)}>
-                  {profile.riskLabel}
-                </Badge>
-              </div>
-              <div className="mt-3 text-xl font-black text-slate-950">
-                {profile.name}
-              </div>
-              <div className="mt-1 text-sm font-semibold text-slate-500">
-                {profile.phone}
-              </div>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-                Customer profile is generated from orders by phone number.
-                Dedicated customers table/profile editing is not connected yet.
-              </p>
-            </div>
-            <Badge tone="default">Read Only</Badge>
-          </div>
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            helper="Phone grouped"
+            helper="From matching orders"
+            index={0}
             label="Total Orders"
             value={profile.orderCount}
           />
           <StatCard
-            helper="Order totals"
+            helper="Lifetime value"
+            index={1}
             label="Total Spent"
             value={formatMoney(profile.totalSpent)}
           />
           <StatCard
-            helper="Paid amount"
-            label="Total Paid"
-            tone="good"
-            value={formatMoney(profile.totalPaid)}
+            helper={`Due ${formatMoney(profile.totalDue)}`}
+            index={2}
+            label="Risk Label"
+            tone={getRiskTone(profile.riskLabel)}
+            value={profile.riskLabel}
           />
           <StatCard
-            helper="Outstanding"
-            label="Total Due"
-            tone={profile.totalDue ? "warn" : "good"}
-            value={formatMoney(profile.totalDue)}
-          />
-          <StatCard
-            helper="Delivered orders"
-            label="Delivered"
-            tone="good"
-            value={profile.deliveredCount}
-          />
-          <StatCard
-            helper="Returned orders"
-            label="Returned"
-            tone={profile.returnedCount ? "bad" : "good"}
-            value={profile.returnedCount}
+            helper={latestOrder?.order_number ?? "No order number"}
+            index={3}
+            label="Last Order"
+            value={formatDate(profile.lastOrderAt)}
           />
         </section>
 
-        <section className="rounded-2xl border border-[#527B86]/20 bg-[#527B86]/5 px-5 py-4 text-sm font-bold text-[#527B86]">
-          Customer profile is generated from orders by phone number. Dedicated
-          customers table/profile editing is not connected yet.
-        </section>
+        <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+          <div className="space-y-6">
+            <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+              <div className="bg-gradient-to-br from-[#527B86]/10 via-white to-stone-50 p-6">
+                <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.6rem] bg-[#527B86] text-2xl font-black text-white shadow-sm">
+                      {getInitials(profile.name)}
+                      <div className="absolute -bottom-2 -right-2 rounded-full border-4 border-white bg-white">
+                        <Badge tone={getRiskTone(profile.riskLabel)}>
+                          {profile.riskLabel}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-slate-500">
+                        Customer Identity
+                      </div>
+                      <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                        {profile.name}
+                      </h1>
+                      <div className="mt-1 text-sm font-semibold text-slate-500">
+                        {profile.phone} / {location}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Badge tone={getRiskTone(profile.riskLabel)}>
+                          {profile.riskLabel}
+                        </Badge>
+                        <Badge tone="default">Read Only</Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-[1.5rem] bg-white p-4 text-center shadow-sm ring-1 ring-slate-100">
+                    <div className="text-2xl font-black text-[#527B86]">
+                      {profile.orderCount}
+                    </div>
+                    <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                      Order-Derived
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="grid gap-4 p-6 md:grid-cols-3">
+                <div className="rounded-2xl bg-stone-50 p-4">
+                  <div className="text-xs text-slate-500">First Order</div>
+                  <div className="mt-1 font-bold text-slate-900">
+                    {formatDate(profile.firstOrderAt)}
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-stone-50 p-4">
+                  <div className="text-xs text-slate-500">Orders</div>
+                  <div className="mt-1 font-bold text-slate-900">
+                    {profile.orderCount}
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-stone-50 p-4">
+                  <div className="text-xs text-slate-500">Spend</div>
+                  <div className="mt-1 font-bold text-slate-900">
+                    {formatMoney(profile.totalSpent)}
+                  </div>
+                </div>
+              </div>
+            </section>
 
-        <div className="grid gap-6 xl:grid-cols-2">
-          <Card eyebrow="Order-Derived Contact" title="Customer Info">
-            <dl className="space-y-3">
-              <DetailRow label="Phone" value={profile.phone} />
-              <DetailRow label="Email" value={formatText(profile.email)} />
-              <DetailRow label="Address" value={formatText(profile.address)} />
-              <DetailRow label="District" value={formatText(profile.district)} />
-              <DetailRow label="Area" value={formatText(profile.area)} />
-              <DetailRow
-                label="Delivery Zone"
-                value={formatText(profile.delivery_zone)}
-              />
-            </dl>
-          </Card>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card eyebrow="Payment Summary" title="Spend & Due">
+                <dl className="space-y-3">
+                  <DetailRow
+                    label="Total Spent"
+                    value={formatMoney(profile.totalSpent)}
+                  />
+                  <DetailRow
+                    label="Total Paid"
+                    value={formatMoney(profile.totalPaid)}
+                  />
+                  <DetailRow
+                    label="Total Due"
+                    value={formatMoney(profile.totalDue)}
+                  />
+                  <DetailRow
+                    label="Payment Risk"
+                    value={
+                      <Badge tone={profile.totalDue > 0 ? "warn" : "good"}>
+                        {profile.totalDue > 0 ? "Due Pending" : "No Due"}
+                      </Badge>
+                    }
+                  />
+                </dl>
+              </Card>
 
-          <Card eyebrow="Read-Only Signals" title="Behavior & Risk">
-            <dl className="space-y-3">
-              <DetailRow
-                label="Risk Label"
-                value={
+              <Card eyebrow="Order-Derived Contact" title="Customer Info">
+                <dl className="space-y-3">
+                  <DetailRow label="Phone" value={profile.phone} />
+                  <DetailRow label="Email" value={formatText(profile.email)} />
+                  <DetailRow
+                    label="Address"
+                    value={formatText(profile.address)}
+                  />
+                  <DetailRow
+                    label="District"
+                    value={formatText(profile.district)}
+                  />
+                  <DetailRow label="Area" value={formatText(profile.area)} />
+                  <DetailRow
+                    label="Delivery Zone"
+                    value={formatText(profile.delivery_zone)}
+                  />
+                </dl>
+              </Card>
+            </div>
+
+            <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+              <div className="flex flex-col gap-3 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="text-sm font-medium text-slate-500">
+                    Order History
+                  </div>
+                  <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
+                    Recent Orders
+                  </h2>
+                </div>
+                <Badge tone="brand">{profile.orders.length} orders</Badge>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-stone-50 text-slate-500">
+                    <tr>
+                      {[
+                        "Order",
+                        "Status",
+                        "Payment",
+                        "Courier",
+                        "Total",
+                        "Due",
+                        "Created",
+                        "Action",
+                      ].map((heading) => (
+                        <th className="px-5 py-4 font-medium" key={heading}>
+                          {heading}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {profile.orders.map((order) => (
+                      <tr
+                        className="border-t border-slate-100 align-top transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#527B86]"
+                        key={order.id}
+                      >
+                        <td className="px-5 py-4 font-black text-slate-950">
+                          {order.order_number ?? "No order number"}
+                        </td>
+                        <td className="px-5 py-4">
+                          <Badge tone={getOrderStatusTone(order.order_status)}>
+                            {formatStatus(order.order_status)}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-4">
+                          <Badge tone={getPaymentStatusTone(order.payment_status)}>
+                            {formatStatus(order.payment_status)}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-4">
+                          <Badge>{formatStatus(order.courier_status)}</Badge>
+                        </td>
+                        <td className="px-5 py-4 font-bold text-slate-800">
+                          {formatMoney(order.total)}
+                        </td>
+                        <td className="px-5 py-4 font-bold text-slate-800">
+                          {formatMoney(order.due_amount)}
+                        </td>
+                        <td className="px-5 py-4 text-slate-600">
+                          {formatDate(order.created_at)}
+                        </td>
+                        <td className="px-5 py-4">
+                          <Link
+                            className="inline-flex rounded-xl bg-[#527B86]/10 px-3 py-2 text-xs font-bold text-[#527B86] transition hover:bg-[#527B86] hover:text-white"
+                            href={`/orders/details?id=${order.id}`}
+                          >
+                            Details
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <div className="grid gap-6 lg:grid-cols-3">
+              <Card eyebrow="Live-Safe Signals" title="Behavior">
+                <div className="space-y-3 text-sm">
+                  <div className="rounded-2xl bg-stone-50 px-4 py-3 font-semibold text-slate-700">
+                    Delivered orders: {profile.deliveredCount}
+                  </div>
+                  <div className="rounded-2xl bg-stone-50 px-4 py-3 font-semibold text-slate-700">
+                    Shipped orders: {profile.shippedCount}
+                  </div>
+                  <div className="rounded-2xl bg-stone-50 px-4 py-3 font-semibold text-slate-700">
+                    Last order: {formatDate(profile.lastOrderAt)}
+                  </div>
+                </div>
+              </Card>
+
+              <Card eyebrow="Tags & Notes" title="Read-Only Notes">
+                <div className="flex flex-wrap gap-2">
                   <Badge tone={getRiskTone(profile.riskLabel)}>
                     {profile.riskLabel}
                   </Badge>
-                }
-              />
-              <DetailRow label="Returned Count" value={profile.returnedCount} />
-              <DetailRow label="Cancelled Count" value={profile.cancelledCount} />
-              <DetailRow label="Shipped Count" value={profile.shippedCount} />
-              <DetailRow label="Due Amount" value={formatMoney(profile.totalDue)} />
-              <DetailRow
-                label="First Order"
-                value={formatDate(profile.firstOrderAt)}
-              />
-              <DetailRow label="Last Order" value={formatDate(profile.lastOrderAt)} />
-            </dl>
-          </Card>
-        </div>
+                  <Badge tone={profile.totalDue > 0 ? "warn" : "good"}>
+                    {profile.totalDue > 0 ? "Due Pending" : "No Due"}
+                  </Badge>
+                  <Badge tone={profile.orderCount >= 2 ? "good" : "default"}>
+                    {profile.orderCount >= 2 ? "Repeat" : "New"}
+                  </Badge>
+                </div>
+                <p className="mt-4 rounded-xl bg-stone-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-700">
+                  Profile is generated from matching order rows by phone number.
+                  Dedicated profile editing, outreach notes, and customer tags
+                  are not connected yet.
+                </p>
+              </Card>
 
-        <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="text-sm font-medium text-slate-500">
-                Order History
-              </div>
-              <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                Orders From This Phone
-              </h2>
+              <Card eyebrow="Risk Summary" title="Order Risk">
+                <dl className="space-y-3">
+                  <DetailRow
+                    label="Returned"
+                    value={profile.returnedCount}
+                  />
+                  <DetailRow
+                    label="Cancelled"
+                    value={profile.cancelledCount}
+                  />
+                  <DetailRow
+                    label="Due"
+                    value={formatMoney(profile.totalDue)}
+                  />
+                </dl>
+              </Card>
             </div>
-            <Badge tone="brand">{profile.orders.length} orders</Badge>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-stone-50 text-slate-500">
-                <tr>
-                  {[
-                    "Order Number",
-                    "Total",
-                    "Due",
-                    "Order Status",
-                    "Payment Status",
-                    "Courier Status",
-                    "Created",
-                    "Action",
-                  ].map((heading) => (
-                    <th className="px-5 py-4 font-medium" key={heading}>
-                      {heading}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {profile.orders.map((order) => (
-                  <tr
-                    className="border-t border-slate-100 align-top transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#527B86]"
-                    key={order.id}
-                  >
-                    <td className="px-5 py-4 font-black text-slate-950">
-                      {order.order_number ?? "No order number"}
-                    </td>
-                    <td className="px-5 py-4 font-bold text-slate-800">
-                      {formatMoney(order.total)}
-                    </td>
-                    <td className="px-5 py-4 font-bold text-slate-800">
-                      {formatMoney(order.due_amount)}
-                    </td>
-                    <td className="px-5 py-4">
-                      <Badge tone={getOrderStatusTone(order.order_status)}>
-                        {formatStatus(order.order_status)}
-                      </Badge>
-                    </td>
-                    <td className="px-5 py-4">
-                      <Badge tone={getPaymentStatusTone(order.payment_status)}>
-                        {formatStatus(order.payment_status)}
-                      </Badge>
-                    </td>
-                    <td className="px-5 py-4">
-                      <Badge>{formatStatus(order.courier_status)}</Badge>
-                    </td>
-                    <td className="px-5 py-4 text-slate-600">
-                      {formatDate(order.created_at)}
-                    </td>
-                    <td className="px-5 py-4">
-                      <Link
-                        className="inline-flex rounded-xl bg-[#527B86]/10 px-3 py-2 text-xs font-bold text-[#527B86] transition hover:bg-[#527B86] hover:text-white"
-                        href={`/orders/details?id=${order.id}`}
-                      >
-                        Details
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-6">
+            <Card title="Action Center">
+              <div className="grid gap-3">
+                <DisabledButton tone="brand">
+                  Create Order - Not Connected
+                </DisabledButton>
+                <DisabledButton tone="good">
+                  WhatsApp Offer - Not Connected
+                </DisabledButton>
+                <DisabledButton>Call Customer - Not Connected</DisabledButton>
+                <DisabledButton>Upsell Combo - Not Connected</DisabledButton>
+                <DisabledButton>Recovery Offer - Not Connected</DisabledButton>
+                <DisabledButton>Export - Not Connected</DisabledButton>
+              </div>
+            </Card>
+
+            <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
+              <div className="text-sm font-bold text-amber-800">
+                Customer Note
+              </div>
+              <p className="mt-2 text-sm leading-6 text-amber-700">
+                This page does not show AI predictions, browsing activity, or
+                outreach history. Only live order-derived profile data is shown
+                until a dedicated customers table and profile editing are
+                connected.
+              </p>
+            </section>
+
+            <Card eyebrow="Current Route" title="Profile Source">
+              <dl className="space-y-3">
+                <DetailRow label="Phone" value={profile.phone} />
+                <DetailRow
+                  label="Source"
+                  value="Orders grouped by normalized phone"
+                />
+                <DetailRow label="Mutation" value="Not connected" />
+              </dl>
+            </Card>
           </div>
-        </section>
+        </div>
       </div>
     </AdminShell>
   );
