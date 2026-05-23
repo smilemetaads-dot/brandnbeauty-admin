@@ -21,18 +21,9 @@ type PurchaseStatus = (typeof PURCHASE_STATUSES)[number];
 
 type PurchaseItemValues = {
   product_id: string;
-  product_name: string;
-  product_sku: string | null;
   quantity: number;
   received_quantity: number;
-  total_cost: number;
   unit_cost: number;
-};
-
-type ProductSnapshotRow = {
-  id: string;
-  name: string;
-  sku: string | null;
 };
 
 type PurchaseReceiveCheckRow = {
@@ -71,29 +62,11 @@ function getStringList(formData: FormData, key: string) {
     .map((value) => (typeof value === "string" ? value.trim() : ""));
 }
 
-async function getProductSnapshots(productIds: string[]) {
-  if (!productIds.length) {
-    return new Map<string, ProductSnapshotRow>();
-  }
-
-  const supabase = createAdminSupabaseClient();
-  const { data, error } = await supabase
-    .from("products")
-    .select("id, name, sku")
-    .in("id", productIds);
-
-  if (error) {
-    console.error("Failed to load product snapshots for purchase action.");
-    return null;
-  }
-
-  return ((data ?? []) as ProductSnapshotRow[]).reduce(
-    (productMap, product) => productMap.set(product.id, product),
-    new Map<string, ProductSnapshotRow>(),
-  );
+function isWholeNumber(value: number) {
+  return Number.isInteger(value);
 }
 
-async function getPurchaseValues(formData: FormData) {
+function getPurchaseValues(formData: FormData) {
   const purchase_number = getString(formData, "purchase_number");
   const purchase_status = getString(formData, "purchase_status") || "draft";
   const productIds = getStringList(formData, "item_product_id");
@@ -123,17 +96,6 @@ async function getPurchaseValues(formData: FormData) {
     };
   }
 
-  const productSnapshots = await getProductSnapshots([
-    ...new Set(selectedProductIds),
-  ]);
-
-  if (!productSnapshots) {
-    return {
-      error: "Purchase products could not be loaded. Try again shortly.",
-      values: null,
-    };
-  }
-
   const items: PurchaseItemValues[] = [];
 
   for (let index = 0; index < productIds.length; index += 1) {
@@ -143,17 +105,9 @@ async function getPurchaseValues(formData: FormData) {
       continue;
     }
 
-    const product = productSnapshots.get(productId);
     const quantity = quantities[index];
     const received_quantity = receivedQuantities[index];
     const unit_cost = unitCosts[index];
-
-    if (!product) {
-      return {
-        error: "Choose a valid product for every purchase item.",
-        values: null,
-      };
-    }
 
     if (
       !Number.isFinite(quantity) ||
@@ -166,6 +120,13 @@ async function getPurchaseValues(formData: FormData) {
       };
     }
 
+    if (!isWholeNumber(quantity) || !isWholeNumber(received_quantity)) {
+      return {
+        error: "Quantity and received quantity must be whole numbers.",
+        values: null,
+      };
+    }
+
     if (quantity < 0 || received_quantity < 0 || unit_cost < 0) {
       return {
         error: "Quantity, received quantity, and unit cost cannot be negative.",
@@ -173,15 +134,10 @@ async function getPurchaseValues(formData: FormData) {
       };
     }
 
-    const total_cost = quantity * unit_cost;
-
     items.push({
-      product_id: product.id,
-      product_name: product.name,
-      product_sku: product.sku,
+      product_id: productId,
       quantity,
       received_quantity,
-      total_cost,
       unit_cost,
     });
   }
@@ -202,17 +158,87 @@ async function getPurchaseValues(formData: FormData) {
         purchase_number,
         purchase_status,
         supplier_id: getNullableString(formData, "supplier_id"),
-        total_cost: items.reduce((sum, item) => sum + item.total_cost, 0),
       },
     },
   };
+}
+
+function getSafePurchaseSaveMessage(message: string | undefined) {
+  const normalizedMessage = message?.toLowerCase() ?? "";
+
+  if (normalizedMessage.includes("purchase number")) {
+    return "Purchase number already exists or is invalid.";
+  }
+
+  if (normalizedMessage.includes("received purchase entries cannot be edited")) {
+    return "Received purchase entries cannot be edited.";
+  }
+
+  if (
+    normalizedMessage.includes("json") ||
+    normalizedMessage.includes("invalid input syntax") ||
+    normalizedMessage.includes("purchase item") ||
+    normalizedMessage.includes("product")
+  ) {
+    return "Purchase items could not be saved. Check products, quantities, and costs.";
+  }
+
+  return "Purchase could not be saved. Check the fields and try again.";
+}
+
+function revalidatePurchaseSavePaths() {
+  revalidatePath("/purchases");
+  revalidatePath("/suppliers");
+  revalidatePath("/suppliers/analytics");
+}
+
+async function savePurchaseEntryWithRpc({
+  purchaseId,
+  successMessage,
+  values,
+}: {
+  purchaseId: string | null;
+  successMessage: string;
+  values: NonNullable<Awaited<ReturnType<typeof getPurchaseValues>>["values"]>;
+}): Promise<PurchaseActionState> {
+  try {
+    const supabase = createAdminSupabaseClient();
+    const { error } = await supabase.rpc("save_purchase_entry", {
+      p_items: values.items,
+      p_note: values.purchase.note,
+      p_purchase_entry_id: purchaseId,
+      p_purchase_number: values.purchase.purchase_number,
+      p_purchase_status: values.purchase.purchase_status,
+      p_supplier_id: values.purchase.supplier_id,
+    });
+
+    if (error) {
+      console.error("Failed to save purchase entry through RPC.");
+
+      return {
+        ok: false,
+        message: getSafePurchaseSaveMessage(error.message),
+      };
+    }
+
+    revalidatePurchaseSavePaths();
+
+    return { ok: true, message: successMessage };
+  } catch {
+    console.error("Failed to initialize purchase save RPC action.");
+
+    return {
+      ok: false,
+      message: "Purchase could not be saved right now. Try again shortly.",
+    };
+  }
 }
 
 export async function createPurchaseEntry(
   _previousState: PurchaseActionState,
   formData: FormData,
 ): Promise<PurchaseActionState> {
-  const { error: validationError, values } = await getPurchaseValues(formData);
+  const { error: validationError, values } = getPurchaseValues(formData);
 
   if (validationError || !values) {
     return {
@@ -221,56 +247,11 @@ export async function createPurchaseEntry(
     };
   }
 
-  try {
-    const supabase = createAdminSupabaseClient();
-    const { data: purchase, error: purchaseError } = await supabase
-      .from("purchase_entries")
-      .insert({
-        ...values.purchase,
-        stock_received: false,
-        stock_received_at: null,
-      })
-      .select("id")
-      .single();
-
-    if (purchaseError || !purchase) {
-      console.error("Failed to create purchase entry.");
-
-      return {
-        ok: false,
-        message: "Purchase could not be created. Check the fields and try again.",
-      };
-    }
-
-    const itemRows = values.items.map((item) => ({
-      ...item,
-      purchase_entry_id: purchase.id,
-    }));
-    const { error: itemsError } = await supabase
-      .from("purchase_entry_items")
-      .insert(itemRows);
-
-    if (itemsError) {
-      console.error("Failed to create purchase entry items.");
-
-      return {
-        ok: false,
-        message:
-          "Purchase was started, but item rows could not be saved. Review the purchase before continuing.",
-      };
-    }
-
-    revalidatePath("/purchases");
-
-    return { ok: true, message: "Purchase created successfully." };
-  } catch {
-    console.error("Failed to initialize purchase create action.");
-
-    return {
-      ok: false,
-      message: "Purchase could not be created right now. Try again shortly.",
-    };
-  }
+  return savePurchaseEntryWithRpc({
+    purchaseId: null,
+    successMessage: "Purchase created successfully.",
+    values,
+  });
 }
 
 export async function updatePurchaseEntry(
@@ -278,7 +259,7 @@ export async function updatePurchaseEntry(
   formData: FormData,
 ): Promise<PurchaseActionState> {
   const purchaseId = getString(formData, "purchaseId");
-  const { error: validationError, values } = await getPurchaseValues(formData);
+  const { error: validationError, values } = getPurchaseValues(formData);
 
   if (!purchaseId) {
     return { ok: false, message: "Purchase entry is required." };
@@ -291,90 +272,11 @@ export async function updatePurchaseEntry(
     };
   }
 
-  try {
-    const supabase = createAdminSupabaseClient();
-    const { data: currentPurchase, error: currentError } = await supabase
-      .from("purchase_entries")
-      .select("id, stock_received")
-      .eq("id", purchaseId)
-      .maybeSingle();
-
-    if (currentError || !currentPurchase) {
-      console.error("Failed to load purchase entry before update.");
-
-      return {
-        ok: false,
-        message: "Purchase could not be loaded for editing.",
-      };
-    }
-
-    if (Boolean(currentPurchase.stock_received)) {
-      return {
-        ok: false,
-        message: "Received purchase entries cannot be edited.",
-      };
-    }
-
-    const { error: updateError } = await supabase
-      .from("purchase_entries")
-      .update({
-        ...values.purchase,
-        stock_received: false,
-        stock_received_at: null,
-      })
-      .eq("id", purchaseId);
-
-    if (updateError) {
-      console.error("Failed to update purchase entry.");
-
-      return {
-        ok: false,
-        message: "Purchase could not be updated. Check the fields and try again.",
-      };
-    }
-
-    const { error: deleteItemsError } = await supabase
-      .from("purchase_entry_items")
-      .delete()
-      .eq("purchase_entry_id", purchaseId);
-
-    if (deleteItemsError) {
-      console.error("Failed to replace purchase entry items.");
-
-      return {
-        ok: false,
-        message: "Purchase items could not be replaced. Try again shortly.",
-      };
-    }
-
-    const itemRows = values.items.map((item) => ({
-      ...item,
-      purchase_entry_id: purchaseId,
-    }));
-    const { error: insertItemsError } = await supabase
-      .from("purchase_entry_items")
-      .insert(itemRows);
-
-    if (insertItemsError) {
-      console.error("Failed to save replacement purchase entry items.");
-
-      return {
-        ok: false,
-        message: "Purchase items could not be saved. Try again shortly.",
-      };
-    }
-
-    revalidatePath("/purchases");
-
-    return { ok: true, message: "Purchase updated successfully." };
-  } catch {
-    console.error("Failed to initialize purchase update action.");
-
-    return {
-      ok: false,
-      message: "Purchase could not be updated right now. Try again shortly.",
-    };
-  }
+  return savePurchaseEntryWithRpc({
+    purchaseId,
+    successMessage: "Purchase updated successfully.",
+    values,
+  });
 }
 
 export async function receivePurchaseStock(
