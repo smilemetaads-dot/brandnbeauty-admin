@@ -1,10 +1,10 @@
-import { ModulePlaceholderPage } from "@/features/placeholders/ModulePlaceholderPage";
+import { getPurchaseEntriesFromSupabase } from "@/features/purchases/purchases-data";
+import { RealPurchasesPage } from "@/features/purchases/RealPurchasesPage";
 
-export default function PurchasesPage() {
-  return (
-    <ModulePlaceholderPage
-      plannedPurpose="Purchase Stock Entry will record supplier purchase entries and connect them to inventory movement history later."
-      title="Purchase Stock Entry"
-    />
-  );
+export const dynamic = "force-dynamic";
+
+export default async function PurchasesPage() {
+  const { entries, kpis } = await getPurchaseEntriesFromSupabase();
+
+  return <RealPurchasesPage entries={entries} kpis={kpis} />;
 }
