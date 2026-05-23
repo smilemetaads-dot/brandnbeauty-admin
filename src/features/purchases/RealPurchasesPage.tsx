@@ -2,16 +2,21 @@ import type { ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 
+import { PurchaseFilters } from "./PurchaseFilters";
 import { PurchaseEntryForm } from "./PurchaseEntryForm";
 import { ReceivePurchaseStockButton } from "./ReceivePurchaseStockButton";
 import type {
+  PurchaseEntriesFilters,
   PurchaseEntriesKpis,
   PurchaseEntryRecord,
+  PurchaseFilterOptions,
   PurchaseFormOptions,
 } from "./purchases-data";
 
 type RealPurchasesPageProps = {
+  activeFilters: PurchaseEntriesFilters;
   entries: PurchaseEntryRecord[];
+  filterOptions: PurchaseFilterOptions;
   kpis: PurchaseEntriesKpis;
   options: PurchaseFormOptions;
 };
@@ -307,7 +312,9 @@ function PurchaseCard({
 }
 
 export function RealPurchasesPage({
+  activeFilters,
   entries,
+  filterOptions,
   kpis,
   options,
 }: RealPurchasesPageProps) {
@@ -424,6 +431,11 @@ export function RealPurchasesPage({
             are handled inside the RPC only, with a double receive guard.
           </div>
         </section>
+
+        <PurchaseFilters
+          activeFilters={activeFilters}
+          filterOptions={filterOptions}
+        />
 
         <section className="space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">

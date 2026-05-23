@@ -52,7 +52,39 @@ export type PurchaseEntriesKpis = {
 
 export type PurchaseEntriesData = {
   entries: PurchaseEntryRecord[];
+  filters: PurchaseFilterOptions;
   kpis: PurchaseEntriesKpis;
+};
+
+export type PurchaseStockReceivedFilter = "all" | "received" | "not_received";
+
+export type PurchaseSortOption =
+  | "newest"
+  | "oldest"
+  | "highest_value"
+  | "lowest_value";
+
+export type PurchaseEntriesFilters = {
+  search?: string;
+  sort?: PurchaseSortOption;
+  status?: string;
+  stockReceived?: PurchaseStockReceivedFilter;
+  supplierId?: string;
+};
+
+export type PurchaseStatusFilterOption = {
+  label: string;
+  value: string;
+};
+
+export type PurchaseFilterSupplierOption = {
+  id: string;
+  name: string;
+};
+
+export type PurchaseFilterOptions = {
+  statuses: PurchaseStatusFilterOption[];
+  suppliers: PurchaseFilterSupplierOption[];
 };
 
 export type PurchaseFormSupplierOption = {
@@ -84,6 +116,18 @@ type PurchaseFormSupplierRow = PurchaseFormSupplierOption & {
   status: string | null;
 };
 
+type PurchaseFilterSupplierRow = PurchaseFilterSupplierOption & {
+  status: string | null;
+};
+
+export const PURCHASE_STATUS_FILTER_OPTIONS: PurchaseStatusFilterOption[] = [
+  { label: "Draft", value: "draft" },
+  { label: "Ordered", value: "ordered" },
+  { label: "Partially Received", value: "partially_received" },
+  { label: "Received", value: "received" },
+  { label: "Cancelled", value: "cancelled" },
+];
+
 const emptyKpis: PurchaseEntriesKpis = {
   cancelledPurchases: 0,
   draftPurchases: 0,
@@ -98,6 +142,10 @@ const emptyKpis: PurchaseEntriesKpis = {
 
 const emptyPurchaseEntriesData: PurchaseEntriesData = {
   entries: [],
+  filters: {
+    statuses: PURCHASE_STATUS_FILTER_OPTIONS,
+    suppliers: [],
+  },
   kpis: emptyKpis,
 };
 
@@ -169,29 +217,93 @@ function buildKpis(entries: PurchaseEntryRecord[]): PurchaseEntriesKpis {
   );
 }
 
-export async function getPurchaseEntriesFromSupabase(): Promise<PurchaseEntriesData> {
+function normalizeSearch(value: string | undefined) {
+  return value?.trim() ?? "";
+}
+
+function isStatusFilter(value: string | undefined) {
+  return PURCHASE_STATUS_FILTER_OPTIONS.some((status) => status.value === value);
+}
+
+function isStockReceivedFilter(
+  value: PurchaseEntriesFilters["stockReceived"],
+): value is PurchaseStockReceivedFilter {
+  return value === "all" || value === "received" || value === "not_received";
+}
+
+function isSortOption(
+  value: PurchaseEntriesFilters["sort"],
+): value is PurchaseSortOption {
+  return (
+    value === "newest" ||
+    value === "oldest" ||
+    value === "highest_value" ||
+    value === "lowest_value"
+  );
+}
+
+export async function getPurchaseEntriesFromSupabase(
+  filters: PurchaseEntriesFilters = {},
+): Promise<PurchaseEntriesData> {
   try {
     const supabase = createAdminSupabaseClient();
+    const search = normalizeSearch(filters.search);
+    const stockReceived = isStockReceivedFilter(filters.stockReceived)
+      ? filters.stockReceived
+      : "all";
+    let entriesQuery = supabase
+      .from("purchase_entries")
+      .select(
+        [
+          "id",
+          "purchase_number",
+          "supplier_id",
+          "purchase_status",
+          "total_cost",
+          "note",
+          "received_at",
+          "stock_received",
+          "stock_received_at",
+          "created_at",
+          "updated_at",
+          "suppliers(name, phone, email, status)",
+        ].join(", "),
+      );
+
+    if (search) {
+      entriesQuery = entriesQuery.ilike("purchase_number", `%${search}%`);
+    }
+
+    if (filters.supplierId) {
+      entriesQuery = entriesQuery.eq("supplier_id", filters.supplierId);
+    }
+
+    if (isStatusFilter(filters.status)) {
+      entriesQuery = entriesQuery.eq("purchase_status", filters.status);
+    }
+
+    if (stockReceived === "received") {
+      entriesQuery = entriesQuery.eq("stock_received", true);
+    }
+
+    if (stockReceived === "not_received") {
+      entriesQuery = entriesQuery.eq("stock_received", false);
+    }
+
+    const sort = isSortOption(filters.sort) ? filters.sort : "newest";
+
+    if (sort === "oldest") {
+      entriesQuery = entriesQuery.order("created_at", { ascending: true });
+    } else if (sort === "highest_value") {
+      entriesQuery = entriesQuery.order("total_cost", { ascending: false });
+    } else if (sort === "lowest_value") {
+      entriesQuery = entriesQuery.order("total_cost", { ascending: true });
+    } else {
+      entriesQuery = entriesQuery.order("created_at", { ascending: false });
+    }
+
     const [entriesResponse, itemsResponse] = await Promise.all([
-      supabase
-        .from("purchase_entries")
-        .select(
-          [
-            "id",
-            "purchase_number",
-            "supplier_id",
-            "purchase_status",
-            "total_cost",
-            "note",
-            "received_at",
-            "stock_received",
-            "stock_received_at",
-            "created_at",
-            "updated_at",
-            "suppliers(name, phone, email, status)",
-          ].join(", "),
-        )
-        .order("created_at", { ascending: false }),
+      entriesQuery,
       supabase
         .from("purchase_entry_items")
         .select(
@@ -232,11 +344,42 @@ export async function getPurchaseEntriesFromSupabase(): Promise<PurchaseEntriesD
 
     return {
       entries,
+      filters: {
+        statuses: PURCHASE_STATUS_FILTER_OPTIONS,
+        suppliers: await getPurchaseFilterSuppliersFromSupabase(),
+      },
       kpis: buildKpis(entries),
     };
   } catch {
     console.error("Failed to initialize purchase entries data source.");
     return emptyPurchaseEntriesData;
+  }
+}
+
+export async function getPurchaseFilterSuppliersFromSupabase(): Promise<
+  PurchaseFilterSupplierOption[]
+> {
+  try {
+    const supabase = createAdminSupabaseClient();
+    const { data, error } = await supabase
+      .from("suppliers")
+      .select("id, name, status")
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("Failed to load purchase filter suppliers from Supabase.");
+      return [];
+    }
+
+    return ((data ?? []) as unknown as PurchaseFilterSupplierRow[]).map(
+      (supplier) => ({
+        id: supplier.id,
+        name: supplier.name,
+      }),
+    );
+  } catch {
+    console.error("Failed to initialize purchase filter supplier data source.");
+    return [];
   }
 }
 
