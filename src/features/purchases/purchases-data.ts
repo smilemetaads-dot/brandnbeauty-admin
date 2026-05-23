@@ -55,11 +55,33 @@ export type PurchaseEntriesData = {
   kpis: PurchaseEntriesKpis;
 };
 
+export type PurchaseFormSupplierOption = {
+  id: string;
+  name: string;
+  phone: string | null;
+};
+
+export type PurchaseFormProductOption = {
+  id: string;
+  name: string;
+  sku: string | null;
+  stock: number;
+};
+
+export type PurchaseFormOptions = {
+  products: PurchaseFormProductOption[];
+  suppliers: PurchaseFormSupplierOption[];
+};
+
 type PurchaseEntryRow = Omit<PurchaseEntryRecord, "items" | "supplier"> & {
   suppliers:
     | PurchaseEntrySupplierRecord
     | PurchaseEntrySupplierRecord[]
     | null;
+};
+
+type PurchaseFormSupplierRow = PurchaseFormSupplierOption & {
+  status: string | null;
 };
 
 const emptyKpis: PurchaseEntriesKpis = {
@@ -77,6 +99,11 @@ const emptyKpis: PurchaseEntriesKpis = {
 const emptyPurchaseEntriesData: PurchaseEntriesData = {
   entries: [],
   kpis: emptyKpis,
+};
+
+const emptyPurchaseFormOptions: PurchaseFormOptions = {
+  products: [],
+  suppliers: [],
 };
 
 function toNumber(value: number | null | undefined) {
@@ -210,5 +237,115 @@ export async function getPurchaseEntriesFromSupabase(): Promise<PurchaseEntriesD
   } catch {
     console.error("Failed to initialize purchase entries data source.");
     return emptyPurchaseEntriesData;
+  }
+}
+
+export async function getPurchaseFormOptionsFromSupabase(): Promise<PurchaseFormOptions> {
+  try {
+    const supabase = createAdminSupabaseClient();
+    const [suppliersResponse, productsResponse] = await Promise.all([
+      supabase
+        .from("suppliers")
+        .select("id, name, phone, status")
+        .eq("status", "active")
+        .order("name", { ascending: true }),
+      supabase
+        .from("products")
+        .select("id, name, sku, stock")
+        .order("name", { ascending: true }),
+    ]);
+
+    if (suppliersResponse.error || productsResponse.error) {
+      console.error("Failed to load purchase form options from Supabase.");
+      return emptyPurchaseFormOptions;
+    }
+
+    return {
+      products: ((productsResponse.data ?? []) as PurchaseFormProductOption[]).map(
+        (product) => ({
+          ...product,
+          stock: toNumber(product.stock),
+        }),
+      ),
+      suppliers: ((suppliersResponse.data ?? []) as PurchaseFormSupplierRow[]).map(
+        (supplier) => ({
+          id: supplier.id,
+          name: supplier.name,
+          phone: supplier.phone,
+        }),
+      ),
+    };
+  } catch {
+    console.error("Failed to initialize purchase form options data source.");
+    return emptyPurchaseFormOptions;
+  }
+}
+
+export async function getPurchaseEntryForEditFromSupabase(
+  id: string,
+): Promise<PurchaseEntryRecord | null> {
+  try {
+    const supabase = createAdminSupabaseClient();
+    const [entryResponse, itemsResponse] = await Promise.all([
+      supabase
+        .from("purchase_entries")
+        .select(
+          [
+            "id",
+            "purchase_number",
+            "supplier_id",
+            "purchase_status",
+            "total_cost",
+            "note",
+            "received_at",
+            "stock_received",
+            "stock_received_at",
+            "created_at",
+            "updated_at",
+            "suppliers(name, phone, email, status)",
+          ].join(", "),
+        )
+        .eq("id", id)
+        .maybeSingle(),
+      supabase
+        .from("purchase_entry_items")
+        .select(
+          [
+            "id",
+            "purchase_entry_id",
+            "product_id",
+            "product_name",
+            "product_sku",
+            "quantity",
+            "received_quantity",
+            "unit_cost",
+            "total_cost",
+            "created_at",
+          ].join(", "),
+        )
+        .eq("purchase_entry_id", id)
+        .order("created_at", { ascending: true }),
+    ]);
+
+    if (entryResponse.error || itemsResponse.error || !entryResponse.data) {
+      console.error("Failed to load purchase entry for edit from Supabase.");
+      return null;
+    }
+
+    const entry = entryResponse.data as unknown as PurchaseEntryRow;
+
+    return {
+      ...entry,
+      items: buildItemsByPurchase(
+        (itemsResponse.data ?? []) as unknown as PurchaseEntryItemRecord[],
+      ).get(entry.id) ?? [],
+      purchase_status: entry.purchase_status ?? "draft",
+      stock_received: Boolean(entry.stock_received),
+      supplier: normalizeSupplier(entry.suppliers),
+      total_cost: toNumber(entry.total_cost),
+    };
+  } catch {
+    console.error("Failed to initialize purchase edit data source.");
+    return null;
   }
 }

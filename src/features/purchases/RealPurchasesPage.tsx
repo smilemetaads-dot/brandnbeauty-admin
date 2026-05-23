@@ -2,14 +2,17 @@ import type { ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 
+import { PurchaseEntryForm } from "./PurchaseEntryForm";
 import type {
   PurchaseEntriesKpis,
   PurchaseEntryRecord,
+  PurchaseFormOptions,
 } from "./purchases-data";
 
 type RealPurchasesPageProps = {
   entries: PurchaseEntryRecord[];
   kpis: PurchaseEntriesKpis;
+  options: PurchaseFormOptions;
 };
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
@@ -185,7 +188,13 @@ function PurchaseItemsSummary({ entry }: { entry: PurchaseEntryRecord }) {
   );
 }
 
-function PurchaseCard({ entry }: { entry: PurchaseEntryRecord }) {
+function PurchaseCard({
+  entry,
+  options,
+}: {
+  entry: PurchaseEntryRecord;
+  options: PurchaseFormOptions;
+}) {
   return (
     <article className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
       <div className="grid gap-4 border-b border-slate-100 p-5 xl:grid-cols-[1.2fr_1fr_1fr_auto] xl:items-start">
@@ -246,7 +255,6 @@ function PurchaseCard({ entry }: { entry: PurchaseEntryRecord }) {
         </div>
 
         <div className="flex flex-wrap gap-2 xl:justify-end">
-          <DisabledButton>Edit Purchase - N/C</DisabledButton>
           <DisabledButton>Receive Stock - N/C</DisabledButton>
           <DisabledButton>Print Purchase - N/C</DisabledButton>
         </div>
@@ -271,12 +279,31 @@ function PurchaseCard({ entry }: { entry: PurchaseEntryRecord }) {
             Note: {entry.note}
           </div>
         ) : null}
+        {entry.stock_received ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm font-semibold leading-6 text-slate-500">
+            This purchase has been marked stock received, so item editing is
+            locked.
+          </div>
+        ) : (
+          <details className="rounded-2xl border border-[#527B86]/20 bg-white p-4">
+            <summary className="cursor-pointer text-sm font-black text-[#527B86]">
+              Edit Purchase
+            </summary>
+            <div className="mt-5">
+              <PurchaseEntryForm entry={entry} mode="edit" options={options} />
+            </div>
+          </details>
+        )}
       </div>
     </article>
   );
 }
 
-export function RealPurchasesPage({ entries, kpis }: RealPurchasesPageProps) {
+export function RealPurchasesPage({
+  entries,
+  kpis,
+  options,
+}: RealPurchasesPageProps) {
   return (
     <AdminShell>
       <div className="space-y-6">
@@ -296,13 +323,12 @@ export function RealPurchasesPage({ entries, kpis }: RealPurchasesPageProps) {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DisabledButton>Create Purchase - N/C</DisabledButton>
               <DisabledButton>Receive Stock - N/C</DisabledButton>
             </div>
           </div>
           <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-3">
             <div className="rounded-2xl bg-white px-4 py-3 font-semibold text-slate-600">
-              Purchase create/edit is not connected yet.
+              Purchase create/edit is connected for purchase records only.
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 font-semibold text-slate-600">
               Receive stock action is not connected yet.
@@ -311,6 +337,28 @@ export function RealPurchasesPage({ entries, kpis }: RealPurchasesPageProps) {
               Product stock does not change from this page yet.
             </div>
           </div>
+        </section>
+
+        <section
+          className="rounded-[2rem] border border-[#527B86]/20 bg-white p-6 shadow-sm"
+          id="create-purchase"
+        >
+          <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#527B86]">
+                Purchase Entry
+              </div>
+              <h2 className="mt-2 text-xl font-black tracking-tight text-slate-950">
+                Create Purchase
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-500">
+                Creates purchase header and item snapshots only. Stock receive,
+                product stock updates, and movement logs stay disconnected.
+              </p>
+            </div>
+            <Badge tone="good">Create/Edit Live</Badge>
+          </div>
+          <PurchaseEntryForm mode="create" options={options} />
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
@@ -359,8 +407,8 @@ export function RealPurchasesPage({ entries, kpis }: RealPurchasesPageProps) {
         <section className="grid gap-4 md:grid-cols-2">
           <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-5 text-sm font-semibold leading-6 text-emerald-900">
             This page only reads `purchase_entries` and
-            `purchase_entry_items`. It does not call purchase mutations or the
-            receive stock RPC.
+            `purchase_entry_items` for the register, and create/edit writes
+            purchase records only. It does not call the receive stock RPC.
           </div>
           <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-900">
             Product stock and inventory movements are protected for a later
@@ -384,14 +432,13 @@ export function RealPurchasesPage({ entries, kpis }: RealPurchasesPageProps) {
           {entries.length ? (
             <div className="space-y-5">
               {entries.map((entry) => (
-                <PurchaseCard entry={entry} key={entry.id} />
+                <PurchaseCard entry={entry} key={entry.id} options={options} />
               ))}
             </div>
           ) : (
             <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-white p-10 text-center text-sm font-semibold text-slate-500">
-              No purchase entries found. Purchase create/edit is not connected
-              yet, so this page will show live rows only after they exist in
-              Supabase.
+              No purchase entries found. Use the create purchase form to add a
+              purchase header and item snapshots without changing stock.
             </div>
           )}
         </section>
