@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 
+import { SupplierForm } from "./SupplierForm";
 import type { SupplierRecord } from "./suppliers-data";
 
 type RealSuppliersPageProps = {
@@ -198,19 +199,18 @@ export function RealSuppliersPage({ suppliers }: RealSuppliersPageProps) {
                 Suppliers
               </h1>
               <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-500">
-                Live read-only supplier directory from Supabase for future
-                purchase stock and vendor management workflows.
+                Live supplier directory from Supabase for vendor master data.
+                Purchase stock and receive workflows remain separate and not
+                connected from this page.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DisabledButton>Add Supplier — N/C</DisabledButton>
-              <DisabledButton>Edit Supplier — N/C</DisabledButton>
-              <DisabledButton>Create Purchase — N/C</DisabledButton>
+              <DisabledButton>Create Purchase - N/C</DisabledButton>
             </div>
           </div>
           <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-3">
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Supplier create/edit: <b className="text-slate-400">N/C</b>
+              Supplier create/edit: <b className="text-emerald-700">Connected</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Purchase stock receive: <b className="text-slate-400">N/C in UI</b>
@@ -259,6 +259,44 @@ export function RealSuppliersPage({ suppliers }: RealSuppliersPageProps) {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="rounded-[2rem] border border-[#527B86]/20 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#527B86]">
+                  Supplier Master Data
+                </div>
+                <h2 className="mt-2 text-xl font-black tracking-tight text-slate-950">
+                  Create Supplier
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-500">
+                  Adds supplier details only. Purchase entries, stock receive,
+                  products, and inventory movements are not changed.
+                </p>
+              </div>
+              <Badge tone="good">Live Save</Badge>
+            </div>
+            <SupplierForm mode="create" />
+          </section>
+
+          <section className="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
+            <h2 className="text-xl font-black text-emerald-900">
+              Supplier Safety
+            </h2>
+            <div className="mt-4 space-y-3 text-sm font-semibold leading-6 text-emerald-900">
+              <div className="rounded-2xl bg-white/75 p-4">
+                Create/edit updates supplier master data only.
+              </div>
+              <div className="rounded-2xl bg-white/75 p-4">
+                Purchase stock receive is not connected from this page.
+              </div>
+              <div className="rounded-2xl bg-white/75 p-4">
+                No supplier hard delete is available.
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col gap-3 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
@@ -266,7 +304,8 @@ export function RealSuppliersPage({ suppliers }: RealSuppliersPageProps) {
                   Supplier Directory
                 </h2>
                 <p className="mt-2 text-sm font-medium leading-6 text-slate-500">
-                  Read-only supplier records with purchase summary counters.
+                  Supplier records with purchase summary counters and safe
+                  inline edit forms.
                 </p>
               </div>
               <Badge tone="brand">{suppliers.length} suppliers</Badge>
@@ -291,60 +330,75 @@ export function RealSuppliersPage({ suppliers }: RealSuppliersPageProps) {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {suppliers.map((supplier) => (
-                      <tr className="bg-white hover:bg-stone-50" key={supplier.id}>
-                        <td className="px-5 py-4">
-                          <div className="font-black text-slate-950">
-                            {supplier.name}
-                          </div>
-                          <div className="mt-1 max-w-[260px] truncate text-xs font-semibold text-slate-400">
-                            {formatText(supplier.address)}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 font-semibold text-slate-700">
-                          {formatText(supplier.contact_person)}
-                        </td>
-                        <td className="px-5 py-4 font-semibold text-slate-600">
-                          {formatText(supplier.phone)}
-                        </td>
-                        <td className="px-5 py-4 font-semibold text-slate-600">
-                          {formatText(supplier.email)}
-                        </td>
-                        <td className="px-5 py-4">
-                          <Badge tone={getStatusTone(supplier.status)}>
-                            {formatStatus(supplier.status)}
-                          </Badge>
-                        </td>
-                        <td className="px-5 py-4 font-semibold text-slate-600">
-                          {formatText(supplier.payment_terms)}
-                        </td>
-                        <td className="px-5 py-4 font-black text-slate-900">
-                          {supplier.purchaseCount}
-                        </td>
-                        <td className="px-5 py-4 font-black text-slate-900">
-                          {formatMoney(supplier.totalPurchaseValue)}
-                        </td>
-                        <td className="px-5 py-4">
-                          <Badge
-                            tone={
-                              supplier.pendingPurchaseCount > 0
-                                ? "warn"
-                                : "default"
-                            }
-                          >
-                            {supplier.pendingPurchaseCount}
-                          </Badge>
-                        </td>
-                        <td className="px-5 py-4 font-semibold text-slate-600">
-                          {formatDate(supplier.updated_at)}
-                        </td>
-                      </tr>
+                      <Fragment key={supplier.id}>
+                        <tr className="bg-white hover:bg-stone-50">
+                          <td className="px-5 py-4">
+                            <div className="font-black text-slate-950">
+                              {supplier.name}
+                            </div>
+                            <div className="mt-1 max-w-[260px] truncate text-xs font-semibold text-slate-400">
+                              {formatText(supplier.address)}
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 font-semibold text-slate-700">
+                            {formatText(supplier.contact_person)}
+                          </td>
+                          <td className="px-5 py-4 font-semibold text-slate-600">
+                            {formatText(supplier.phone)}
+                          </td>
+                          <td className="px-5 py-4 font-semibold text-slate-600">
+                            {formatText(supplier.email)}
+                          </td>
+                          <td className="px-5 py-4">
+                            <Badge tone={getStatusTone(supplier.status)}>
+                              {formatStatus(supplier.status)}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-4 font-semibold text-slate-600">
+                            {formatText(supplier.payment_terms)}
+                          </td>
+                          <td className="px-5 py-4 font-black text-slate-900">
+                            {supplier.purchaseCount}
+                          </td>
+                          <td className="px-5 py-4 font-black text-slate-900">
+                            {formatMoney(supplier.totalPurchaseValue)}
+                          </td>
+                          <td className="px-5 py-4">
+                            <Badge
+                              tone={
+                                supplier.pendingPurchaseCount > 0
+                                  ? "warn"
+                                  : "default"
+                              }
+                            >
+                              {supplier.pendingPurchaseCount}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-4 font-semibold text-slate-600">
+                            {formatDate(supplier.updated_at)}
+                          </td>
+                        </tr>
+                        <tr className="bg-stone-50/80">
+                          <td className="px-5 py-4" colSpan={10}>
+                            <details className="rounded-2xl border border-slate-200 bg-white p-4">
+                              <summary className="cursor-pointer text-sm font-black text-[#527B86]">
+                                Edit Supplier
+                              </summary>
+                              <div className="mt-5">
+                                <SupplierForm mode="edit" supplier={supplier} />
+                              </div>
+                            </details>
+                          </td>
+                        </tr>
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
               <div className="p-10 text-center text-sm font-semibold text-slate-500">
-                No suppliers found. Supplier create/edit is not connected yet.
+                No suppliers found. Use the create supplier form to add the
+                first supplier master record.
               </div>
             )}
           </div>
@@ -358,7 +412,7 @@ export function RealSuppliersPage({ suppliers }: RealSuppliersPageProps) {
               </h2>
               <div className="mt-4 space-y-3 text-sm font-semibold leading-6 text-amber-900">
                 <div className="rounded-2xl bg-white/70 p-4">
-                  Supplier create/edit is not connected yet.
+                  Create Purchase is not connected yet.
                 </div>
                 <div className="rounded-2xl bg-white/70 p-4">
                   Purchase stock receive is not connected yet in UI.
