@@ -35,6 +35,12 @@ type ProductSnapshotRow = {
   sku: string | null;
 };
 
+type PurchaseReceiveCheckRow = {
+  id: string;
+  purchase_status: string | null;
+  stock_received: boolean | null;
+};
+
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
 
@@ -367,6 +373,85 @@ export async function updatePurchaseEntry(
     return {
       ok: false,
       message: "Purchase could not be updated right now. Try again shortly.",
+    };
+  }
+}
+
+export async function receivePurchaseStock(
+  _previousState: PurchaseActionState,
+  formData: FormData,
+): Promise<PurchaseActionState> {
+  const purchaseEntryId = getString(formData, "purchaseEntryId");
+
+  if (!purchaseEntryId) {
+    return { ok: false, message: "Purchase entry is required." };
+  }
+
+  try {
+    const supabase = createAdminSupabaseClient();
+    const { data: purchase, error: purchaseError } = await supabase
+      .from("purchase_entries")
+      .select("id, purchase_status, stock_received")
+      .eq("id", purchaseEntryId)
+      .maybeSingle();
+
+    if (purchaseError || !purchase) {
+      console.error("Failed to load purchase entry before stock receive.");
+
+      return {
+        ok: false,
+        message: "Purchase could not be loaded for stock receive.",
+      };
+    }
+
+    const purchaseRow = purchase as PurchaseReceiveCheckRow;
+
+    if (purchaseRow.purchase_status === "cancelled") {
+      return {
+        ok: false,
+        message: "Cancelled purchase entries cannot be received.",
+      };
+    }
+
+    if (Boolean(purchaseRow.stock_received)) {
+      return {
+        ok: true,
+        message: "Purchase stock was already received.",
+      };
+    }
+
+    const { error: rpcError } = await supabase.rpc(
+      "receive_purchase_entry_stock",
+      {
+        p_purchase_entry_id: purchaseEntryId,
+      },
+    );
+
+    if (rpcError) {
+      console.error("Failed to receive purchase stock through RPC.");
+
+      return {
+        ok: false,
+        message:
+          "Purchase stock could not be received. Check the purchase items and try again.",
+      };
+    }
+
+    revalidatePath("/purchases");
+    revalidatePath("/inventory");
+    revalidatePath("/products");
+    revalidatePath("/reports");
+
+    return {
+      ok: true,
+      message: "Purchase stock received successfully.",
+    };
+  } catch {
+    console.error("Failed to initialize purchase stock receive action.");
+
+    return {
+      ok: false,
+      message: "Purchase stock could not be received right now. Try again shortly.",
     };
   }
 }

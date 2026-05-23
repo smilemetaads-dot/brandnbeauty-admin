@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 
 import { PurchaseEntryForm } from "./PurchaseEntryForm";
+import { ReceivePurchaseStockButton } from "./ReceivePurchaseStockButton";
 import type {
   PurchaseEntriesKpis,
   PurchaseEntryRecord,
@@ -255,7 +256,11 @@ function PurchaseCard({
         </div>
 
         <div className="flex flex-wrap gap-2 xl:justify-end">
-          <DisabledButton>Receive Stock - N/C</DisabledButton>
+          <ReceivePurchaseStockButton
+            purchaseEntryId={entry.id}
+            purchaseStatus={entry.purchase_status}
+            stockReceived={entry.stock_received}
+          />
           <DisabledButton>Print Purchase - N/C</DisabledButton>
         </div>
       </div>
@@ -267,11 +272,13 @@ function PurchaseCard({
               Items Summary
             </h3>
             <p className="mt-1 text-sm font-medium text-slate-500">
-              Product snapshots from purchase entry items. Stock remains
-              unchanged from this page.
+              Product snapshots from purchase entry items. Receiving stock is
+              one-time and double-guarded by the database RPC.
             </p>
           </div>
-          <Badge tone="default">Read only</Badge>
+          <Badge tone={entry.stock_received ? "good" : "warn"}>
+            {entry.stock_received ? "Received" : "Pending receive"}
+          </Badge>
         </div>
         <PurchaseItemsSummary entry={entry} />
         {entry.note ? (
@@ -318,12 +325,13 @@ export function RealPurchasesPage({
               </h1>
               <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-500">
                 Live read-only view of purchase entries and item snapshots from
-                Supabase. Create, edit, receive stock, product stock updates,
-                and inventory movements remain intentionally disconnected.
+                Supabase. Create/edit writes purchase records, and Receive
+                Stock calls the existing RPC so product stock and movement logs
+                stay inside the database function.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DisabledButton>Receive Stock - N/C</DisabledButton>
+              <DisabledButton>Print Purchase - N/C</DisabledButton>
             </div>
           </div>
           <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-3">
@@ -331,10 +339,10 @@ export function RealPurchasesPage({
               Purchase create/edit is connected for purchase records only.
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 font-semibold text-slate-600">
-              Receive stock action is not connected yet.
+              Receive stock is one-time and guarded by RPC.
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 font-semibold text-slate-600">
-              Product stock does not change from this page yet.
+              Product stock updates only inside the RPC.
             </div>
           </div>
         </section>
@@ -352,8 +360,8 @@ export function RealPurchasesPage({
                 Create Purchase
               </h2>
               <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-500">
-                Creates purchase header and item snapshots only. Stock receive,
-                product stock updates, and movement logs stay disconnected.
+                Creates purchase header and item snapshots only. Stock receive
+                remains a separate one-time action.
               </p>
             </div>
             <Badge tone="good">Create/Edit Live</Badge>
@@ -408,11 +416,12 @@ export function RealPurchasesPage({
           <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-5 text-sm font-semibold leading-6 text-emerald-900">
             This page only reads `purchase_entries` and
             `purchase_entry_items` for the register, and create/edit writes
-            purchase records only. It does not call the receive stock RPC.
+            purchase records only. Receive Stock calls the existing
+            `receive_purchase_entry_stock` RPC.
           </div>
           <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-900">
-            Product stock and inventory movements are protected for a later
-            connected receive flow.
+            Product stock updates and `purchase_stock_in` inventory movements
+            are handled inside the RPC only, with a double receive guard.
           </div>
         </section>
 
