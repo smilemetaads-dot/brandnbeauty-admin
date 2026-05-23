@@ -12,9 +12,20 @@ export function getRequiredEnv(name: string): string {
 }
 
 export function getSupabasePublicEnv() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url) {
+    throw missingEnvError("NEXT_PUBLIC_SUPABASE_URL");
+  }
+
+  if (!anonKey) {
+    throw missingEnvError("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  }
+
   return {
-    url: getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    anonKey: getRequiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    url,
+    anonKey,
   };
 }
 

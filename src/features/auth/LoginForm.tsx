@@ -5,8 +5,12 @@ import { type FormEvent, useState } from "react";
 
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
+const LOGIN_TIMEOUT_MS = 15_000;
+const timeoutErrorMessage = "LOGIN_TIMEOUT";
+
 export function LoginForm() {
   const router = useRouter();
+  const [clientStatus, setClientStatus] = useState("");
   const [email, setEmail] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -15,23 +19,68 @@ export function LoginForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage("");
-    setIsSubmitting(true);
 
-    const supabase = createBrowserSupabaseClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const trimmedEmail = email.trim();
 
-    setIsSubmitting(false);
-
-    if (error) {
-      setErrorMessage("Unable to sign in with those credentials.");
+    if (!trimmedEmail) {
+      setErrorMessage("Email is required.");
       return;
     }
 
-    router.replace("/");
-    router.refresh();
+    if (!password) {
+      setErrorMessage("Password is required.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage("Password must be at least 6 characters.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const supabase = createBrowserSupabaseClient();
+      setClientStatus("Supabase browser client loaded.");
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        window.setTimeout(
+          () => reject(new Error(timeoutErrorMessage)),
+          LOGIN_TIMEOUT_MS,
+        );
+      });
+      const { data, error } = await Promise.race([
+        supabase.auth.signInWithPassword({
+          email: trimmedEmail,
+          password,
+        }),
+        timeoutPromise,
+      ]);
+
+      if (error) {
+        setErrorMessage("Unable to sign in with those credentials.");
+        return;
+      }
+
+      if (data.session) {
+        router.replace("/");
+        router.refresh();
+        return;
+      }
+
+      setErrorMessage(
+        "Sign in response received, but no session was created. Check email confirmation or password.",
+      );
+    } catch (error) {
+      if (error instanceof Error && error.message === timeoutErrorMessage) {
+        setErrorMessage("Sign in timed out. Check your connection and try again.");
+        return;
+      }
+
+      setClientStatus("Supabase browser client not loaded.");
+      setErrorMessage("Sign in could not start. Check admin browser configuration.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -79,6 +128,12 @@ export function LoginForm() {
       {errorMessage ? (
         <div className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
           {errorMessage}
+        </div>
+      ) : null}
+
+      {clientStatus ? (
+        <div className="rounded-2xl bg-stone-50 px-4 py-3 text-xs font-semibold text-slate-500">
+          {clientStatus}
         </div>
       ) : null}
 
