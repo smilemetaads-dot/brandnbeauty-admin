@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { useActionState } from "react";
 
@@ -22,7 +23,7 @@ type RealAddEditProductPageProps = {
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
 const inputClassName =
-  "mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#527B86] focus:ring-2 focus:ring-[#527B86]/15";
+  "mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 shadow-sm transition focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15";
 
 const labelClassName = "text-sm font-medium text-slate-600";
 
@@ -78,7 +79,7 @@ function Badge({
   tone?: BadgeTone;
 }) {
   const className = {
-    brand: "bg-[#527B86]/10 text-[#527B86]",
+    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
     good: "bg-emerald-50 text-emerald-700",
     warn: "bg-amber-50 text-amber-700",
     bad: "bg-rose-50 text-rose-700",
@@ -98,24 +99,34 @@ function StatCard({
   label,
   value,
   helper,
+  icon,
   active = false,
 }: {
   label: string;
   value: string;
   helper: string;
+  icon: string;
   active?: boolean;
 }) {
   return (
     <div
-      className={`rounded-[1.5rem] border bg-white p-5 shadow-sm ${
-        active ? "border-[#527B86] ring-2 ring-[#527B86]/15" : "border-slate-200"
+      className={`group relative overflow-hidden rounded-[1.7rem] border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+        active ? "border-[#5E7F85] ring-2 ring-[#5E7F85]/15" : "border-slate-200"
       }`}
     >
-      <div className="text-sm font-medium text-slate-500">{label}</div>
-      <div className="mt-2 text-2xl font-black tracking-tight text-slate-950">
-        {value}
+      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#5E7F85]/5 transition group-hover:bg-[#5E7F85]/10" />
+      <div className="relative flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-slate-500">{label}</div>
+          <div className="mt-3 text-2xl font-black tracking-tight text-slate-950">
+            {value}
+          </div>
+        </div>
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-sm font-black text-[#5E7F85] transition group-hover:bg-[#5E7F85] group-hover:text-white">
+          {icon}
+        </div>
       </div>
-      <div className="mt-3 inline-flex rounded-full bg-stone-50 px-3 py-1 text-xs font-semibold text-slate-600">
+      <div className="relative mt-4 inline-flex rounded-full bg-stone-50 px-3 py-1 text-xs font-semibold text-slate-600">
         {helper}
       </div>
     </div>
@@ -131,6 +142,34 @@ function DisabledAction({ children }: { children: ReactNode }) {
     >
       {children}
     </button>
+  );
+}
+
+function SectionHeader({
+  badge,
+  children,
+  helper,
+  tone = "brand",
+}: {
+  badge?: string;
+  children: ReactNode;
+  helper?: string;
+  tone?: BadgeTone;
+}) {
+  return (
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <h2 className="text-xl font-bold tracking-tight text-slate-950">
+          {children}
+        </h2>
+        {helper ? (
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
+            {helper}
+          </p>
+        ) : null}
+      </div>
+      {badge ? <Badge tone={tone}>{badge}</Badge> : null}
+    </div>
   );
 }
 
@@ -170,13 +209,19 @@ export function RealAddEditProductPage({
       <form action={formAction} className="space-y-6">
         {product ? <input name="id" type="hidden" value={product.id} /> : null}
 
-        <section className="sticky top-3 z-20 rounded-[1.6rem] border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur">
+        <section className="sticky top-3 z-20 overflow-hidden rounded-[1.8rem] border border-slate-200 bg-white/95 shadow-lg backdrop-blur">
+          <div className="border-b border-slate-100 bg-stone-50/70 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+              <span className="rounded-full bg-[#5E7F85]/10 px-3 py-1 text-[#5E7F85]">
+                Product Editor
+              </span>
+              <span>{isEditing ? "Live edit mode" : "New product draft"}</span>
+            </div>
+          </div>
+          <div className="p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <div className="text-xs font-bold uppercase tracking-[0.16em] text-[#527B86]">
-                Product Editor
-              </div>
-              <div className="mt-1 text-sm font-semibold text-slate-600">
+              <div className="text-lg font-black tracking-tight text-slate-950">
                 {productTitle} / {product?.sku || "SKU pending"}
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -197,7 +242,7 @@ export function RealAddEditProductPage({
               </Link>
               <DisabledAction>Preview Not Connected</DisabledAction>
               <button
-                className="rounded-2xl bg-[#527B86] px-5 py-3 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-950 disabled:cursor-not-allowed disabled:bg-slate-300"
                 disabled={isPending}
                 type="submit"
               >
@@ -209,27 +254,32 @@ export function RealAddEditProductPage({
               </button>
             </div>
           </div>
+          </div>
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
             helper="Live options"
+            icon="BR"
             label="Brands"
             value={String(brands.length)}
           />
           <StatCard
             helper="Live options"
+            icon="CA"
             label="Categories"
             value={String(categories.length)}
           />
           <StatCard
             helper="Multi-select mapping"
+            icon="CN"
             label="Concerns"
             value={String(concerns.length)}
           />
           <StatCard
             active
             helper="Current draft completeness"
+            icon="RD"
             label="Editor Readiness"
             value={`${readinessScore}%`}
           />
@@ -238,12 +288,12 @@ export function RealAddEditProductPage({
         <section className="grid gap-6 xl:grid-cols-[1fr_380px]">
           <div className="space-y-6">
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between gap-3">
-                <h1 className="text-xl font-bold tracking-tight text-slate-950">
-                  Product Master Form
-                </h1>
-                <Badge tone="brand">{isEditing ? "Edit Mode" : "Create Mode"}</Badge>
-              </div>
+              <SectionHeader
+                badge={isEditing ? "Edit Mode" : "Create Mode"}
+                helper="Core identity fields stay connected to the existing saveProduct action."
+              >
+                Product Master Form
+              </SectionHeader>
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <label className={labelClassName}>
                   Product Name
@@ -297,18 +347,12 @@ export function RealAddEditProductPage({
             </div>
 
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <h2 className="text-xl font-bold tracking-tight text-slate-950">
-                    Pricing & Inventory
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Single-product pricing remains connected to the live
-                    Supabase product record.
-                  </p>
-                </div>
-                <Badge tone="brand">Single Product</Badge>
-              </div>
+              <SectionHeader
+                badge="Single Product"
+                helper="Single-product pricing remains connected to the live Supabase product record."
+              >
+                Pricing & Inventory
+              </SectionHeader>
               <div className="mt-5 grid gap-4 md:grid-cols-3">
                 <label className={labelClassName}>
                   Price
@@ -385,12 +429,12 @@ export function RealAddEditProductPage({
             </div>
 
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-xl font-bold tracking-tight text-slate-950">
-                  Catalog Mapping
-                </h2>
-                <Badge tone="brand">Live Options</Badge>
-              </div>
+              <SectionHeader
+                badge="Live Options"
+                helper="Brand, category, and concern choices come from the existing Supabase-backed route loader."
+              >
+                Catalog Mapping
+              </SectionHeader>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <label className={labelClassName}>
                   Brand
@@ -435,7 +479,7 @@ export function RealAddEditProductPage({
                         key={concern.id}
                       >
                         <input
-                          className="h-4 w-4 rounded border-slate-300 text-[#527B86]"
+                          className="h-4 w-4 rounded border-slate-300 text-[#5E7F85]"
                           defaultChecked={
                             product?.concernIds.includes(concern.id) ?? false
                           }
@@ -456,19 +500,13 @@ export function RealAddEditProductPage({
             </div>
 
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <h2 className="text-xl font-bold tracking-tight text-slate-950">
-                    Content & Media
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    The image URL and short description are live fields. Gallery,
-                    uploads, AI content, FAQ, reviews, and PDP blocks are parked
-                    as Not Connected.
-                  </p>
-                </div>
-                <Badge tone="warn">Media Placeholder</Badge>
-              </div>
+              <SectionHeader
+                badge="Media Placeholder"
+                helper="The image URL and short description are live fields. Gallery, uploads, AI content, FAQ, reviews, and PDP blocks are parked as Not Connected."
+                tone="warn"
+              >
+                Content & Media
+              </SectionHeader>
               <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_320px]">
                 <div className="space-y-5">
                   <label className={labelClassName}>
@@ -494,9 +532,20 @@ export function RealAddEditProductPage({
                 </div>
 
                 <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-stone-50 p-5">
-                  <div className="flex aspect-square items-center justify-center rounded-[1.25rem] bg-white text-xs font-bold text-slate-400">
-                    Main Image Preview
-                  </div>
+                  {product?.image ? (
+                    <Image
+                      alt=""
+                      className="aspect-square w-full rounded-[1.25rem] bg-white object-cover"
+                      height={320}
+                      src={product.image}
+                      unoptimized
+                      width={320}
+                    />
+                  ) : (
+                    <div className="flex aspect-square items-center justify-center rounded-[1.25rem] bg-white text-xs font-bold text-slate-400">
+                      Main Image Preview
+                    </div>
+                  )}
                   <div className="mt-4 grid gap-2">
                     <DisabledAction>Upload Not Connected</DisabledAction>
                     <DisabledAction>Gallery Not Connected</DisabledAction>
@@ -506,19 +555,13 @@ export function RealAddEditProductPage({
             </div>
 
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-xl font-bold tracking-tight text-slate-950">
-                  Attributes JSON
-                </h2>
-                <Badge tone={hasAttributes ? "good" : "default"}>
-                  Flexible Metadata
-                </Badge>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Use this live JSON field for future-ready product details such
-                as skin type, color, material, size, routine step, and other
-                lifestyle metadata.
-              </p>
+              <SectionHeader
+                badge="Flexible Metadata"
+                helper="Use this live JSON field for future-ready product details such as skin type, color, material, size, routine step, and other lifestyle metadata."
+                tone={hasAttributes ? "good" : "default"}
+              >
+                Attributes JSON
+              </SectionHeader>
               <textarea
                 className={`${inputClassName} min-h-48 resize-y font-mono text-xs leading-5`}
                 defaultValue={formatAttributes(product?.attributes ?? null)}
@@ -530,16 +573,27 @@ export function RealAddEditProductPage({
 
           <aside className="space-y-6">
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-xl font-bold tracking-tight text-slate-950">
-                  Live Product Preview
-                </h2>
-                <Badge tone="brand">PDP</Badge>
-              </div>
+              <SectionHeader
+                badge="PDP"
+                helper="Preview uses saved product values only; it does not add a separate frontend publish workflow."
+              >
+                Live Product Preview
+              </SectionHeader>
               <div className="mt-5 rounded-3xl border border-slate-200 p-4">
-                <div className="flex h-56 items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-stone-50 text-xs font-bold text-slate-400">
-                  {product?.image ? "Image URL Saved" : "Main Product Image"}
-                </div>
+                {product?.image ? (
+                  <Image
+                    alt=""
+                    className="h-56 w-full rounded-3xl border border-slate-200 bg-stone-50 object-cover"
+                    height={224}
+                    src={product.image}
+                    unoptimized
+                    width={320}
+                  />
+                ) : (
+                  <div className="flex h-56 items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-stone-50 text-xs font-bold text-slate-400">
+                    Main Product Image
+                  </div>
+                )}
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Badge tone={product?.featured ? "brand" : "default"}>
                     {product?.featured ? "Featured" : "Standard"}
@@ -585,19 +639,18 @@ export function RealAddEditProductPage({
             </div>
 
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-xl font-bold text-slate-950">
-                  Publish Control
-                </h2>
-                <Badge tone={readinessScore >= 70 ? "good" : "warn"}>
-                  {readinessScore >= 70 ? "Ready" : "Needs Review"}
-                </Badge>
-              </div>
+              <SectionHeader
+                badge={readinessScore >= 70 ? "Ready" : "Needs Review"}
+                helper="Status and featured fields stay part of the existing product save form."
+                tone={readinessScore >= 70 ? "good" : "warn"}
+              >
+                Publish Control
+              </SectionHeader>
               <div className="mt-5 space-y-3 text-sm">
                 <div className="rounded-2xl bg-stone-50 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <span>Status Mapping</span>
-                    <b className="text-[#527B86]">
+                    <b className="text-[#5E7F85]">
                       {formatStatus(product?.status)}
                     </b>
                   </div>
@@ -609,7 +662,7 @@ export function RealAddEditProductPage({
                 <label className="flex items-center justify-between rounded-2xl bg-stone-50 p-4">
                   <span>Featured</span>
                   <input
-                    className="h-4 w-4 rounded border-slate-300 text-[#527B86]"
+                    className="h-4 w-4 rounded border-slate-300 text-[#5E7F85]"
                     defaultChecked={product?.featured ?? false}
                     name="featured"
                     type="checkbox"
@@ -633,7 +686,7 @@ export function RealAddEditProductPage({
               </div>
               <div className="mt-5 grid gap-3">
                 <button
-                  className="w-full rounded-2xl bg-[#527B86] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                  className="w-full rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-950 disabled:cursor-not-allowed disabled:bg-slate-300"
                   disabled={isPending}
                   type="submit"
                 >
@@ -647,7 +700,7 @@ export function RealAddEditProductPage({
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6">
+            <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
               <h2 className="text-xl font-bold text-amber-900">
                 Smart Checks
               </h2>
