@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -73,7 +74,7 @@ function Badge({
   tone?: BadgeTone;
 }) {
   const className = {
-    brand: "bg-[#527B86]/10 text-[#527B86]",
+    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
     good: "bg-emerald-50 text-emerald-700",
     warn: "bg-amber-50 text-amber-700",
     bad: "bg-rose-50 text-rose-700",
@@ -93,24 +94,34 @@ function StatCard({
   label,
   value,
   helper,
+  icon,
   active = false,
 }: {
   label: string;
   value: string;
   helper: string;
+  icon: string;
   active?: boolean;
 }) {
   return (
     <div
-      className={`rounded-[1.5rem] border bg-white p-5 shadow-sm ${
-        active ? "border-[#527B86] ring-2 ring-[#527B86]/15" : "border-slate-200"
+      className={`group relative overflow-hidden rounded-[1.7rem] border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+        active ? "border-[#5E7F85] ring-2 ring-[#5E7F85]/15" : "border-slate-200"
       }`}
     >
-      <div className="text-sm font-medium text-slate-500">{label}</div>
-      <div className="mt-2 text-2xl font-black tracking-tight text-slate-950">
-        {value}
+      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#5E7F85]/5 transition group-hover:bg-[#5E7F85]/10" />
+      <div className="relative flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-slate-500">{label}</div>
+          <div className="mt-3 text-2xl font-black tracking-tight text-slate-950">
+            {value}
+          </div>
+        </div>
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-sm font-black text-[#5E7F85] transition group-hover:bg-[#5E7F85] group-hover:text-white">
+          {icon}
+        </div>
       </div>
-      <div className="mt-3 inline-flex rounded-full bg-stone-50 px-3 py-1 text-xs font-semibold text-slate-600">
+      <div className="relative mt-4 inline-flex rounded-full bg-stone-50 px-3 py-1 text-xs font-semibold text-slate-600">
         {helper}
       </div>
     </div>
@@ -131,7 +142,7 @@ function StatusControl({
         Product status
       </label>
       <select
-        className={`rounded-2xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-sm outline-none transition focus:border-[#527B86] focus:ring-2 focus:ring-[#527B86]/20 ${
+        className={`rounded-2xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-sm outline-none transition focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/20 ${
           compact ? "px-3 py-2" : "px-4 py-3"
         }`}
         defaultValue={product.status ?? "draft"}
@@ -144,7 +155,7 @@ function StatusControl({
         <option value="out_of_stock">Out of Stock</option>
       </select>
       <button
-        className={`rounded-2xl bg-[#527B86] font-semibold text-white transition hover:bg-slate-950 ${
+        className={`rounded-2xl bg-[#5E7F85] font-semibold text-white transition hover:bg-slate-950 ${
           compact ? "px-3 py-2 text-xs" : "px-4 py-3 text-sm"
         }`}
         type="submit"
@@ -169,6 +180,9 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
   const outOfStockCount = products.filter(
     (product) => product.status === "out_of_stock",
   ).length;
+  const outOfStockVisibleCount = products.filter(
+    (product) => product.status === "out_of_stock",
+  ).length;
   const alertCount = products.filter((product) =>
     ["low_stock", "out_of_stock"].includes(product.status ?? ""),
   ).length;
@@ -180,7 +194,7 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
         <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-5 p-6 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#527B86]">
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#5E7F85]">
                 Catalog
               </div>
               <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
@@ -207,7 +221,7 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                 Export Not Connected
               </button>
               <Link
-                className="rounded-2xl bg-[#527B86] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-950"
+                className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-950"
                 href="/products/edit"
               >
                 Add Product
@@ -217,7 +231,7 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
           <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-4">
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Stock value:{" "}
-              <b className="text-[#527B86]">BDT {formatPrice(catalogValue)}</b>
+              <b className="text-[#5E7F85]">BDT {formatPrice(catalogValue)}</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Visible products:{" "}
@@ -235,22 +249,26 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
             helper="Current stock value"
+            icon="BDT"
             label="Catalog Value"
             value={`BDT ${formatPrice(catalogValue)}`}
           />
           <StatCard
             helper="Mapped from active, low stock, out of stock"
+            icon="VS"
             label="Visible SKUs"
             value={String(visibleCount)}
           />
           <StatCard
             active
             helper="Archive safe review queue"
+            icon="AL"
             label="Status Alerts"
             value={String(alertCount)}
           />
           <StatCard
             helper={`${outOfStockCount} out of stock`}
+            icon="HD"
             label="Hidden SKUs"
             value={String(hiddenCount)}
           />
@@ -296,16 +314,16 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    "All Products",
-                    "Active",
-                    "Draft",
-                    "Low Stock",
-                    "Out of Stock",
+                  "All Products",
+                  "Active",
+                  "Draft",
+                  "Low Stock",
+                  "Out of Stock",
                   ].map((item) => (
                     <button
                       className={`rounded-full px-4 py-2 text-xs font-semibold ${
                         item === "All Products"
-                          ? "bg-[#527B86] text-white"
+                          ? "bg-[#5E7F85] text-white"
                           : "border border-slate-200 bg-white text-slate-500"
                       }`}
                       disabled
@@ -320,7 +338,8 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
               <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-medium leading-6 text-amber-800">
                 Unsupported source actions are intentionally disabled here.
                 Product archive behavior stays status-based; products are not
-                hard deleted.
+                hard deleted. Out-of-stock visible count:{" "}
+                <b>{outOfStockVisibleCount}</b>.
               </div>
             </div>
 
@@ -348,9 +367,9 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                   {products.length > 0 ? (
                     products.map((product, index) => (
                       <tr
-                        className={`border-t border-slate-100 transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#527B86] ${
+                        className={`border-t border-slate-100 transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${
                           index === 0
-                            ? "bg-[#527B86]/[0.06] shadow-[inset_3px_0_0_#527B86]"
+                            ? "bg-[#5E7F85]/[0.06] shadow-[inset_3px_0_0_#5E7F85]"
                             : product.status === "out_of_stock"
                               ? "bg-rose-50/25"
                               : product.status === "low_stock"
@@ -361,9 +380,20 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                       >
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-[10px] font-bold text-slate-400">
-                              IMG
-                            </div>
+                            {product.image ? (
+                              <Image
+                                alt=""
+                                className="h-12 w-12 shrink-0 rounded-2xl bg-stone-100 object-cover"
+                                height={48}
+                                src={product.image}
+                                unoptimized
+                                width={48}
+                              />
+                            ) : (
+                              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-[10px] font-bold text-slate-400">
+                                IMG
+                              </div>
+                            )}
                             <div>
                               <div className="font-bold text-slate-950">
                                 {product.name}
@@ -435,7 +465,7 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                         <td className="px-5 py-4">
                           <div className="flex min-w-[330px] flex-wrap items-center gap-2">
                             <Link
-                              className="rounded-xl bg-[#527B86]/10 px-3 py-2 text-xs font-semibold text-[#527B86] transition hover:bg-[#527B86] hover:text-white"
+                              className="rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-semibold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
                               href={`/products/edit?id=${product.id}`}
                             >
                               Edit
@@ -488,9 +518,20 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                     </Badge>
                   </div>
                   <div className="mt-5 rounded-3xl border border-slate-200 bg-stone-50 p-4">
-                    <div className="flex h-52 items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white text-xs font-semibold text-slate-400">
-                      Product Image Preview
-                    </div>
+                    {selectedProduct.image ? (
+                      <Image
+                        alt=""
+                        className="h-52 w-full rounded-3xl border border-slate-200 bg-white object-cover"
+                        height={208}
+                        src={selectedProduct.image}
+                        unoptimized
+                        width={320}
+                      />
+                    ) : (
+                      <div className="flex h-52 items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white text-xs font-semibold text-slate-400">
+                        Product Image Preview
+                      </div>
+                    )}
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Badge tone={selectedProduct.featured ? "brand" : "default"}>
                         {selectedProduct.featured ? "Featured" : "Standard"}
@@ -542,7 +583,7 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                   </div>
                   <div className="mt-5 grid gap-3">
                     <Link
-                      className="rounded-2xl bg-[#527B86] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-slate-950"
+                      className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-slate-950"
                       href={`/products/edit?id=${selectedProduct.id}`}
                     >
                       Edit Product
