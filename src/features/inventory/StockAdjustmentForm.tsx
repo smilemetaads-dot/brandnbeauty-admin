@@ -19,7 +19,7 @@ const initialState: InventoryActionState = {
 };
 
 const inputClassName =
-  "mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#527B86] focus:ring-2 focus:ring-[#527B86]/15";
+  "mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 shadow-sm transition focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15";
 
 const labelClassName = "text-sm font-medium text-slate-600";
 
@@ -30,12 +30,15 @@ export function StockAdjustmentForm({ products }: StockAdjustmentFormProps) {
   );
 
   return (
-    <section className="rounded-[2rem] border border-[#527B86]/20 bg-white p-6 shadow-sm">
+    <section className="overflow-hidden rounded-[2rem] border border-[#5E7F85]/20 bg-white shadow-sm">
+      <div className="border-b border-slate-100 bg-stone-50/70 px-6 py-4">
+        <div className="text-xs font-bold uppercase tracking-[0.18em] text-[#5E7F85]">
+          Safe Stock Control
+        </div>
+      </div>
+      <div className="p-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#527B86]">
-            Safe Stock Control
-          </div>
           <h2 className="mt-2 text-xl font-bold tracking-tight text-slate-950">
             Manual Stock Adjustment
           </h2>
@@ -44,7 +47,7 @@ export function StockAdjustmentForm({ products }: StockAdjustmentFormProps) {
             movement in inventory_movements. No hard delete.
           </p>
         </div>
-        <div className="rounded-2xl bg-[#527B86]/10 px-4 py-3 text-xs font-bold text-[#527B86]">
+        <div className="rounded-2xl bg-[#5E7F85]/10 px-4 py-3 text-xs font-bold text-[#5E7F85]">
           Movement logging connected
         </div>
       </div>
@@ -108,7 +111,7 @@ export function StockAdjustmentForm({ products }: StockAdjustmentFormProps) {
 
         <div className="flex items-end">
           <button
-            className="w-full rounded-2xl bg-[#527B86] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-950 disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="w-full rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-950 disabled:cursor-not-allowed disabled:bg-slate-300"
             disabled={isPending || products.length === 0}
             type="submit"
           >
@@ -128,6 +131,7 @@ export function StockAdjustmentForm({ products }: StockAdjustmentFormProps) {
           </div>
         ) : null}
       </form>
+      </div>
     </section>
   );
 }

@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { AdminShell } from "@/components/admin/AdminShell";
 
 import type {
@@ -24,7 +26,7 @@ function Badge({
   tone?: BadgeTone;
 }) {
   const className = {
-    brand: "bg-[#527B86]/10 text-[#527B86]",
+    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
     good: "bg-emerald-50 text-emerald-700",
     warn: "bg-amber-50 text-amber-700",
     bad: "bg-rose-50 text-rose-700",
@@ -44,24 +46,34 @@ function StatCard({
   label,
   value,
   helper,
+  icon,
   active = false,
 }: {
   label: string;
   value: string;
   helper: string;
+  icon: string;
   active?: boolean;
 }) {
   return (
     <div
-      className={`rounded-[1.5rem] border bg-white p-5 shadow-sm ${
-        active ? "border-[#527B86] ring-2 ring-[#527B86]/15" : "border-slate-200"
+      className={`group relative overflow-hidden rounded-[1.7rem] border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+        active ? "border-[#5E7F85] ring-2 ring-[#5E7F85]/15" : "border-slate-200"
       }`}
     >
-      <div className="text-sm font-medium text-slate-500">{label}</div>
-      <div className="mt-2 text-2xl font-black tracking-tight text-slate-950">
-        {value}
+      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#5E7F85]/5 transition group-hover:bg-[#5E7F85]/10" />
+      <div className="relative flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-slate-500">{label}</div>
+          <div className="mt-3 text-2xl font-black tracking-tight text-slate-950">
+            {value}
+          </div>
+        </div>
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-sm font-black text-[#5E7F85] transition group-hover:bg-[#5E7F85] group-hover:text-white">
+          {icon}
+        </div>
       </div>
-      <div className="mt-3 inline-flex rounded-full bg-stone-50 px-3 py-1 text-xs font-semibold text-slate-600">
+      <div className="relative mt-4 inline-flex rounded-full bg-stone-50 px-3 py-1 text-xs font-semibold text-slate-600">
         {helper}
       </div>
     </div>
@@ -152,6 +164,36 @@ function DisabledAction({ children }: { children: React.ReactNode }) {
   );
 }
 
+function SectionHeader({
+  badge,
+  children,
+  helper,
+  tone = "brand",
+}: {
+  badge?: string;
+  children: React.ReactNode;
+  helper?: string;
+  tone?: BadgeTone;
+}) {
+  return (
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-xl font-bold tracking-tight text-slate-950">
+            {children}
+          </h2>
+          {badge ? <Badge tone={tone}>{badge}</Badge> : null}
+        </div>
+        {helper ? (
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+            {helper}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function RealInventoryPage({
   movements,
   products,
@@ -176,7 +218,7 @@ export function RealInventoryPage({
         <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-5 p-6 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#527B86]">
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#5E7F85]">
                 Catalog Operations
               </div>
               <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
@@ -190,14 +232,14 @@ export function RealInventoryPage({
             </div>
             <div className="flex flex-wrap gap-2">
               <DisabledAction>Import CSV Not Connected</DisabledAction>
-              <div className="rounded-2xl bg-[#527B86] px-4 py-3 text-sm font-semibold text-white">
+              <div className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white">
                 Manual Adjustment Connected
               </div>
             </div>
           </div>
           <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-4">
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Read mode: <b className="text-[#527B86]">Live products</b>
+              Read mode: <b className="text-[#5E7F85]">Live products</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Stock adjustment: <b className="text-emerald-700">Connected</b>
@@ -215,21 +257,25 @@ export function RealInventoryPage({
           <StatCard
             active
             helper="Live product rows"
+            icon="SKU"
             label="Total SKUs"
             value={String(totalSkus)}
           />
           <StatCard
             helper={`1-${LOW_STOCK_THRESHOLD} units`}
+            icon="LO"
             label="Low Stock"
             value={String(lowStockCount)}
           />
           <StatCard
             helper="Zero or below"
+            icon="OO"
             label="Out of Stock"
             value={String(outOfStockCount)}
           />
           <StatCard
             helper="Status active"
+            icon="AC"
             label="Active Products"
             value={String(activeProductsCount)}
           />
@@ -239,14 +285,13 @@ export function RealInventoryPage({
 
         <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-3 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between">
+            <SectionHeader badge="Automation Ready" helper={
+              "Ordered by lowest stock first, then product name. Progress bars are derived from live stock only."
+            }>
+              Inventory Stock Directory
+            </SectionHeader>
             <div>
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold tracking-tight text-slate-950">
-                  Inventory Stock Directory
-                </h2>
-                <Badge tone="brand">Automation Ready</Badge>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
+              <p className="sr-only">
                 Ordered by lowest stock first, then product name. Progress bars
                 are derived from live stock only.
               </p>
@@ -309,7 +354,7 @@ export function RealInventoryPage({
 
                     return (
                       <tr
-                        className={`border-t border-slate-100 transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#527B86] ${
+                          className={`border-t border-slate-100 transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${
                           stockLabel === "Out"
                             ? "bg-rose-50/40"
                             : stockLabel === "Low"
@@ -320,9 +365,20 @@ export function RealInventoryPage({
                       >
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#527B86]/10 text-xs font-black text-[#527B86]">
-                              {product.name.slice(0, 2).toUpperCase()}
-                            </div>
+                            {product.image ? (
+                              <Image
+                                alt=""
+                                className="h-11 w-11 rounded-2xl bg-stone-100 object-cover"
+                                height={44}
+                                src={product.image}
+                                unoptimized
+                                width={44}
+                              />
+                            ) : (
+                              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-xs font-black text-[#5E7F85]">
+                                {product.name.slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
                             <div>
                               <div className="font-bold text-slate-950">
                                 {product.name}
@@ -348,7 +404,7 @@ export function RealInventoryPage({
                           </div>
                           <div className="mt-2 h-2 w-24 overflow-hidden rounded-full bg-slate-100">
                             <div
-                              className="h-full rounded-full bg-[#527B86]"
+                              className="h-full rounded-full bg-[#5E7F85]"
                               style={{ width: `${stockPercentage}%` }}
                             />
                           </div>
@@ -395,17 +451,12 @@ export function RealInventoryPage({
 
         <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-3 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold tracking-tight text-slate-950">
-                  Recent Stock Movements
-                </h2>
-                <Badge tone="brand">Connected</Badge>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Latest read-only movement rows from inventory_movements.
-              </p>
-            </div>
+            <SectionHeader
+              badge="Connected"
+              helper="Latest read-only movement rows from inventory_movements."
+            >
+              Recent Stock Movements
+            </SectionHeader>
             <Badge tone="default">Recent {movements.length}</Badge>
           </div>
 
@@ -432,7 +483,7 @@ export function RealInventoryPage({
                 {movements.length > 0 ? (
                   movements.map((movement) => (
                     <tr
-                      className="border-t border-slate-100 bg-white transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#527B86]"
+                      className="border-t border-slate-100 bg-white transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85]"
                       key={movement.id}
                     >
                       <td className="px-5 py-4">
