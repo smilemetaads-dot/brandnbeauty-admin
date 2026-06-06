@@ -4,12 +4,14 @@ export type AdminNavItem = {
 };
 
 export type AdminNavGroup = {
+  icon: string;
   label: string;
   items: AdminNavItem[];
 };
 
 export const adminNavGroups: AdminNavGroup[] = [
   {
+    icon: "OV",
     label: "Overview",
     items: [
       { label: "Dashboard", href: "/dashboard" },
@@ -17,6 +19,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     ],
   },
   {
+    icon: "CA",
     label: "Catalog",
     items: [
       { label: "Products", href: "/products" },
@@ -31,6 +34,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     ],
   },
   {
+    icon: "OR",
     label: "Orders",
     items: [
       { label: "Orders", href: "/orders" },
@@ -42,6 +46,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     ],
   },
   {
+    icon: "CU",
     label: "Customers",
     items: [
       { label: "Customers", href: "/customers" },
@@ -49,6 +54,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     ],
   },
   {
+    icon: "SU",
     label: "Suppliers",
     items: [
       { label: "Suppliers", href: "/suppliers" },
@@ -56,6 +62,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     ],
   },
   {
+    icon: "FI",
     label: "Finance",
     items: [
       { label: "Finance Reconciliation", href: "/finance/reconciliation" },
@@ -63,6 +70,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     ],
   },
   {
+    icon: "ST",
     label: "Storefront",
     items: [
       { label: "Homepage CMS", href: "/homepage-cms" },
@@ -73,6 +81,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     ],
   },
   {
+    icon: "CO",
     label: "Control",
     items: [
       { label: "Roles & Permissions", href: "/roles" },
