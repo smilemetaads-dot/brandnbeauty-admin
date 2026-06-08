@@ -1,7 +1,15 @@
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
+import {
+  AdminBadge,
+  AdminStatCard,
+  AdminTable,
+  AdminTableHead,
+  AdminTableRow,
+  getAdminStatusTone,
+} from "@/components/admin/AdminUiPrimitives";
 import { AdminShell } from "@/components/admin/AdminShell";
 
 import { updateProductStatus } from "./product-actions";
@@ -11,7 +19,16 @@ type RealProductsPageProps = {
   products: ProductRecord[];
 };
 
-type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
+const PRODUCT_FILTERS = [
+  "All Products",
+  "Visible",
+  "Hidden",
+  "Active",
+  "Low Stock",
+  "Out of Stock",
+  "Discontinued",
+  "Notify Me",
+];
 
 const formatPrice = (price: number) =>
   new Intl.NumberFormat("en-BD", {
@@ -30,29 +47,12 @@ const formatStatus = (status: string | null) => {
   return status ? (labels[status] ?? status) : "Unknown";
 };
 
-const getStatusTone = (status: string | null): BadgeTone => {
-  if (status === "active") {
-    return "good";
-  }
-
-  if (status === "low_stock") {
-    return "warn";
-  }
-
-  return "bad";
-};
-
 const getVisibilityLabel = (status: string | null) =>
   status === "draft" ? "Hidden" : "Visible";
 
 const getStockRuleLabel = (status: string | null) => {
-  if (status === "out_of_stock") {
-    return "Notify Later";
-  }
-
-  if (status === "draft") {
-    return "Disabled";
-  }
+  if (status === "out_of_stock") return "Notify Me";
+  if (status === "draft") return "Disabled";
 
   return "Sellable";
 };
@@ -66,74 +66,12 @@ async function submitProductStatus(formData: FormData) {
   await updateProductStatus(formData);
 }
 
-function Badge({
-  children,
-  tone = "default",
-}: {
-  children: ReactNode;
-  tone?: BadgeTone;
-}) {
-  const className = {
-    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
-    good: "bg-emerald-50 text-emerald-700",
-    warn: "bg-amber-50 text-amber-700",
-    bad: "bg-rose-50 text-rose-700",
-    default: "bg-slate-100 text-slate-600",
-  }[tone];
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${className}`}
-    >
-      {children}
-    </span>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  helper,
-  icon,
-  active = false,
-}: {
-  label: string;
-  value: string;
-  helper: string;
-  icon: string;
-  active?: boolean;
-}) {
-  return (
-    <div
-      className={`group relative overflow-hidden rounded-[1.7rem] border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-        active ? "border-[#5E7F85] ring-2 ring-[#5E7F85]/15" : "border-slate-200"
-      }`}
-    >
-      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#5E7F85]/5 transition group-hover:bg-[#5E7F85]/10" />
-      <div className="relative flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="text-sm font-medium text-slate-500">{label}</div>
-          <div className="mt-3 text-2xl font-black tracking-tight text-slate-950">
-            {value}
-          </div>
-        </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-sm font-black text-[#5E7F85] transition group-hover:bg-[#5E7F85] group-hover:text-white">
-          {icon}
-        </div>
-      </div>
-      <div className="relative mt-4 inline-flex rounded-full bg-stone-50 px-3 py-1 text-xs font-semibold text-slate-600">
-        {helper}
-      </div>
-    </div>
-  );
-}
-
 function StatusControl({
   product,
   compact = false,
 }: {
-  product: ProductRecord;
   compact?: boolean;
+  product: ProductRecord;
 }) {
   return (
     <form action={submitProductStatus} className="flex flex-wrap items-center gap-2">
@@ -142,7 +80,7 @@ function StatusControl({
         Product status
       </label>
       <select
-        className={`rounded-2xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-sm outline-none transition focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/20 ${
+        className={`rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-stone-50 text-xs font-semibold text-slate-700 shadow-sm outline-none transition focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/20 ${
           compact ? "px-3 py-2" : "px-4 py-3"
         }`}
         defaultValue={product.status ?? "draft"}
@@ -166,6 +104,59 @@ function StatusControl({
   );
 }
 
+function DisabledAction({ children }: { children: ReactNode }) {
+  return (
+    <button
+      className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-500 shadow-sm transition disabled:opacity-60"
+      disabled
+      type="button"
+    >
+      {children}
+    </button>
+  );
+}
+
+function ProductImage({
+  className,
+  product,
+  size = 48,
+}: {
+  className?: string;
+  product: ProductRecord;
+  size?: number;
+}) {
+  if (!product.image) {
+    return (
+      <div
+        className={`flex shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-[10px] font-bold text-slate-400 ${className ?? ""}`}
+        style={{ height: size, width: size }}
+      >
+        IMG
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      alt=""
+      className={`shrink-0 rounded-2xl bg-stone-100 object-cover ${className ?? ""}`}
+      height={size}
+      src={product.image}
+      unoptimized
+      width={size}
+    />
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex justify-between gap-3 rounded-2xl bg-stone-50 px-4 py-3">
+      <span className="text-slate-500">{label}</span>
+      <b className="text-right text-slate-950">{value}</b>
+    </div>
+  );
+}
+
 export function RealProductsPage({ products }: RealProductsPageProps) {
   const catalogValue = products.reduce(
     (sum, product) => sum + product.price * product.stock,
@@ -177,13 +168,11 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
   const hiddenCount = products.filter(
     (product) => product.status === "draft",
   ).length;
-  const outOfStockCount = products.filter(
-    (product) => product.status === "out_of_stock",
+  const visibleOutOfStockCount = products.filter(
+    (product) =>
+      product.status === "out_of_stock" && getVisibilityLabel(product.status) === "Visible",
   ).length;
-  const outOfStockVisibleCount = products.filter(
-    (product) => product.status === "out_of_stock",
-  ).length;
-  const alertCount = products.filter((product) =>
+  const lowOrOutCount = products.filter((product) =>
     ["low_stock", "out_of_stock"].includes(product.status ?? ""),
   ).length;
   const selectedProduct = products[0] ?? null;
@@ -197,29 +186,17 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
               <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#5E7F85]">
                 Catalog
               </div>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
+              <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
                 Products Control Room
               </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Manage live Supabase products, archive-safe status changes,
-                attributes, and quick catalog checks from one clean place.
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+                Manage product visibility, stock health, pricing, badges and
+                quick catalog actions from one clean place.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button
-                className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-400"
-                disabled
-                type="button"
-              >
-                Bulk Import Not Connected
-              </button>
-              <button
-                className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-400"
-                disabled
-                type="button"
-              >
-                Export Not Connected
-              </button>
+              <DisabledAction>Bulk Import</DisabledAction>
+              <DisabledAction>Export</DisabledAction>
               <Link
                 className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-950"
                 href="/products/edit"
@@ -235,46 +212,49 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Visible products:{" "}
-              <b className="text-slate-950">{visibleCount}</b>
+              <b className="text-slate-900">{visibleCount}</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Hidden products: <b className="text-rose-700">{hiddenCount}</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Status alerts: <b className="text-amber-700">{alertCount}</b>
+              Units sold: <b className="text-slate-900">Not tracked</b>
             </div>
           </div>
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard
+          <AdminStatCard
             helper="Current stock value"
             icon="BDT"
             label="Catalog Value"
             value={`BDT ${formatPrice(catalogValue)}`}
           />
-          <StatCard
-            helper="Mapped from active, low stock, out of stock"
+          <AdminStatCard
+            helper="Frontend visible"
             icon="VS"
+            index={1}
             label="Visible SKUs"
-            value={String(visibleCount)}
+            value={visibleCount}
           />
-          <StatCard
+          <AdminStatCard
             active
-            helper="Archive safe review queue"
-            icon="AL"
-            label="Status Alerts"
-            value={String(alertCount)}
+            helper={`${lowOrOutCount} total stock alerts`}
+            icon="OS"
+            index={2}
+            label="Visible OOS"
+            value={visibleOutOfStockCount}
           />
-          <StatCard
-            helper={`${outOfStockCount} out of stock`}
+          <AdminStatCard
+            helper="Not on website"
             icon="HD"
+            index={3}
             label="Hidden SKUs"
-            value={String(hiddenCount)}
+            value={hiddenCount}
           />
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1fr_380px]">
+        <section className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_380px]">
           <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -282,49 +262,40 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                   <div className="text-sm font-medium text-slate-500">
                     Product Management
                   </div>
-                  <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
+                  <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900">
                     Product Master List
                   </h2>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <DisabledAction>Bulk Status</DisabledAction>
                   <button
-                    className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-400"
+                    className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white opacity-60"
                     disabled
                     type="button"
                   >
-                    Bulk Status Not Connected
-                  </button>
-                  <button
-                    className="rounded-2xl bg-slate-200 px-4 py-3 text-sm font-semibold text-slate-500"
-                    disabled
-                    type="button"
-                  >
-                    Quick Price Not Connected
+                    Quick Price
                   </button>
                 </div>
               </div>
-              <div className="mt-5 grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
-                <div className="relative max-w-xl">
+              <div className="mt-5 grid gap-3 xl:grid-cols-[minmax(20rem,36rem)_1fr] xl:items-center">
+                <div className="relative">
                   <input
-                    className="w-full rounded-2xl border border-slate-300 bg-stone-50 px-4 py-3 text-sm text-slate-500 outline-none"
+                    className="w-full rounded-2xl border border-slate-300 bg-stone-50 px-4 py-3 pl-10 text-sm outline-none placeholder:text-slate-400 disabled:text-slate-500"
                     disabled
-                    placeholder="Search not connected yet"
+                    placeholder="Search product / SKU / brand / category..."
                     type="search"
                   />
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    /
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {[
-                  "All Products",
-                  "Active",
-                  "Draft",
-                  "Low Stock",
-                  "Out of Stock",
-                  ].map((item) => (
+                  {PRODUCT_FILTERS.map((item) => (
                     <button
                       className={`rounded-full px-4 py-2 text-xs font-semibold ${
                         item === "All Products"
                           ? "bg-[#5E7F85] text-white"
-                          : "border border-slate-200 bg-white text-slate-500"
+                          : "border border-slate-200 bg-white text-slate-600"
                       }`}
                       disabled
                       key={item}
@@ -335,17 +306,11 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                   ))}
                 </div>
               </div>
-              <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-medium leading-6 text-amber-800">
-                Unsupported source actions are intentionally disabled here.
-                Product archive behavior stays status-based; products are not
-                hard deleted. Out-of-stock visible count:{" "}
-                <b>{outOfStockVisibleCount}</b>.
-              </div>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-stone-50 text-xs uppercase tracking-[0.12em] text-slate-500">
+              <AdminTable className="min-w-[1080px]">
+                <AdminTableHead>
                   <tr>
                     {[
                       "Product",
@@ -354,7 +319,6 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                       "Price / Stock",
                       "Storefront",
                       "Status",
-                      "Attributes",
                       "Action",
                     ].map((head) => (
                       <th className="px-5 py-4 font-medium" key={head}>
@@ -362,44 +326,31 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                       </th>
                     ))}
                   </tr>
-                </thead>
+                </AdminTableHead>
                 <tbody>
                   {products.length > 0 ? (
                     products.map((product, index) => (
-                      <tr
-                        className={`border-t border-slate-100 transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${
+                      <AdminTableRow
+                        className={
                           index === 0
                             ? "bg-[#5E7F85]/[0.06] shadow-[inset_3px_0_0_#5E7F85]"
                             : product.status === "out_of_stock"
                               ? "bg-rose-50/25"
                               : product.status === "low_stock"
                                 ? "bg-amber-50/25"
-                                : "bg-white"
-                        }`}
+                                : undefined
+                        }
                         key={product.id}
                       >
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
-                            {product.image ? (
-                              <Image
-                                alt=""
-                                className="h-12 w-12 shrink-0 rounded-2xl bg-stone-100 object-cover"
-                                height={48}
-                                src={product.image}
-                                unoptimized
-                                width={48}
-                              />
-                            ) : (
-                              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-[10px] font-bold text-slate-400">
-                                IMG
-                              </div>
-                            )}
-                            <div>
-                              <div className="font-bold text-slate-950">
+                            <ProductImage product={product} />
+                            <div className="min-w-0">
+                              <div className="max-w-[18rem] truncate font-bold text-slate-900">
                                 {product.name}
                               </div>
                               <div className="mt-1 text-xs text-slate-500">
-                                {product.featured ? "Featured" : "Standard"} catalog item
+                                {product.featured ? "Featured" : "Standard"} item
                               </div>
                             </div>
                           </div>
@@ -416,7 +367,7 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                           </div>
                         </td>
                         <td className="px-5 py-4">
-                          <div className="font-semibold text-slate-950">
+                          <div className="font-semibold text-slate-900">
                             BDT {formatPrice(product.price)}
                           </div>
                           <div className="mt-1 text-xs font-semibold text-slate-500">
@@ -425,14 +376,14 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex flex-wrap gap-2">
-                            <Badge
+                            <AdminBadge
                               tone={
                                 product.status === "draft" ? "bad" : "good"
                               }
                             >
                               {getVisibilityLabel(product.status)}
-                            </Badge>
-                            <Badge
+                            </AdminBadge>
+                            <AdminBadge
                               tone={
                                 product.status === "out_of_stock"
                                   ? "warn"
@@ -442,28 +393,16 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                               }
                             >
                               {getStockRuleLabel(product.status)}
-                            </Badge>
+                            </AdminBadge>
                           </div>
                         </td>
                         <td className="px-5 py-4">
-                          <Badge tone={getStatusTone(product.status)}>
+                          <AdminBadge tone={getAdminStatusTone(product.status)}>
                             {formatStatus(product.status)}
-                          </Badge>
+                          </AdminBadge>
                         </td>
                         <td className="px-5 py-4">
-                          <Badge
-                            tone={
-                              hasAttributes(product.attributes)
-                                ? "brand"
-                                : "default"
-                            }
-                          >
-                            Attributes:{" "}
-                            {hasAttributes(product.attributes) ? "yes" : "no"}
-                          </Badge>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex min-w-[330px] flex-wrap items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <Link
                               className="rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-semibold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
                               href={`/products/edit?id=${product.id}`}
@@ -471,51 +410,51 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                               Edit
                             </Link>
                             <button
-                              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400"
+                              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500 opacity-60"
                               disabled
                               type="button"
                             >
-                              View Not Connected
+                              View
                             </button>
                             <StatusControl compact product={product} />
                           </div>
                         </td>
-                      </tr>
+                      </AdminTableRow>
                     ))
                   ) : (
                     <tr>
                       <td
                         className="px-5 py-14 text-center text-sm text-slate-500"
-                        colSpan={8}
+                        colSpan={7}
                       >
                         No products found.
                       </td>
                     </tr>
                   )}
                 </tbody>
-              </table>
+              </AdminTable>
             </div>
           </div>
 
           <aside className="space-y-6">
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
               {selectedProduct ? (
                 <>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-sm font-medium text-slate-500">
-                        Live Product Preview
+                        Selected Product
                       </div>
-                      <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
+                      <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-900">
                         {selectedProduct.name}
                       </h3>
                       <div className="mt-1 text-xs text-slate-500">
                         {selectedProduct.sku ?? "No SKU"}
                       </div>
                     </div>
-                    <Badge tone={getStatusTone(selectedProduct.status)}>
+                    <AdminBadge tone={getAdminStatusTone(selectedProduct.status)}>
                       {formatStatus(selectedProduct.status)}
-                    </Badge>
+                    </AdminBadge>
                   </div>
                   <div className="mt-5 rounded-3xl border border-slate-200 bg-stone-50 p-4">
                     {selectedProduct.image ? (
@@ -533,17 +472,19 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                       </div>
                     )}
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <Badge tone={selectedProduct.featured ? "brand" : "default"}>
+                      <AdminBadge
+                        tone={selectedProduct.featured ? "brand" : "default"}
+                      >
                         {selectedProduct.featured ? "Featured" : "Standard"}
-                      </Badge>
-                      <Badge
+                      </AdminBadge>
+                      <AdminBadge
                         tone={
                           selectedProduct.status === "draft" ? "bad" : "good"
                         }
                       >
                         {getVisibilityLabel(selectedProduct.status)}
-                      </Badge>
-                      <Badge
+                      </AdminBadge>
+                      <AdminBadge
                         tone={
                           selectedProduct.status === "out_of_stock"
                             ? "warn"
@@ -553,33 +494,49 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                         }
                       >
                         {getStockRuleLabel(selectedProduct.status)}
-                      </Badge>
-                      <Badge tone="warn">Stock {selectedProduct.stock}</Badge>
+                      </AdminBadge>
+                      <AdminBadge tone="warn">
+                        Stock {selectedProduct.stock}
+                      </AdminBadge>
                     </div>
                   </div>
                   <div className="mt-5 space-y-3 text-sm">
-                    {[
-                      ["Brand", selectedProduct.brands?.name ?? "-"],
-                      ["Category", selectedProduct.categories?.name ?? "-"],
-                      ["Website", getVisibilityLabel(selectedProduct.status)],
-                      ["Stock Rule", getStockRuleLabel(selectedProduct.status)],
-                      [
-                        "Attributes",
-                        hasAttributes(selectedProduct.attributes) ? "yes" : "no",
-                      ],
-                      [
-                        "Selling Price",
-                        `BDT ${formatPrice(selectedProduct.price)}`,
-                      ],
-                    ].map(([label, value]) => (
-                      <div
-                        className="flex justify-between gap-3 rounded-2xl bg-stone-50 px-4 py-3"
-                        key={label}
-                      >
-                        <span className="text-slate-500">{label}</span>
-                        <b className="text-right text-slate-950">{value}</b>
-                      </div>
-                    ))}
+                    <DetailRow
+                      label="Brand"
+                      value={selectedProduct.brands?.name ?? "-"}
+                    />
+                    <DetailRow
+                      label="Category"
+                      value={selectedProduct.categories?.name ?? "-"}
+                    />
+                    <DetailRow
+                      label="Website"
+                      value={getVisibilityLabel(selectedProduct.status)}
+                    />
+                    <DetailRow
+                      label="Stock Rule"
+                      value={getStockRuleLabel(selectedProduct.status)}
+                    />
+                    <DetailRow
+                      label="Policy"
+                      value={
+                        selectedProduct.status === "draft"
+                          ? "Hide from storefront"
+                          : selectedProduct.status === "out_of_stock"
+                            ? "Keep visible / notify"
+                            : "Show normally"
+                      }
+                    />
+                    <DetailRow
+                      label="Attributes"
+                      value={
+                        hasAttributes(selectedProduct.attributes) ? "Yes" : "No"
+                      }
+                    />
+                    <DetailRow
+                      label="Selling Price"
+                      value={`BDT ${formatPrice(selectedProduct.price)}`}
+                    />
                   </div>
                   <div className="mt-5 grid gap-3">
                     <Link
@@ -600,11 +557,11 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                       </button>
                     </form>
                     <button
-                      className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-400"
+                      className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-500 opacity-60"
                       disabled
                       type="button"
                     >
-                      Frontend Preview Not Connected
+                      Frontend Preview
                     </button>
                   </div>
                 </>
@@ -613,9 +570,9 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                   Product details appear here after live products are added.
                 </div>
               )}
-            </div>
+            </section>
 
-            <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
+            <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
               <div className="text-sm font-bold text-amber-800">
                 Professional Visibility Rule
               </div>
@@ -624,7 +581,7 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                 Out of Stock for archive-safe control. No hard delete action is
                 available on this page.
               </div>
-            </div>
+            </section>
           </aside>
         </section>
       </div>
