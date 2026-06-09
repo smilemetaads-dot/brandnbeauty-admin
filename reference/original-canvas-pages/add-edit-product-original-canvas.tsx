@@ -1,11 +1,9 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck
-"use client";
-
-// DESIGN TEST ONLY.
-// Original Canvas Add/Edit Product visual code copied into production target for screenshot comparison.
-// Live saveProduct is intentionally disconnected in this temporary design-first test.
+// REFERENCE ONLY.
+// Original Canvas Add/Edit Product design source.
+// Do not import this file into production src.
+// Use only as visual skeleton reference for rebuilding src/features/products/RealAddEditProductPage.tsx.
 /* eslint-disable */
+// @ts-nocheck
 /*
 Full-context page file generated from the uploaded final admin source.
 Page: Add/Edit Product
@@ -14,15 +12,6 @@ Use this as reference for live injection. Do not import from _reference into pro
 */
 
 import React, { useState } from "react";
-
-import { AdminShell } from "@/components/admin/AdminShell";
-
-type RealAddEditProductPageProps = {
-  brands?: unknown;
-  categories?: unknown;
-  concerns?: unknown;
-  product?: unknown;
-};
 
 function Badge({ children, tone = "default" }) {
   const cls = {
@@ -58,7 +47,7 @@ function TableHead({ children, className = "" }) {
   return <thead className={`sticky top-0 z-10 bg-stone-50 text-slate-500 ${className}`}>{children}</thead>;
 }
 
-export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
+export default function ProductMasterPagePreviewWrapper() {
   const [trackStock, setTrackStock] = useState(true);
   const [featured, setFeatured] = useState(true);
   const [freeDelivery, setFreeDelivery] = useState(false);
@@ -216,9 +205,8 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   };
 
   return (
-    <AdminShell>
-      <div className="space-y-6">
-        {actionToast && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-700">✅ {actionToast}</div>}
+    <div className="space-y-6">
+      {actionToast && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-700">✅ {actionToast}</div>}
 
       <div className="sticky top-3 z-20 rounded-[1.6rem] border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -280,7 +268,6 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
       </div>
 
       {publishModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"><div className="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-4"><div><div className="text-sm font-medium text-slate-500">Publish Check</div><h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Ready to Publish?</h3></div><button onClick={() => setPublishModalOpen(false)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold">✕</button></div><div className="mt-6 grid gap-3">{publishChecks.map((check) => <div key={check.label} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${check.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{check.ok ? "✅" : "⚠"} {check.label}</div>)}</div><div className="mt-6 grid gap-3 sm:grid-cols-2"><button onClick={() => setPublishModalOpen(false)} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold">Cancel</button><button onClick={() => { if (publishBlocked) { showActionToast("Fix publish checklist before publishing"); setPublishModalOpen(false); } else { setStatus("Published"); setSaveStatus("Published just now"); setPublishModalOpen(false); showActionToast("Product published successfully"); } }} className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white">Publish</button></div></div></div>}
-      </div>
-    </AdminShell>
+    </div>
   );
 }
