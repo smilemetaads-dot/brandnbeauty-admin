@@ -1,10 +1,5 @@
-import { ModulePlaceholderPage } from "@/features/placeholders/ModulePlaceholderPage";
+import { RealOffersDealsPage } from "@/features/catalog/RealOffersDealsPage";
 
 export default function OffersPage() {
-  return (
-    <ModulePlaceholderPage
-      plannedPurpose="Offers & Deals will manage discount campaigns, coupon rules, featured offers, and future promotion windows."
-      title="Offers & Deals"
-    />
-  );
+  return <RealOffersDealsPage />;
 }
