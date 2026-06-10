@@ -1,10 +1,5 @@
-import { ModulePlaceholderPage } from "@/features/placeholders/ModulePlaceholderPage";
+import { RealProductRecommendationsPage } from "@/features/catalog/RealProductRecommendationsPage";
 
 export default function RecommendationsPage() {
-  return (
-    <ModulePlaceholderPage
-      plannedPurpose="Product Recommendations will manage curated product relationships, upsells, cross-sells, and rule-based recommendation sets."
-      title="Product Recommendations"
-    />
-  );
+  return <RealProductRecommendationsPage />;
 }
