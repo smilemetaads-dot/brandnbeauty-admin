@@ -22,7 +22,7 @@ function Badge({
   tone?: BadgeTone;
 }) {
   const className = {
-    brand: "bg-[#527B86]/10 text-[#527B86]",
+    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
     good: "bg-emerald-50 text-emerald-700",
     warn: "bg-amber-50 text-amber-700",
     bad: "bg-rose-50 text-rose-700",
@@ -42,7 +42,7 @@ function StatCard({
   helper,
   icon,
   label,
-  tone = "brand",
+  tone = "good",
   value,
 }: {
   helper: string;
@@ -52,7 +52,7 @@ function StatCard({
   value: ReactNode;
 }) {
   const helperClassName = {
-    brand: "bg-[#527B86]/10 text-[#527B86]",
+    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
     good: "bg-emerald-50 text-emerald-700",
     warn: "bg-amber-50 text-amber-700",
     bad: "bg-rose-50 text-rose-700",
@@ -60,21 +60,21 @@ function StatCard({
   }[tone];
 
   return (
-    <div className="group relative overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#527B86]/5 transition group-hover:bg-[#527B86]/10" />
+    <div className="group relative overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#5E7F85]/5 transition group-hover:bg-[#5E7F85]/10" />
       <div className="relative flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-slate-500">{label}</div>
-          <div className="mt-3 text-2xl font-black tracking-tight text-slate-950">
+          <div className="mt-3 truncate text-2xl font-bold tracking-tight text-slate-900">
             {value}
           </div>
         </div>
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#527B86]/10 text-xl font-black text-[#527B86]">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-xs font-bold text-[#5E7F85] transition group-hover:bg-[#5E7F85] group-hover:text-white">
           {icon}
         </div>
       </div>
       <div
-        className={`relative mt-4 inline-flex rounded-full px-3 py-1 text-xs font-bold ${helperClassName}`}
+        className={`relative mt-4 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${helperClassName}`}
       >
         {helper}
       </div>
@@ -95,9 +95,9 @@ function DisabledButton({
     <button
       className={`${
         small ? "rounded-xl px-3 py-2 text-xs" : "rounded-2xl px-5 py-3 text-sm"
-      } font-bold ${
+      } font-semibold ${
         primary
-          ? "bg-[#527B86] text-white opacity-45"
+          ? "bg-[#5E7F85] text-white opacity-45"
           : "border border-slate-300 bg-white text-slate-400"
       }`}
       disabled
@@ -115,6 +115,15 @@ function SelectShell({ label }: { label: string }) {
       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">
         v
       </span>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex justify-between gap-3">
+      <span className="text-slate-500">{label}</span>
+      <b className="text-right text-slate-900">{value}</b>
     </div>
   );
 }
@@ -177,10 +186,40 @@ function getRowClassName(order: CourierPaymentOrderRecord) {
   }
 
   if (order.order_status === "packed" || order.courier_status === "ready") {
-    return "bg-[#527B86]/[0.04]";
+    return "bg-[#5E7F85]/[0.04]";
   }
 
   return "bg-white";
+}
+
+function getReadyDispatchCount(orders: CourierPaymentOrderRecord[]) {
+  return orders.filter(
+    (order) => order.courier_status === "ready" || order.order_status === "packed",
+  ).length;
+}
+
+function getDeliveredCount(orders: CourierPaymentOrderRecord[]) {
+  return orders.filter(
+    (order) =>
+      order.courier_status === "delivered" ||
+      order.order_status === "delivered",
+  ).length;
+}
+
+function getReturnedCount(orders: CourierPaymentOrderRecord[]) {
+  return orders.filter(
+    (order) =>
+      order.courier_status === "returned" || order.order_status === "returned",
+  ).length;
+}
+
+function getMismatchCount(orders: CourierPaymentOrderRecord[]) {
+  return orders.filter(
+    (order) =>
+      order.payment_status === "failed" ||
+      order.courier_status === "failed" ||
+      order.due_amount > 0,
+  ).length;
 }
 
 function formatStatus(value: string | null) {
@@ -217,29 +256,16 @@ function getItemsSummary(order: CourierPaymentOrderRecord) {
 export function RealCourierPaymentsPage({
   orders,
 }: RealCourierPaymentsPageProps) {
-  const readyDispatchOrders = orders.filter(
-    (order) => order.courier_status === "ready" || order.order_status === "packed",
-  ).length;
-  const deliveredOrders = orders.filter(
-    (order) =>
-      order.courier_status === "delivered" ||
-      order.order_status === "delivered",
-  ).length;
-  const returnedOrders = orders.filter(
-    (order) =>
-      order.courier_status === "returned" || order.order_status === "returned",
-  ).length;
-  const mismatchOrders = orders.filter(
-    (order) =>
-      order.payment_status === "failed" ||
-      order.courier_status === "failed" ||
-      order.due_amount > 0,
-  ).length;
+  const readyDispatchOrders = getReadyDispatchCount(orders);
+  const deliveredOrders = getDeliveredCount(orders);
+  const returnedOrders = getReturnedCount(orders);
+  const mismatchOrders = getMismatchCount(orders);
   const codPipeline = orders.reduce((sum, order) => sum + order.due_amount, 0);
   const totalPaid = orders.reduce((sum, order) => sum + order.paid_amount, 0);
+  const settlementBase = codPipeline + totalPaid;
   const collectedPercent =
-    codPipeline + totalPaid > 0
-      ? Math.round((totalPaid / (codPipeline + totalPaid)) * 100)
+    settlementBase > 0
+      ? Math.round((totalPaid / settlementBase) * 100)
       : 0;
   const focusedOrder = orders[0] ?? null;
 
@@ -248,7 +274,7 @@ export function RealCourierPaymentsPage({
       <div className="space-y-6">
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            helper="Can send later"
+            helper="Can send courier"
             icon="#"
             label="Ready Dispatch"
             value={readyDispatchOrders}
@@ -261,7 +287,7 @@ export function RealCourierPaymentsPage({
             value={formatMoney(codPipeline)}
           />
           <StatCard
-            helper="Not Connected"
+            helper="Not tracked"
             icon="C"
             label="Courier Charge"
             tone="default"
@@ -276,9 +302,9 @@ export function RealCourierPaymentsPage({
           />
         </section>
 
-        <section className="rounded-2xl border border-[#527B86]/20 bg-[#527B86]/5 px-5 py-4 text-sm font-bold text-[#527B86]">
-          {readyDispatchOrders} parcels ready for courier upload. Courier API,
-          COD settlement, tracking sync, and export are not connected yet.
+        <section className="rounded-2xl border border-[#5E7F85]/20 bg-[#5E7F85]/5 px-5 py-4 text-sm font-semibold text-[#5E7F85]">
+          {readyDispatchOrders} parcels ready for courier upload. Tracking sync,
+          bulk export, and courier API upload remain preview-only.
         </section>
 
         <section className="flex flex-wrap items-center gap-2 rounded-[1.4rem] border border-slate-200 bg-white p-2 shadow-sm">
@@ -286,7 +312,7 @@ export function RealCourierPaymentsPage({
             <button
               className={`rounded-xl px-4 py-2.5 text-sm font-bold ${
                 index === 0
-                  ? "bg-[#527B86] text-white shadow-sm"
+                  ? "bg-[#5E7F85] text-white shadow-sm"
                   : "text-slate-500"
               }`}
               disabled
@@ -304,37 +330,35 @@ export function RealCourierPaymentsPage({
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
           <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 p-6">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <div className="text-sm font-medium text-slate-500">
                     Courier Dispatch Center
                   </div>
-                  <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                  <h1 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
                     Courier Dispatch Queue
                   </h1>
-                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                    Live packed, shipped, delivered, returned, and courier-ready
-                    orders. Dispatch, tracking sync, settlement, and export are
-                    safe placeholders in this step.
-                  </p>
+                  <div className="mt-1 text-sm text-slate-500">
+                    Send ready parcels to courier in bulk with one click.
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <DisabledButton>Export CSV N/C</DisabledButton>
-                  <DisabledButton primary>Send to Courier N/C</DisabledButton>
+                  <DisabledButton>Export CSV</DisabledButton>
+                  <DisabledButton primary>Send to Courier</DisabledButton>
                 </div>
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
                 <SelectShell label="All Partners" />
                 <SelectShell label="All Settlements" />
-                <DisabledButton small>Sync Tracking N/C</DisabledButton>
-                <DisabledButton small>Finance Review N/C</DisabledButton>
+                <DisabledButton small>Sync Tracking</DisabledButton>
+                <DisabledButton small>Finance Review</DisabledButton>
               </div>
             </div>
 
-            <div className="border-b border-slate-100 bg-stone-50/70 px-6 py-4 text-sm font-bold text-slate-600">
+            <div className="border-b border-slate-100 bg-stone-50/70 px-6 py-4 text-sm font-semibold text-slate-600">
               Live records: {orders.length}. Selection, courier upload, COD
-              paid, payment reconciliation, stock sync, and hard delete are not
-              performed here.
+              reconciliation, tracking sync, export, and hard delete are
+              preview-only here. Connected row actions remain available below.
             </div>
 
             {orders.length ? (
@@ -355,8 +379,10 @@ export function RealCourierPaymentsPage({
                         "Partner",
                         "Tracking",
                         "COD",
+                        "Charge",
                         "Courier",
                         "Settlement",
+                        "Received",
                         "Items",
                         "Action",
                       ].map((heading) => (
@@ -373,7 +399,7 @@ export function RealCourierPaymentsPage({
                   <tbody>
                     {orders.map((order) => (
                       <tr
-                        className={`border-t border-slate-100 align-top transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#527B86] ${getRowClassName(
+                        className={`border-t border-slate-100 align-top transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${getRowClassName(
                           order,
                         )}`}
                         key={order.id}
@@ -416,12 +442,12 @@ export function RealCourierPaymentsPage({
                           <div className="font-black text-slate-950">
                             {formatMoney(order.due_amount)}
                           </div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            Paid {formatMoney(order.paid_amount)}
-                          </div>
                           <div className="text-xs text-slate-500">
                             Total {formatMoney(order.total)}
                           </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <Badge tone="default">Not tracked</Badge>
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex flex-col items-start gap-2">
@@ -440,6 +466,9 @@ export function RealCourierPaymentsPage({
                             {formatStatus(order.payment_status)}
                           </Badge>
                         </td>
+                        <td className="px-5 py-4 font-semibold text-slate-800">
+                          {formatMoney(order.paid_amount)}
+                        </td>
                         <td className="max-w-[260px] px-5 py-4">
                           <div className="font-semibold text-slate-700">
                             {getItemsSummary(order)}
@@ -453,7 +482,7 @@ export function RealCourierPaymentsPage({
                         <td className="px-5 py-4">
                           <div className="flex min-w-[220px] flex-col gap-2">
                             <Link
-                              className="rounded-xl bg-[#527B86]/10 px-3 py-2 text-center text-xs font-bold text-[#527B86] transition hover:bg-[#527B86] hover:text-white"
+                              className="rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-center text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
                               href={`/orders/details?id=${order.id}`}
                             >
                               Open
@@ -473,7 +502,7 @@ export function RealCourierPaymentsPage({
                               currentOrderStatus={order.order_status}
                               orderId={order.id}
                             />
-                            <DisabledButton small>Sync N/C</DisabledButton>
+                            <DisabledButton small>Sync</DisabledButton>
                           </div>
                         </td>
                       </tr>
@@ -499,7 +528,7 @@ export function RealCourierPaymentsPage({
               <div className="mt-5 flex items-center justify-center">
                 <div className="relative flex h-28 w-28 items-center justify-center rounded-full border-8 border-stone-100">
                   <div
-                    className="absolute inset-0 rounded-full border-8 border-[#527B86]"
+                    className="absolute inset-0 rounded-full border-8 border-[#5E7F85]"
                     style={{
                       clipPath: `inset(${100 - collectedPercent}% 0 0 0)`,
                     }}
@@ -515,18 +544,23 @@ export function RealCourierPaymentsPage({
                 </div>
               </div>
               <div className="mt-5 space-y-3 text-sm">
-                <div className="flex justify-between gap-3">
-                  <span className="text-slate-500">COD Pipeline</span>
-                  <b>{formatMoney(codPipeline)}</b>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span className="text-slate-500">Paid Amount</span>
-                  <b className="text-emerald-700">{formatMoney(totalPaid)}</b>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span className="text-slate-500">Difference</span>
-                  <b className="text-rose-600">{formatMoney(codPipeline)}</b>
-                </div>
+                <DetailRow label="COD Pipeline" value={formatMoney(codPipeline)} />
+                <DetailRow
+                  label="Paid Amount"
+                  value={
+                    <span className="text-emerald-700">
+                      {formatMoney(totalPaid)}
+                    </span>
+                  }
+                />
+                <DetailRow
+                  label="Pending / Difference"
+                  value={
+                    <span className="text-rose-600">
+                      {formatMoney(codPipeline)}
+                    </span>
+                  }
+                />
               </div>
             </section>
 
@@ -544,7 +578,7 @@ export function RealCourierPaymentsPage({
                   "Courier API setup pending",
                 ].map((item) => (
                   <div
-                    className="rounded-2xl bg-stone-50 px-4 py-3 text-sm font-bold text-slate-700"
+                    className="rounded-2xl bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-700"
                     key={item}
                   >
                     {item}
@@ -569,25 +603,47 @@ export function RealCourierPaymentsPage({
               </div>
               {focusedOrder ? (
                 <div className="mt-4 space-y-2 text-sm">
-                  <div className="flex justify-between gap-3">
-                    <span className="text-slate-500">Customer</span>
-                    <b className="text-right">{focusedOrder.customer_name}</b>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span className="text-slate-500">Tracking</span>
-                    <b className="text-right">
-                      {formatText(focusedOrder.courier_tracking_id)}
-                    </b>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span className="text-slate-500">Partner</span>
-                    <b className="text-right">
-                      {formatText(focusedOrder.courier_name)}
-                    </b>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span className="text-slate-500">COD Due</span>
-                    <b className="text-right">{formatMoney(focusedOrder.due_amount)}</b>
+                  <DetailRow label="Customer" value={focusedOrder.customer_name} />
+                  <DetailRow
+                    label="Tracking"
+                    value={formatText(focusedOrder.courier_tracking_id)}
+                  />
+                  <DetailRow
+                    label="Partner"
+                    value={formatText(focusedOrder.courier_name)}
+                  />
+                  <DetailRow
+                    label="COD Due"
+                    value={formatMoney(focusedOrder.due_amount)}
+                  />
+                  <div className="mt-5 rounded-2xl bg-stone-50 p-4">
+                    <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                      Tracking Timeline
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {[
+                        ["Packed", focusedOrder.packed_at],
+                        ["Courier Sent", focusedOrder.shipped_at],
+                        ["Delivered", focusedOrder.delivered_at],
+                        ["Returned", focusedOrder.returned_at],
+                      ].map(([label, value], index) => (
+                        <div
+                          className="flex items-center gap-3 text-xs font-semibold text-slate-700"
+                          key={label}
+                        >
+                          <span
+                            className={`h-2.5 w-2.5 rounded-full ${
+                              value
+                                ? "bg-emerald-500"
+                                : index === 1
+                                  ? "bg-[#5E7F85]"
+                                  : "bg-slate-200"
+                            }`}
+                          />
+                          {label}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ) : (
