@@ -13,8 +13,6 @@ type RealOrderDetailsPageProps = {
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
-const BRAND = "#527B86";
-
 function Badge({
   children,
   tone = "default",
@@ -23,7 +21,7 @@ function Badge({
   tone?: BadgeTone;
 }) {
   const className = {
-    brand: "bg-[#527B86]/10 text-[#527B86]",
+    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
     good: "bg-emerald-50 text-emerald-700",
     warn: "bg-amber-50 text-amber-700",
     bad: "bg-rose-50 text-rose-700",
@@ -39,24 +37,31 @@ function Badge({
   );
 }
 
+function BackLink() {
+  return (
+    <Link
+      className="inline-flex rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
+      href="/orders"
+    >
+      Back to Orders
+    </Link>
+  );
+}
+
 function Card({
-  eyebrow,
-  title,
   action,
   children,
-  className = "",
+  eyebrow,
+  title,
 }: {
-  eyebrow?: string;
-  title: string;
   action?: ReactNode;
   children: ReactNode;
-  className?: string;
+  eyebrow?: string;
+  title: string;
 }) {
   return (
-    <section
-      className={`rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm ${className}`}
-    >
-      <div className="flex items-start justify-between gap-4">
+    <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex items-center justify-between gap-4">
         <div>
           {eyebrow ? (
             <div className="text-sm font-medium text-slate-500">{eyebrow}</div>
@@ -72,13 +77,7 @@ function Card({
   );
 }
 
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: ReactNode;
-}) {
+function DetailRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 text-sm">
       <dt className="text-slate-500">{label}</dt>
@@ -90,17 +89,17 @@ function DetailRow({
 }
 
 function InfoTile({
+  helper,
   label,
   value,
-  helper,
 }: {
+  helper?: ReactNode;
   label: string;
   value: ReactNode;
-  helper?: ReactNode;
 }) {
   return (
     <div className="rounded-2xl bg-stone-50 p-4">
-      <div className="text-xs font-medium text-slate-500">{label}</div>
+      <div className="text-xs text-slate-500">{label}</div>
       <div className="mt-1 font-bold text-slate-900">{value}</div>
       {helper ? <div className="mt-1 text-sm text-slate-600">{helper}</div> : null}
     </div>
@@ -108,21 +107,29 @@ function InfoTile({
 }
 
 function StatCard({
-  label,
-  value,
   helper,
-  index,
+  icon,
+  label,
+  tone = "good",
+  value,
 }: {
-  label: string;
-  value: ReactNode;
   helper: string;
-  index: number;
+  icon: string;
+  label: string;
+  tone?: BadgeTone;
+  value: ReactNode;
 }) {
-  const icons = ["৳", "☷", "◈", "▸"];
+  const helperClassName = {
+    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
+    good: "bg-emerald-50 text-emerald-700",
+    warn: "bg-amber-50 text-amber-700",
+    bad: "bg-rose-50 text-rose-700",
+    default: "bg-stone-50 text-slate-600",
+  }[tone];
 
   return (
     <div className="group relative overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#527B86]/5 transition group-hover:bg-[#527B86]/10" />
+      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#5E7F85]/5 transition group-hover:bg-[#5E7F85]/10" />
       <div className="relative flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-slate-500">{label}</div>
@@ -130,11 +137,13 @@ function StatCard({
             {value}
           </div>
         </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#527B86]/10 text-xl font-bold text-[#527B86]">
-          {icons[index % icons.length]}
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-xs font-bold text-[#5E7F85] transition group-hover:bg-[#5E7F85] group-hover:text-white">
+          {icon}
         </div>
       </div>
-      <div className="relative mt-4 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+      <div
+        className={`relative mt-4 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${helperClassName}`}
+      >
         {helper}
       </div>
     </div>
@@ -149,14 +158,10 @@ function DisabledButton({
   tone?: "default" | "brand" | "good" | "bad";
 }) {
   const className = {
-    default:
-      "border-slate-300 bg-white text-slate-500",
-    brand:
-      "border-[#527B86]/20 bg-[#527B86]/10 text-[#527B86]",
-    good:
-      "border-emerald-200 bg-emerald-50 text-emerald-700",
-    bad:
-      "border-rose-200 bg-rose-50 text-rose-700",
+    default: "border-slate-300 bg-white text-slate-400",
+    brand: "border-[#5E7F85]/20 bg-[#5E7F85]/10 text-[#5E7F85]",
+    good: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    bad: "border-rose-200 bg-rose-50 text-rose-700",
   }[tone];
 
   return (
@@ -171,54 +176,57 @@ function DisabledButton({
 }
 
 function getOrderStatusTone(status: string): BadgeTone {
-  if (status === "delivered") {
-    return "good";
-  }
-
-  if (status === "cancelled" || status === "returned") {
-    return "bad";
-  }
-
-  if (status === "new" || status === "processing") {
-    return "warn";
-  }
-
+  if (status === "delivered" || status === "packed") return "good";
+  if (status === "cancelled" || status === "returned") return "bad";
+  if (status === "new" || status === "processing") return "warn";
   return "brand";
 }
 
 function getPaymentStatusTone(status: string): BadgeTone {
-  if (status === "paid") {
-    return "good";
-  }
-
-  if (status === "failed" || status === "refunded") {
-    return "bad";
-  }
-
+  if (status === "paid") return "good";
+  if (status === "failed" || status === "refunded") return "bad";
   return "warn";
 }
 
 function getCourierStatusTone(status: string | null): BadgeTone {
-  if (status === "delivered") {
-    return "good";
-  }
-
-  if (status === "returned" || status === "failed") {
-    return "bad";
-  }
-
-  if (status === "sent" || status === "ready") {
-    return "brand";
-  }
-
+  if (status === "delivered") return "good";
+  if (status === "returned" || status === "failed") return "bad";
+  if (status === "sent" || status === "ready") return "brand";
   return "default";
 }
 
-function getTimelineState(value: string | null, isCurrent: boolean) {
-  if (value) {
-    return "done";
+function getRiskLabel(order: OrderDetailsRecord) {
+  if (order.order_status === "cancelled" || order.order_status === "returned") {
+    return "High";
   }
 
+  if (order.due_amount > 0 || order.order_status === "new") {
+    return "Medium";
+  }
+
+  return "Low";
+}
+
+function getRiskTone(order: OrderDetailsRecord): BadgeTone {
+  const risk = getRiskLabel(order);
+  if (risk === "High") return "bad";
+  if (risk === "Medium") return "warn";
+  return "good";
+}
+
+function getRiskScore(order: OrderDetailsRecord) {
+  let score = 18;
+  if (order.order_status === "new") score += 24;
+  if (order.due_amount > 0) score += 18;
+  if (order.order_status === "cancelled" || order.order_status === "returned") {
+    score += 34;
+  }
+  if (order.district && order.district !== "Dhaka") score += 6;
+  return Math.min(score, 100);
+}
+
+function getTimelineState(value: string | null, isCurrent: boolean) {
+  if (value) return "done";
   return isCurrent ? "active" : "wait";
 }
 
@@ -243,9 +251,7 @@ function formatMoney(value: number) {
 }
 
 function formatDate(value: string | null) {
-  if (!value) {
-    return "Not available";
-  }
+  if (!value) return "Not available";
 
   return new Intl.DateTimeFormat("en", {
     dateStyle: "medium",
@@ -253,23 +259,24 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
-function BackLink() {
-  return (
-    <Link
-      className="inline-flex rounded-xl bg-[#527B86]/10 px-3 py-2 text-xs font-bold text-[#527B86] transition hover:bg-[#527B86] hover:text-white"
-      href="/orders"
-    >
-      Back to Orders
-    </Link>
-  );
-}
+function getNextStepText(order: OrderDetailsRecord) {
+  if (order.order_status === "new") {
+    return "Confirm customer details before packing.";
+  }
 
-function NotConnectedLabel() {
-  return (
-    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
-      Not Connected
-    </span>
-  );
+  if (order.order_status === "confirmed" || order.order_status === "processing") {
+    return "Move this order toward Packing Desk.";
+  }
+
+  if (order.order_status === "packed") {
+    return "Review courier handoff before shipping.";
+  }
+
+  if (order.order_status === "cancelled" || order.order_status === "returned") {
+    return "Review stock restoration and customer note.";
+  }
+
+  return "Update order, payment, and courier status safely.";
 }
 
 export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
@@ -281,7 +288,7 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
           <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#527B86]">
+                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#5E7F85]">
                   Order Operations
                 </div>
                 <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
@@ -309,12 +316,12 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
     { label: "Order Placed", value: order.created_at },
     { label: "Confirmed", value: order.confirmed_at },
     { label: "Packed", value: order.packed_at },
-    { label: "Shipped", value: order.shipped_at },
+    { label: "Courier Sent", value: order.shipped_at },
     { label: "Delivered", value: order.delivered_at },
     { label: "Returned", value: order.returned_at },
-    { label: "Cancelled", value: order.cancelled_at },
   ];
   const firstPendingIndex = timeline.findIndex((item) => !item.value);
+  const riskScore = getRiskScore(order);
 
   return (
     <AdminShell>
@@ -325,68 +332,66 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
           <div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight text-slate-950">
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900">
                   Order {orderNumber}
                 </h1>
                 <Badge tone={getOrderStatusTone(order.order_status)}>
                   {formatStatus(order.order_status)}
                 </Badge>
-                <Badge tone={getPaymentStatusTone(order.payment_status)}>
-                  {formatStatus(order.payment_status)}
-                </Badge>
-                <Badge tone={getCourierStatusTone(order.courier_status)}>
-                  {formatStatus(order.courier_status)}
+                <Badge tone={getRiskTone(order)}>
+                  {getRiskLabel(order)} Risk
                 </Badge>
               </div>
               <div className="mt-2 text-sm text-slate-500">
-                Created {formatDate(order.created_at)} · Source{" "}
-                {formatText(order.source)} · Payment{" "}
-                {formatStatus(order.payment_status)}
+                Created {formatDate(order.created_at)} - Source{" "}
+                {formatText(order.source)} - {formatStatus(order.payment_status)}
               </div>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-                Live order details with controlled status updates and one-time
-                stock deduction/restoration through guarded RPC calls. Courier
-                actions and hard delete are not connected.
-              </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DisabledButton>Print Invoice · Not Connected</DisabledButton>
-              <DisabledButton tone="good">WhatsApp · Not Connected</DisabledButton>
+              <Link
+                className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-stone-50"
+                href={`/orders/details/invoice?id=${order.id}`}
+              >
+                Print Invoice
+              </Link>
+              <DisabledButton tone="good">WhatsApp</DisabledButton>
+              <DisabledButton tone="brand">Confirm / Update</DisabledButton>
             </div>
           </div>
         </section>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            helper="Live order total"
-            index={0}
+            helper={order.due_amount > 0 ? "COD receivable" : "Paid or settled"}
+            icon="BDT"
             label="Order Total"
             value={formatMoney(order.total)}
           />
           <StatCard
             helper={`${order.order_items.length} product rows`}
-            index={1}
+            icon="List"
             label="Items"
             value={totalItems}
           />
           <StatCard
-            helper={formatStatus(order.payment_status)}
-            index={2}
-            label="Due / Payment"
-            value={formatMoney(order.due_amount)}
+            helper={riskScore >= 50 ? "Call before dispatch" : "Normal review"}
+            icon="Risk"
+            label="Risk Score"
+            tone={riskScore >= 50 ? "warn" : "good"}
+            value={`${riskScore}/100`}
           />
           <StatCard
             helper={formatStatus(order.courier_status)}
-            index={3}
+            icon="Go"
             label="Courier"
             value={formatText(order.courier_name)}
           />
-        </div>
+        </section>
 
-        <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+        <section className="grid gap-6 xl:grid-cols-[1fr_380px]">
           <div className="space-y-6">
             <Card
-              action={<NotConnectedLabel />}
+              action={<DisabledButton>Edit</DisabledButton>}
               eyebrow="Customer & Delivery"
               title="Shipping Details"
             >
@@ -397,16 +402,16 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
                   value={order.customer_name}
                 />
                 <InfoTile
-                  helper={formatText(order.customer_email)}
-                  label="Email"
-                  value={formatText(order.customer_email)}
-                />
-                <InfoTile
-                  helper={`${formatText(order.district)} · ${formatText(
+                  helper={`${formatText(order.district)} / ${formatText(
                     order.area,
                   )}`}
                   label="Address"
                   value={formatText(order.customer_address)}
+                />
+                <InfoTile
+                  helper={formatText(order.customer_email)}
+                  label="Email"
+                  value={formatText(order.customer_email)}
                 />
                 <InfoTile
                   helper={formatText(order.note)}
@@ -416,90 +421,62 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
               </div>
             </Card>
 
-            <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-              <div className="flex flex-col gap-3 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <div className="text-sm font-medium text-slate-500">
-                    Products
-                  </div>
-                  <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                    Ordered Items
-                  </h2>
-                </div>
-                <Badge tone="brand">{totalItems} items</Badge>
-              </div>
-
+            <Card
+              action={<Badge tone="brand">{totalItems} items</Badge>}
+              eyebrow="Products"
+              title="Ordered Items"
+            >
               {order.order_items.length ? (
-                <div className="overflow-x-auto p-5">
-                  <div className="overflow-hidden rounded-2xl border border-slate-200">
-                    <table className="min-w-full text-left text-sm">
-                      <thead className="bg-stone-50 text-slate-500">
-                        <tr>
-                          {[
-                            "Product",
-                            "SKU",
-                            "Brand",
-                            "Size",
-                            "Qty",
-                            "Unit Price",
-                            "Total",
-                          ].map((heading) => (
-                            <th
-                              className="px-4 py-3 font-medium"
-                              key={heading}
-                              scope="col"
-                            >
-                              {heading}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {order.order_items.map((item) => (
-                          <tr
-                            className="border-t border-slate-100 bg-white"
-                            key={item.id}
+                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-stone-50 text-slate-500">
+                      <tr>
+                        {["Product", "Stock", "Qty", "Total"].map((heading) => (
+                          <th
+                            className={`px-4 py-3 font-medium ${
+                              heading === "Qty" ? "text-center" : ""
+                            } ${heading === "Total" ? "text-right" : ""}`}
+                            key={heading}
                           >
-                            <td className="px-4 py-4">
-                              <div className="font-bold text-slate-950">
-                                {item.product_name}
-                              </div>
-                              <div className="mt-1 text-xs font-semibold text-slate-400">
-                                {formatText(item.product_slug)}
-                              </div>
-                            </td>
-                            <td className="px-4 py-4 text-slate-600">
-                              {formatText(item.product_sku)}
-                            </td>
-                            <td className="px-4 py-4 text-slate-600">
-                              {formatText(item.product_brand)}
-                            </td>
-                            <td className="px-4 py-4 text-slate-600">
-                              {formatText(item.product_size)}
-                            </td>
-                            <td className="px-4 py-4 text-center font-semibold text-slate-800">
-                              {item.quantity}
-                            </td>
-                            <td className="px-4 py-4 font-semibold text-slate-800">
-                              {formatMoney(item.unit_price)}
-                            </td>
-                            <td className="px-4 py-4 text-right font-bold text-slate-900">
-                              {formatMoney(item.total_price)}
-                            </td>
-                          </tr>
+                            {heading}
+                          </th>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {order.order_items.map((item) => (
+                        <tr className="border-t border-slate-100" key={item.id}>
+                          <td className="px-4 py-4">
+                            <div className="font-semibold text-slate-900">
+                              {item.product_name}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {formatText(item.product_brand)} / SKU{" "}
+                              {formatText(item.product_sku)}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <Badge tone={item.product_id ? "good" : "warn"}>
+                              {item.product_id ? "Linked" : "Snapshot"}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-4 text-center font-semibold">
+                            {item.quantity}
+                          </td>
+                          <td className="px-4 py-4 text-right font-bold">
+                            {formatMoney(item.total_price)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               ) : (
-                <div className="p-6 text-sm text-slate-500">
+                <div className="rounded-2xl bg-stone-50 p-6 text-sm text-slate-500">
                   No order items found for this order.
                 </div>
               )}
-            </section>
-
-            <OrderDocumentsPreview order={order} />
+            </Card>
 
             <Card
               action={<Badge tone="brand">Live</Badge>}
@@ -523,7 +500,7 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
                           state === "done"
                             ? "bg-emerald-500"
                             : state === "active"
-                              ? "bg-[#527B86]"
+                              ? "bg-[#5E7F85]"
                               : "bg-slate-200"
                         }`}
                       />
@@ -532,21 +509,27 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
                           {item.label}
                         </div>
                         <div className="text-[11px] text-slate-500">
-                          {formatDate(item.value)}
+                          {state === "active" ? "Current step" : formatDate(item.value)}
                         </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              <dl className="mt-5 grid gap-3 rounded-2xl border border-slate-100 bg-white p-4 md:grid-cols-2">
-                <DetailRow label="Updated" value={formatDate(order.updated_at)} />
-                <DetailRow
-                  label="Current Status"
-                  value={formatStatus(order.order_status)}
-                />
-              </dl>
             </Card>
+
+            <Card eyebrow="Internal Notes" title="Notes">
+              <div className="space-y-3">
+                <textarea
+                  className="h-20 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 outline-none"
+                  defaultValue={formatText(order.note)}
+                  disabled
+                />
+                <DisabledButton>Save Notes</DisabledButton>
+              </div>
+            </Card>
+
+            <OrderDocumentsPreview order={order} />
 
             <Card eyebrow="Inventory Safety" title="Stock Sync">
               <dl className="space-y-3">
@@ -570,39 +553,33 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
             </Card>
           </div>
 
-          <div className="space-y-6">
+          <aside className="space-y-6">
             <Card title="Action Center">
-              <div className="rounded-2xl border border-[#527B86]/15 bg-[#527B86]/5 p-4">
-                <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#527B86]">
+              <div className="rounded-2xl border border-[#5E7F85]/15 bg-[#5E7F85]/5 p-4">
+                <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#5E7F85]">
                   Next Step
                 </div>
                 <div className="mt-1 text-sm font-semibold text-slate-800">
-                  Update order, payment, and courier status safely.
+                  {getNextStepText(order)}
                 </div>
                 <div className="mt-1 text-xs text-slate-500">
-                  Stock deduction runs once for confirmation-stage statuses, and
-                  restoration runs once for cancelled or returned status.
-                  Courier send and separate cancellation actions remain
-                  unavailable in this step.
+                  Stock deduction/restoration remains controlled by the existing
+                  status action safeguards.
                 </div>
               </div>
+
               <OrderStatusForm
                 courierStatus={order.courier_status}
                 orderId={order.id}
                 orderStatus={order.order_status}
                 paymentStatus={order.payment_status}
               />
+
               <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <DisabledButton>Call Customer · Not Connected</DisabledButton>
-                <DisabledButton tone="good">
-                  WhatsApp · Not Connected
-                </DisabledButton>
-                <DisabledButton tone="brand">
-                  Move to Packing · Not Connected
-                </DisabledButton>
-                <DisabledButton tone="bad">
-                  Cancel Order · Not Connected
-                </DisabledButton>
+                <DisabledButton>Call Customer</DisabledButton>
+                <DisabledButton tone="good">WhatsApp</DisabledButton>
+                <DisabledButton tone="brand">Move to Packing</DisabledButton>
+                <DisabledButton tone="bad">Cancel Order</DisabledButton>
               </div>
             </Card>
 
@@ -618,7 +595,11 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
                 />
                 <DetailRow
                   label="Status"
-                  value={formatStatus(order.courier_status)}
+                  value={
+                    <Badge tone={getCourierStatusTone(order.courier_status)}>
+                      {formatStatus(order.courier_status)}
+                    </Badge>
+                  }
                 />
                 <DetailRow
                   label="Note"
@@ -626,9 +607,7 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
                 />
               </dl>
               <div className="mt-5">
-                <DisabledButton tone="brand">
-                  Send Courier · Not Connected
-                </DisabledButton>
+                <DisabledButton tone="brand">Send Courier</DisabledButton>
               </div>
             </Card>
 
@@ -654,18 +633,22 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
                   label="Due Amount"
                   value={formatMoney(order.due_amount)}
                 />
+                <DetailRow
+                  label="Payment"
+                  value={
+                    <Badge tone={getPaymentStatusTone(order.payment_status)}>
+                      {formatStatus(order.payment_status)}
+                    </Badge>
+                  }
+                />
                 <div className="flex justify-between border-t border-slate-200 pt-3 text-base">
-                  <span className="font-bold text-slate-900">Total</span>
+                  <span className="font-bold text-slate-900">Total COD</span>
                   <b className="text-slate-950">{formatMoney(order.total)}</b>
                 </div>
               </dl>
             </Card>
-          </div>
-        </div>
-
-        <div className="sr-only" style={{ color: BRAND }}>
-          Brand accent reference
-        </div>
+          </aside>
+        </section>
       </div>
     </AdminShell>
   );
