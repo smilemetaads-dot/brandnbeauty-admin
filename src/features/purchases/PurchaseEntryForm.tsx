@@ -122,15 +122,15 @@ export function PurchaseEntryForm({
         <input name="purchaseId" type="hidden" value={entry?.id ?? ""} />
       )}
 
-      <div className="grid gap-4 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2">
         <label className={`${labelClassName} lg:col-span-1`}>
-          Purchase Number
+          Invoice No / Purchase Number
           <input
             className={inputClassName}
             defaultValue={entry?.purchase_number ?? ""}
             disabled={isPending}
             name="purchase_number"
-            placeholder="PO-0001"
+            placeholder="INV-2026-001"
             required
             type="text"
           />
@@ -152,6 +152,26 @@ export function PurchaseEntryForm({
               </option>
             ))}
           </select>
+        </label>
+
+        <label className={labelClassName}>
+          Warehouse
+          <input
+            className={`${inputClassName} font-semibold text-slate-400`}
+            disabled
+            placeholder="Main Warehouse preview"
+            type="text"
+          />
+        </label>
+
+        <label className={labelClassName}>
+          Batch / GRN No
+          <input
+            className={`${inputClassName} font-semibold text-slate-400`}
+            disabled
+            placeholder="Generated after receive"
+            type="text"
+          />
         </label>
 
         <label className={`${labelClassName} lg:col-span-1`}>
@@ -188,6 +208,27 @@ export function PurchaseEntryForm({
           placeholder="Purchase note"
         />
       </label>
+
+      <div className="grid gap-3 md:grid-cols-4">
+        <div className="rounded-2xl border border-slate-200 p-3">
+          <div className="text-xs text-slate-500">Landed Cost</div>
+          <div className="mt-1 font-bold">{formatMoney(draftTotal)}</div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 p-3">
+          <div className="text-xs text-slate-500">Avg Margin</div>
+          <div className="mt-1 font-bold text-slate-400">Not tracked</div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 p-3">
+          <div className="text-xs text-slate-500">Units Added</div>
+          <div className="mt-1 font-bold">
+            {rows.reduce((sum, row) => sum + toInputNumber(row.quantity), 0)}
+          </div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 p-3">
+          <div className="text-xs text-slate-500">Stock Value</div>
+          <div className="mt-1 font-bold">{formatMoney(draftTotal)}</div>
+        </div>
+      </div>
 
       <section className="space-y-3 rounded-[1.5rem] border border-slate-200 bg-stone-50 p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -322,8 +363,8 @@ export function PurchaseEntryForm({
       </section>
 
       <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-900">
-        This does not update stock. Stock increases only when Receive Stock is
-        connected later.
+        This save does not update stock. Stock increases only when the existing
+        Receive Stock action is used.
       </div>
 
       {options.products.length === 0 ? (
