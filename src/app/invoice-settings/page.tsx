@@ -1,10 +1,5 @@
-import { ModulePlaceholderPage } from "@/features/placeholders/ModulePlaceholderPage";
+import { RealInvoiceThankYouSettingsPage } from "@/features/invoice/RealInvoiceThankYouSettingsPage";
 
 export default function InvoiceSettingsPage() {
-  return (
-    <ModulePlaceholderPage
-      plannedPurpose="Invoice & Thank You Settings will configure invoice branding, packing slip content, and post-checkout messages."
-      title="Invoice & Thank You Settings"
-    />
-  );
+  return <RealInvoiceThankYouSettingsPage />;
 }
