@@ -19,7 +19,7 @@ function Badge({
   tone?: BadgeTone;
 }) {
   const className = {
-    brand: "bg-[#527B86]/10 text-[#527B86]",
+    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
     good: "bg-emerald-50 text-emerald-700",
     warn: "bg-amber-50 text-amber-700",
     bad: "bg-rose-50 text-rose-700",
@@ -49,7 +49,7 @@ function StatCard({
   value: ReactNode;
 }) {
   const helperClassName = {
-    brand: "bg-[#527B86]/10 text-[#527B86]",
+    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
     good: "bg-emerald-50 text-emerald-700",
     warn: "bg-amber-50 text-amber-700",
     bad: "bg-rose-50 text-rose-700",
@@ -58,7 +58,7 @@ function StatCard({
 
   return (
     <section className="group relative overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#527B86]/5 transition group-hover:bg-[#527B86]/10" />
+      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#5E7F85]/5 transition group-hover:bg-[#5E7F85]/10" />
       <div className="relative flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-slate-500">{label}</div>
@@ -66,7 +66,7 @@ function StatCard({
             {value}
           </div>
         </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#527B86]/10 text-sm font-black text-[#527B86]">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-sm font-black text-[#5E7F85]">
           {marker}
         </div>
       </div>
@@ -79,10 +79,20 @@ function StatCard({
   );
 }
 
-function DisabledButton({ children }: { children: ReactNode }) {
+function DisabledButton({
+  children,
+  primary = false,
+}: {
+  children: ReactNode;
+  primary?: boolean;
+}) {
   return (
     <button
-      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-400 opacity-75"
+      className={
+        primary
+          ? "rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-bold text-white opacity-45"
+          : "rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-400 opacity-75"
+      }
       disabled
       type="button"
     >
@@ -137,6 +147,18 @@ function getStatusTone(status: string): BadgeTone {
   return status === "active" ? "good" : "default";
 }
 
+function getSupplierScore(supplier: SupplierRecord) {
+  const purchaseScore = Math.min(supplier.purchaseCount * 12, 48);
+  const valueScore = Math.min(Math.round(supplier.totalPurchaseValue / 2500), 32);
+  const pendingPenalty = Math.min(supplier.pendingPurchaseCount * 8, 24);
+  const statusBonus = supplier.status === "active" ? 20 : 4;
+
+  return Math.max(
+    0,
+    Math.min(100, purchaseScore + valueScore + statusBonus - pendingPenalty),
+  );
+}
+
 function SupplierFocusPanel({
   supplier,
 }: {
@@ -144,19 +166,54 @@ function SupplierFocusPanel({
 }) {
   return (
     <aside className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="text-sm font-medium text-slate-500">Supplier Notes</div>
+      <div className="text-sm font-medium text-slate-500">Supplier Profile</div>
       {supplier ? (
         <>
-          <h3 className="mt-1 text-xl font-black tracking-tight text-slate-950">
-            {supplier.name}
-          </h3>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="mt-1 text-xl font-black tracking-tight text-slate-950">
+                {supplier.name}
+              </h3>
+              <div className="mt-1 text-xs font-semibold text-slate-500">
+                {formatText(supplier.contact_person)}
+              </div>
+            </div>
+            <Badge tone={getStatusTone(supplier.status)}>
+              {formatStatus(supplier.status)}
+            </Badge>
+          </div>
           <div className="mt-5 space-y-3">
-            <DetailRow label="Address" value={formatText(supplier.address)} />
-            <DetailRow label="Notes" value={formatText(supplier.notes)} />
+            <DetailRow label="Phone" value={formatText(supplier.phone)} />
             <DetailRow
               label="Payment Terms"
               value={formatText(supplier.payment_terms)}
             />
+            <DetailRow label="Updated" value={formatDate(supplier.updated_at)} />
+            <DetailRow
+              label="Pending"
+              value={supplier.pendingPurchaseCount}
+            />
+            <DetailRow
+              label="Purchase Value"
+              value={formatMoney(supplier.totalPurchaseValue)}
+            />
+          </div>
+          <div className="mt-5 rounded-2xl bg-stone-50 p-4">
+            <div className="mb-2 flex justify-between text-xs font-bold text-slate-500">
+              <span>Performance Health</span>
+              <span>{getSupplierScore(supplier)}%</span>
+            </div>
+            <div className="h-3 overflow-hidden rounded-full bg-white">
+              <div
+                className="h-full rounded-full bg-[#5E7F85]"
+                style={{ width: `${getSupplierScore(supplier)}%` }}
+              />
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3">
+            <DisabledButton primary>Create PO</DisabledButton>
+            <DisabledButton>Payment Entry</DisabledButton>
+            <DisabledButton>View Ledger</DisabledButton>
           </div>
         </>
       ) : (
@@ -170,12 +227,6 @@ function SupplierFocusPanel({
 
 export function RealSuppliersPage({ suppliers }: RealSuppliersPageProps) {
   const totalSuppliers = suppliers.length;
-  const activeSuppliers = suppliers.filter(
-    (supplier) => supplier.status === "active",
-  ).length;
-  const inactiveSuppliers = suppliers.filter(
-    (supplier) => supplier.status === "inactive",
-  ).length;
   const purchaseEntries = suppliers.reduce(
     (sum, supplier) => sum + supplier.purchaseCount,
     0,
@@ -184,204 +235,196 @@ export function RealSuppliersPage({ suppliers }: RealSuppliersPageProps) {
     (sum, supplier) => sum + supplier.pendingPurchaseCount,
     0,
   );
+  const totalPurchaseValue = suppliers.reduce(
+    (sum, supplier) => sum + supplier.totalPurchaseValue,
+    0,
+  );
+  const topScore = suppliers.reduce(
+    (best, supplier) => Math.max(best, getSupplierScore(supplier)),
+    0,
+  );
   const focusedSupplier = suppliers[0];
 
   return (
     <AdminShell>
       <div className="space-y-6">
-        <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-5 p-6 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#527B86]">
-                Vendor Operations
-              </div>
-              <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">
-                Suppliers
-              </h1>
-              <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-500">
-                Live supplier directory from Supabase for vendor master data.
-                Purchase stock and receive workflows remain separate and not
-                connected from this page.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <DisabledButton>Create Purchase - N/C</DisabledButton>
-            </div>
-          </div>
-          <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-3">
-            <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Supplier create/edit: <b className="text-emerald-700">Connected</b>
-            </div>
-            <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Purchase stock receive: <b className="text-slate-400">N/C in UI</b>
-            </div>
-            <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Stock changes from this page: <b className="text-emerald-700">No</b>
-            </div>
-          </div>
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            helper="Live supplier rows"
+            helper="Approved vendors"
             label="Total Suppliers"
             marker="SUP"
             value={totalSuppliers}
           />
           <StatCard
-            helper="Ready for purchase flow"
-            label="Active Suppliers"
-            marker="ON"
-            tone="good"
-            value={activeSuppliers}
+            helper="Pending purchase rows"
+            label="Outstanding Due"
+            marker="DUE"
+            tone={pendingPurchases ? "warn" : "good"}
+            value={pendingPurchases}
           />
           <StatCard
-            helper="Not used for new purchase"
-            label="Inactive Suppliers"
-            marker="OFF"
-            tone="default"
-            value={inactiveSuppliers}
-          />
-          <StatCard
-            helper="From purchase entries"
+            helper="Restock planning"
             label="Purchase Entries"
-            marker="PO"
+            marker="AVG"
             tone="brand"
             value={purchaseEntries}
           />
           <StatCard
-            helper="Not received/cancelled"
-            label="Pending Purchases"
-            marker="PEN"
-            tone="warn"
-            value={pendingPurchases}
+            helper="Best vendor health"
+            label="Top Score"
+            marker="TOP"
+            tone="good"
+            value={`${topScore}%`}
           />
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <section className="rounded-[2rem] border border-[#527B86]/20 bg-white p-6 shadow-sm">
-            <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#527B86]">
-                  Supplier Master Data
-                </div>
-                <h2 className="mt-2 text-xl font-black tracking-tight text-slate-950">
-                  Create Supplier
-                </h2>
-                <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-500">
-                  Adds supplier details only. Purchase entries, stock receive,
-                  products, and inventory movements are not changed.
-                </p>
-              </div>
-              <Badge tone="good">Live Save</Badge>
-            </div>
-            <SupplierForm mode="create" />
-          </section>
-
-          <section className="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
-            <h2 className="text-xl font-black text-emerald-900">
-              Supplier Safety
-            </h2>
-            <div className="mt-4 space-y-3 text-sm font-semibold leading-6 text-emerald-900">
-              <div className="rounded-2xl bg-white/75 p-4">
-                Create/edit updates supplier master data only.
-              </div>
-              <div className="rounded-2xl bg-white/75 p-4">
-                Purchase stock receive is not connected from this page.
-              </div>
-              <div className="rounded-2xl bg-white/75 p-4">
-                No supplier hard delete is available.
-              </div>
-            </div>
-          </section>
+        <section className="rounded-[2rem] border border-[#5E7F85]/15 bg-gradient-to-r from-[#5E7F85]/10 via-white to-stone-50 p-5 text-sm shadow-sm">
+          <div className="font-bold text-slate-900">Procurement Focus</div>
+          <div className="mt-1 text-slate-600">
+            Live purchase value {formatMoney(totalPurchaseValue)} /{" "}
+            {pendingPurchases} pending purchase rows. Purchase stock receive
+            remains separate from this page.
+          </div>
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-            <div className="flex flex-col gap-3 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-xl font-black tracking-tight text-slate-950">
-                  Supplier Directory
-                </h2>
-                <p className="mt-2 text-sm font-medium leading-6 text-slate-500">
-                  Supplier records with purchase summary counters and safe
-                  inline edit forms.
-                </p>
+            <div className="border-b border-slate-100 p-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="text-sm font-medium text-slate-500">
+                    Vendor Control Room
+                  </div>
+                  <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
+                    Suppliers Directory
+                  </h2>
+                  <div className="mt-1 text-sm text-slate-500">
+                    Manage purchasing, payables, lead time and supplier health.
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <DisabledButton>Export</DisabledButton>
+                  <details className="group relative">
+                    <summary className="cursor-pointer list-none rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white shadow-sm [&::-webkit-details-marker]:hidden">
+                      Add Supplier
+                    </summary>
+                    <div className="absolute right-0 z-20 mt-3 w-[min(92vw,760px)] rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl">
+                      <div className="mb-5 flex items-start justify-between gap-4">
+                        <div>
+                          <div className="text-sm font-medium text-slate-500">
+                            Supplier Entry
+                          </div>
+                          <h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+                            Add New Supplier
+                          </h3>
+                          <p className="mt-2 text-sm text-slate-500">
+                            Live supplier master save only. Purchases and stock
+                            are not changed here.
+                          </p>
+                        </div>
+                        <Badge tone="good">Live Save</Badge>
+                      </div>
+                      <SupplierForm mode="create" />
+                    </div>
+                  </details>
+                </div>
               </div>
-              <Badge tone="brand">{suppliers.length} suppliers</Badge>
+              <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+                <input
+                  className="w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-500 outline-none"
+                  disabled
+                  placeholder="Search supplier / contact / category - Not connected"
+                />
+                <div className="flex flex-wrap gap-2">
+                  {["All", "Active", "Primary", "Inactive", "Due"].map((item) => (
+                    <button
+                      className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-500 opacity-75"
+                      disabled
+                      key={item}
+                      type="button"
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {suppliers.length ? (
               <div className="overflow-x-auto">
-                <table className="min-w-[1120px] text-left text-sm">
-                  <thead className="bg-stone-50 text-xs uppercase tracking-[0.08em] text-slate-400">
+                <table className="min-w-[1040px] text-left text-sm">
+                  <thead className="bg-stone-50 text-slate-500">
                     <tr>
-                      <th className="px-5 py-4 font-black">Supplier</th>
-                      <th className="px-5 py-4 font-black">Contact</th>
-                      <th className="px-5 py-4 font-black">Phone</th>
-                      <th className="px-5 py-4 font-black">Email</th>
-                      <th className="px-5 py-4 font-black">Status</th>
-                      <th className="px-5 py-4 font-black">Payment Terms</th>
-                      <th className="px-5 py-4 font-black">Purchases</th>
-                      <th className="px-5 py-4 font-black">Value</th>
-                      <th className="px-5 py-4 font-black">Pending</th>
-                      <th className="px-5 py-4 font-black">Updated</th>
+                      {[
+                        "Supplier",
+                        "Products",
+                        "Purchase",
+                        "Payable",
+                        "Lead",
+                        "Score",
+                        "Status",
+                        "Action",
+                      ].map((heading) => (
+                        <th className="px-5 py-4 font-medium" key={heading}>
+                          {heading}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {suppliers.map((supplier) => (
                       <Fragment key={supplier.id}>
-                        <tr className="bg-white hover:bg-stone-50">
+                        <tr
+                          className={`transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${
+                            supplier.pendingPurchaseCount > 0
+                              ? "bg-amber-50/25"
+                              : "bg-white"
+                          }`}
+                        >
                           <td className="px-5 py-4">
                             <div className="font-black text-slate-950">
                               {supplier.name}
                             </div>
-                            <div className="mt-1 max-w-[260px] truncate text-xs font-semibold text-slate-400">
-                              {formatText(supplier.address)}
+                            <div className="mt-1 text-xs text-slate-500">
+                              {formatText(supplier.contact_person)} /{" "}
+                              {formatText(supplier.phone)}
                             </div>
                           </td>
                           <td className="px-5 py-4 font-semibold text-slate-700">
-                            {formatText(supplier.contact_person)}
+                            {supplier.purchaseCount}
                           </td>
-                          <td className="px-5 py-4 font-semibold text-slate-600">
-                            {formatText(supplier.phone)}
+                          <td className="px-5 py-4 font-semibold text-slate-800">
+                            {formatMoney(supplier.totalPurchaseValue)}
                           </td>
-                          <td className="px-5 py-4 font-semibold text-slate-600">
-                            {formatText(supplier.email)}
+                          <td className="px-5 py-4 font-black text-slate-900">
+                            {supplier.pendingPurchaseCount}
+                          </td>
+                          <td className="px-5 py-4">
+                            <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-bold text-slate-600">
+                              {formatText(supplier.payment_terms)}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4">
+                            <Badge tone={getSupplierScore(supplier) >= 80 ? "brand" : "warn"}>
+                              {getSupplierScore(supplier)}%
+                            </Badge>
                           </td>
                           <td className="px-5 py-4">
                             <Badge tone={getStatusTone(supplier.status)}>
                               {formatStatus(supplier.status)}
                             </Badge>
                           </td>
-                          <td className="px-5 py-4 font-semibold text-slate-600">
-                            {formatText(supplier.payment_terms)}
-                          </td>
-                          <td className="px-5 py-4 font-black text-slate-900">
-                            {supplier.purchaseCount}
-                          </td>
-                          <td className="px-5 py-4 font-black text-slate-900">
-                            {formatMoney(supplier.totalPurchaseValue)}
-                          </td>
                           <td className="px-5 py-4">
-                            <Badge
-                              tone={
-                                supplier.pendingPurchaseCount > 0
-                                  ? "warn"
-                                  : "default"
-                              }
-                            >
-                              {supplier.pendingPurchaseCount}
-                            </Badge>
-                          </td>
-                          <td className="px-5 py-4 font-semibold text-slate-600">
-                            {formatDate(supplier.updated_at)}
+                            <div className="flex flex-col gap-2">
+                              <DisabledButton>Open</DisabledButton>
+                              <DisabledButton>PO</DisabledButton>
+                            </div>
                           </td>
                         </tr>
                         <tr className="bg-stone-50/80">
-                          <td className="px-5 py-4" colSpan={10}>
+                          <td className="px-5 py-4" colSpan={8}>
                             <details className="rounded-2xl border border-slate-200 bg-white p-4">
-                              <summary className="cursor-pointer text-sm font-black text-[#527B86]">
+                              <summary className="cursor-pointer text-sm font-black text-[#5E7F85]">
                                 Edit Supplier
                               </summary>
                               <div className="mt-5">
@@ -397,7 +440,7 @@ export function RealSuppliersPage({ suppliers }: RealSuppliersPageProps) {
               </div>
             ) : (
               <div className="p-10 text-center text-sm font-semibold text-slate-500">
-                No suppliers found. Use the create supplier form to add the
+                No suppliers found. Use the live Add Supplier form to add the
                 first supplier master record.
               </div>
             )}
@@ -406,19 +449,65 @@ export function RealSuppliersPage({ suppliers }: RealSuppliersPageProps) {
           <aside className="space-y-6">
             <SupplierFocusPanel supplier={focusedSupplier} />
 
+            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="text-sm font-medium text-slate-500">
+                Recent Purchase Orders
+              </div>
+              <div className="mt-4 space-y-3">
+                {suppliers.slice(0, 3).map((supplier) => (
+                  <div
+                    className="flex items-center justify-between rounded-2xl bg-stone-50 px-4 py-3 text-xs"
+                    key={supplier.id}
+                  >
+                    <div>
+                      <div className="font-bold text-slate-900">
+                        {supplier.name}
+                      </div>
+                      <div className="text-slate-500">
+                        {supplier.purchaseCount} purchase rows
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <b>{formatMoney(supplier.totalPurchaseValue)}</b>
+                      <div className="mt-1">
+                        <Badge
+                          tone={
+                            supplier.pendingPurchaseCount > 0
+                              ? "warn"
+                              : "good"
+                          }
+                        >
+                          {supplier.pendingPurchaseCount > 0
+                            ? "Pending"
+                            : "Clear"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {!suppliers.length ? (
+                  <div className="rounded-2xl bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-500">
+                    No purchase summary rows available.
+                  </div>
+                ) : null}
+              </div>
+            </section>
+
             <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
               <h2 className="text-xl font-black text-amber-900">
-                Pending Connections
+                Restock Recommendation
               </h2>
               <div className="mt-4 space-y-3 text-sm font-semibold leading-6 text-amber-900">
                 <div className="rounded-2xl bg-white/70 p-4">
-                  Create Purchase is not connected yet.
+                  Use live supplier rows for purchase planning only.
                 </div>
                 <div className="rounded-2xl bg-white/70 p-4">
-                  Purchase stock receive is not connected yet in UI.
+                  Create PO, payment entry, ledger, and receive stock controls
+                  remain preview-only here.
                 </div>
                 <div className="rounded-2xl bg-white/70 p-4">
-                  No stock changes happen from this page.
+                  Supplier create/edit stays connected and isolated to supplier
+                  master data.
                 </div>
               </div>
             </section>
