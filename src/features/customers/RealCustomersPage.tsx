@@ -19,7 +19,7 @@ function Badge({
   tone?: BadgeTone;
 }) {
   const className = {
-    brand: "bg-[#527B86]/10 text-[#527B86]",
+    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
     good: "bg-emerald-50 text-emerald-700",
     warn: "bg-amber-50 text-amber-700",
     bad: "bg-rose-50 text-rose-700",
@@ -50,7 +50,7 @@ function StatCard({
 }) {
   const icons = ["C", "R", "D", "!"];
   const helperClassName = {
-    brand: "bg-[#527B86]/10 text-[#527B86]",
+    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
     good: "bg-emerald-50 text-emerald-700",
     warn: "bg-amber-50 text-amber-700",
     bad: "bg-rose-50 text-rose-700",
@@ -59,7 +59,7 @@ function StatCard({
 
   return (
     <section className="group relative overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#527B86]/5 transition group-hover:bg-[#527B86]/10" />
+      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#5E7F85]/5 transition group-hover:bg-[#5E7F85]/10" />
       <div className="relative flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-slate-500">{label}</div>
@@ -67,7 +67,7 @@ function StatCard({
             {value}
           </div>
         </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#527B86]/10 text-sm font-black text-[#527B86]">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-sm font-black text-[#5E7F85]">
           {icons[index % icons.length]}
         </div>
       </div>
@@ -88,7 +88,7 @@ function DisabledButton({
   tone?: BadgeTone;
 }) {
   const className = {
-    brand: "border-[#527B86]/20 bg-[#527B86]/10 text-[#527B86]",
+    brand: "border-[#5E7F85]/20 bg-[#5E7F85]/10 text-[#5E7F85]",
     good: "border-emerald-200 bg-emerald-50 text-emerald-700",
     warn: "border-amber-200 bg-amber-50 text-amber-700",
     bad: "border-rose-200 bg-rose-50 text-rose-700",
@@ -237,7 +237,7 @@ function CustomerProfilePanel({
 
       <div className="mt-5 grid gap-3">
         <Link
-          className="rounded-2xl bg-[#527B86] px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:opacity-90"
+          className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:opacity-90"
           href={`/customers/profile?phone=${encodeURIComponent(customer.phone)}`}
         >
           Open Profile
@@ -283,67 +283,44 @@ export function RealCustomersPage({ customers }: RealCustomersPageProps) {
   const repeatCustomers = customers.filter(
     (customer) => customer.orderCount >= 2,
   ).length;
-  const customersWithDue = customers.filter((customer) => customer.totalDue > 0)
-    .length;
+  const repeatRate = customers.length
+    ? Math.round((repeatCustomers / customers.length) * 100)
+    : 0;
+  const vipCustomers = customers.filter(
+    (customer) => customer.totalSpent >= 5000 || customer.orderCount >= 5,
+  ).length;
   const returnRiskCustomers = customers.filter(
     (customer) => customer.riskLabel === "High Return Risk",
   ).length;
-  const totalCustomerDue = customers.reduce(
-    (sum, customer) => sum + customer.totalDue,
-    0,
-  );
   const featuredCustomer = customers[0];
 
   return (
     <AdminShell>
       <div className="space-y-6">
-        <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#527B86]">
-                CRM Center
-              </div>
-              <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">
-                Customers Database
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-500">
-                Live customer summaries are generated from existing order
-                records by normalized phone number. Dedicated customer records
-                and customer mutations are not connected yet.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Badge tone="brand">{customers.length} grouped records</Badge>
-              <Badge tone="default">Read Only</Badge>
-            </div>
-          </div>
-        </section>
-
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            helper="Grouped by phone"
+            helper="Growing base"
             index={0}
             label="Total Customers"
             value={customers.length}
           />
           <StatCard
-            helper="2+ orders"
+            helper="Strong retention"
             index={1}
-            label="Repeat Customers"
+            label="Repeat Rate"
             tone="good"
-            value={repeatCustomers}
+            value={`${repeatRate}%`}
           />
           <StatCard
-            helper={`Due total ${formatMoney(totalCustomerDue)}`}
+            helper="High LTV"
             index={2}
-            label="Customers With Due"
-            tone={customersWithDue ? "warn" : "good"}
-            value={customersWithDue}
+            label="VIP Customers"
+            value={vipCustomers}
           />
           <StatCard
-            helper="2+ returns"
+            helper="Need followup"
             index={3}
-            label="Return Risk"
+            label="Risk Customers"
             tone={returnRiskCustomers ? "bad" : "good"}
             value={returnRiskCustomers}
           />
@@ -360,6 +337,10 @@ export function RealCustomersPage({ customers }: RealCustomersPageProps) {
                   <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
                     Customers Database
                   </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    Live customer summaries are grouped from existing order
+                    records. Editing, outreach, and segmentation are preview-only.
+                  </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <DisabledButton>Export - Not Connected</DisabledButton>
@@ -378,9 +359,11 @@ export function RealCustomersPage({ customers }: RealCustomersPageProps) {
                 <div className="flex flex-wrap gap-2">
                   {[
                     "All",
+                    "VIP",
                     "Repeat Customer",
+                    "Sleeping",
                     "Due Pending",
-                    "High Return Risk",
+                    "Risk",
                   ].map((item) => (
                     <button
                       className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-500 opacity-75"
@@ -419,9 +402,9 @@ export function RealCustomersPage({ customers }: RealCustomersPageProps) {
                   <tbody>
                     {customers.map((customer, index) => (
                       <tr
-                        className={`border-t border-slate-100 align-top transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#527B86] ${
+                        className={`border-t border-slate-100 align-top transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${
                           index === 0
-                            ? "bg-[#527B86]/[0.04] shadow-[inset_3px_0_0_#527B86]"
+                            ? "bg-[#5E7F85]/[0.06] shadow-[inset_3px_0_0_#5E7F85]"
                             : "bg-white"
                         }`}
                         key={customer.phone}
@@ -497,7 +480,7 @@ export function RealCustomersPage({ customers }: RealCustomersPageProps) {
                         <td className="px-5 py-4">
                           <div className="flex flex-col gap-2">
                             <Link
-                              className="inline-flex rounded-xl bg-[#527B86]/10 px-3 py-2 text-xs font-bold text-[#527B86] transition hover:bg-[#527B86] hover:text-white"
+                              className="inline-flex rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
                               href={`/customers/profile?phone=${encodeURIComponent(
                                 customer.phone,
                               )}`}
@@ -529,12 +512,12 @@ export function RealCustomersPage({ customers }: RealCustomersPageProps) {
 
             <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
               <div className="text-sm font-bold text-amber-800">
-                Customer Note
+                AI Suggestion
               </div>
               <p className="mt-2 text-sm leading-6 text-amber-700">
-                Profiles are read-only and generated from order history by
-                phone number. Dedicated customer editing, segmentation,
-                outreach, and manual order creation are not connected yet.
+                {featuredCustomer
+                  ? `${featuredCustomer.name} is shown from live order history. Outreach suggestions, offers, and manual order creation are preview-only.`
+                  : "Customer suggestions will appear after live order history is available. Outreach and manual order creation are preview-only."}
               </p>
             </section>
           </div>
