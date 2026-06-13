@@ -327,8 +327,8 @@ export function RealCourierPaymentsPage({
           </span>
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-          <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="min-w-0 overflow-visible rounded-[2rem] border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
@@ -362,11 +362,23 @@ export function RealCourierPaymentsPage({
             </div>
 
             {orders.length ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
+              <div className="overflow-x-auto lg:overflow-x-visible">
+                <table className="w-full table-fixed text-left text-sm">
+                  <colgroup>
+                    <col className="w-[4%]" />
+                    <col className="w-[20%]" />
+                    <col className="w-[11%]" />
+                    <col className="w-[10%]" />
+                    <col className="w-[7%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[11%]" />
+                    <col className="w-[9%]" />
+                    <col className="w-[11%]" />
+                    <col className="w-[5%]" />
+                  </colgroup>
                   <thead className="sticky top-0 z-10 bg-stone-50 text-slate-500">
                     <tr>
-                      <th className="px-5 py-4 font-medium">
+                      <th className="px-3 py-4 font-medium">
                         <input
                           className="h-4 w-4 rounded border-slate-300"
                           disabled
@@ -375,8 +387,6 @@ export function RealCourierPaymentsPage({
                       </th>
                       {[
                         "Order",
-                        "Customer",
-                        "Partner",
                         "Tracking",
                         "COD",
                         "Charge",
@@ -387,7 +397,7 @@ export function RealCourierPaymentsPage({
                         "Action",
                       ].map((heading) => (
                         <th
-                          className="px-5 py-4 font-medium"
+                          className="px-3 py-4 font-medium"
                           key={heading}
                           scope="col"
                         >
@@ -404,23 +414,21 @@ export function RealCourierPaymentsPage({
                         )}`}
                         key={order.id}
                       >
-                        <td className="px-5 py-4">
+                        <td className="px-3 py-4">
                           <input
                             className="h-4 w-4 rounded border-slate-300"
                             disabled
                             type="checkbox"
                           />
                         </td>
-                        <td className="px-5 py-4">
-                          <div className="font-black text-slate-950">
+                        <td className="px-3 py-4">
+                          <div className="break-words font-black text-slate-950">
                             {order.order_number ?? "No order number"}
                           </div>
                           <div className="mt-1 text-xs font-semibold text-slate-500">
                             {formatStatus(order.order_status)}
                           </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="font-bold text-slate-800">
+                          <div className="mt-3 font-bold leading-5 text-slate-800">
                             {order.customer_name}
                           </div>
                           <div className="mt-1 text-xs text-slate-500">
@@ -430,15 +438,10 @@ export function RealCourierPaymentsPage({
                             {formatLocation(order)}
                           </div>
                         </td>
-                        <td className="px-5 py-4">
-                          <Badge tone="brand">
-                            {formatText(order.courier_name)}
-                          </Badge>
-                        </td>
-                        <td className="px-5 py-4 font-bold text-slate-800">
+                        <td className="break-words px-3 py-4 font-bold text-slate-800">
                           {formatText(order.courier_tracking_id)}
                         </td>
-                        <td className="px-5 py-4">
+                        <td className="px-3 py-4">
                           <div className="font-black text-slate-950">
                             {formatMoney(order.due_amount)}
                           </div>
@@ -446,11 +449,14 @@ export function RealCourierPaymentsPage({
                             Total {formatMoney(order.total)}
                           </div>
                         </td>
-                        <td className="px-5 py-4">
+                        <td className="px-3 py-4">
                           <Badge tone="default">Not tracked</Badge>
                         </td>
-                        <td className="px-5 py-4">
+                        <td className="px-3 py-4">
                           <div className="flex flex-col items-start gap-2">
+                            <Badge tone="brand">
+                              {formatText(order.courier_name)}
+                            </Badge>
                             <Badge
                               tone={getCourierStatusTone(order.courier_status)}
                             >
@@ -461,16 +467,16 @@ export function RealCourierPaymentsPage({
                             </Badge>
                           </div>
                         </td>
-                        <td className="px-5 py-4">
+                        <td className="px-3 py-4">
                           <Badge tone={getPaymentStatusTone(order.payment_status)}>
                             {formatStatus(order.payment_status)}
                           </Badge>
                         </td>
-                        <td className="px-5 py-4 font-semibold text-slate-800">
+                        <td className="px-3 py-4 font-semibold text-slate-800">
                           {formatMoney(order.paid_amount)}
                         </td>
-                        <td className="max-w-[260px] px-5 py-4">
-                          <div className="font-semibold text-slate-700">
+                        <td className="px-3 py-4">
+                          <div className="max-h-16 overflow-hidden text-xs font-semibold leading-5 text-slate-700">
                             {getItemsSummary(order)}
                           </div>
                           {order.order_items.length > 3 ? (
@@ -479,10 +485,17 @@ export function RealCourierPaymentsPage({
                             </div>
                           ) : null}
                         </td>
-                        <td className="px-5 py-4">
-                          <div className="flex min-w-[220px] flex-col gap-2">
+                        <td className="px-3 py-4">
+                          <details className="group relative">
+                            <summary className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-xl border border-slate-200 bg-white text-xs font-black text-[#5E7F85] shadow-sm transition hover:border-[#5E7F85]/40 hover:bg-[#5E7F85]/10 [&::-webkit-details-marker]:hidden">
+                              ...
+                            </summary>
+                            <div className="absolute right-0 z-30 mt-2 w-72 space-y-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+                              <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                                Row actions
+                              </div>
                             <Link
-                              className="rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-center text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
+                              className="block rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-center text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
                               href={`/orders/details?id=${order.id}`}
                             >
                               Open
@@ -503,7 +516,8 @@ export function RealCourierPaymentsPage({
                               orderId={order.id}
                             />
                             <DisabledButton small>Sync</DisabledButton>
-                          </div>
+                            </div>
+                          </details>
                         </td>
                       </tr>
                     ))}
