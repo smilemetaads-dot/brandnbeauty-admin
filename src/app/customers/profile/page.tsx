@@ -1,4 +1,7 @@
-import { getCustomerProfileFromOrdersSupabase } from "@/features/customers/customers-data";
+import {
+  getCustomerProfileFromOrdersSupabase,
+  getCustomersFromOrdersSupabase,
+} from "@/features/customers/customers-data";
 import { RealCustomerProfilePage } from "@/features/customers/RealCustomerProfilePage";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +16,12 @@ export default async function CustomerProfilePage({
   searchParams,
 }: CustomerProfilePageProps) {
   const params = await searchParams;
-  const phone = params?.phone;
+  let phone = params?.phone;
+
+  if (!phone) {
+    const customers = await getCustomersFromOrdersSupabase();
+    phone = customers[0]?.phone;
+  }
 
   if (!phone) {
     return <RealCustomerProfilePage profile={null} />;

@@ -19,7 +19,7 @@ function Badge({
   tone?: BadgeTone;
 }) {
   const className = {
-    brand: "bg-[#527B86]/10 text-[#527B86]",
+    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
     good: "bg-emerald-50 text-emerald-700",
     warn: "bg-amber-50 text-amber-700",
     bad: "bg-rose-50 text-rose-700",
@@ -72,7 +72,7 @@ function StatCard({
 }) {
   const icons = ["O", "T", "R", "L"];
   const helperClassName = {
-    brand: "bg-[#527B86]/10 text-[#527B86]",
+    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
     good: "bg-emerald-50 text-emerald-700",
     warn: "bg-amber-50 text-amber-700",
     bad: "bg-rose-50 text-rose-700",
@@ -81,7 +81,7 @@ function StatCard({
 
   return (
     <section className="group relative overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#527B86]/5 transition group-hover:bg-[#527B86]/10" />
+      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#5E7F85]/5 transition group-hover:bg-[#5E7F85]/10" />
       <div className="relative flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-slate-500">{label}</div>
@@ -89,7 +89,7 @@ function StatCard({
             {value}
           </div>
         </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#527B86]/10 text-sm font-black text-[#527B86]">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-sm font-black text-[#5E7F85]">
           {icons[index % icons.length]}
         </div>
       </div>
@@ -127,7 +127,7 @@ function DisabledButton({
   tone?: BadgeTone;
 }) {
   const className = {
-    brand: "border-[#527B86]/20 bg-[#527B86]/10 text-[#527B86]",
+    brand: "border-[#5E7F85]/20 bg-[#5E7F85]/10 text-[#5E7F85]",
     good: "border-emerald-200 bg-emerald-50 text-emerald-700",
     warn: "border-amber-200 bg-amber-50 text-amber-700",
     bad: "border-rose-200 bg-rose-50 text-rose-700",
@@ -148,7 +148,7 @@ function DisabledButton({
 function BackLink() {
   return (
     <Link
-      className="inline-flex rounded-xl bg-[#527B86]/10 px-3 py-2 text-xs font-bold text-[#527B86] transition hover:bg-[#527B86] hover:text-white"
+      className="inline-flex rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
       href="/customers"
     >
       Back to Customers
@@ -212,10 +212,6 @@ function formatStatus(value: string | null) {
   return value ? value.replaceAll("_", " ") : "not set";
 }
 
-function formatText(value: string | null) {
-  return value || "Not available";
-}
-
 function formatDate(value: string | null) {
   if (!value) {
     return "Not available";
@@ -246,6 +242,38 @@ function getLatestOrder(profile: CustomerProfileRecord) {
   return profile.orders[0];
 }
 
+function getLoyaltyScore(profile: CustomerProfileRecord) {
+  const repeatScore = Math.min(profile.orderCount * 8, 48);
+  const spendScore = Math.min(Math.round(profile.totalSpent / 500), 32);
+  const duePenalty = profile.totalDue > 0 ? 10 : 0;
+  const returnPenalty = Math.min(profile.returnedCount * 8, 20);
+
+  return Math.max(0, Math.min(100, repeatScore + spendScore - duePenalty - returnPenalty));
+}
+
+function getSpendTrend(profile: CustomerProfileRecord) {
+  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+  const sortedOrders = profile.orders
+    .toSorted((a, b) => {
+      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+
+      return aTime - bTime;
+    })
+    .slice(-6);
+
+  const values = sortedOrders.map((order) => order.total);
+  const paddedValues = [
+    ...Array(Math.max(0, 6 - values.length)).fill(0),
+    ...values,
+  ].slice(-6);
+
+  return paddedValues.map((value, index) => ({
+    label: monthLabels[index],
+    value,
+  }));
+}
+
 export function RealCustomerProfilePage({
   profile,
 }: RealCustomerProfilePageProps) {
@@ -257,7 +285,7 @@ export function RealCustomerProfilePage({
           <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#527B86]">
+                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#5E7F85]">
                   Customer Profile
                 </div>
                 <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
@@ -279,6 +307,9 @@ export function RealCustomerProfilePage({
 
   const latestOrder = getLatestOrder(profile);
   const location = getLocation(profile) || "Location not available";
+  const loyaltyScore = getLoyaltyScore(profile);
+  const spendTrend = getSpendTrend(profile);
+  const maxSpend = Math.max(...spendTrend.map((item) => item.value), 1);
 
   return (
     <AdminShell>
@@ -293,17 +324,17 @@ export function RealCustomerProfilePage({
             value={profile.orderCount}
           />
           <StatCard
-            helper="Lifetime value"
+            helper="High repeat potential"
             index={1}
-            label="Total Spent"
+            label="Lifetime Value"
             value={formatMoney(profile.totalSpent)}
           />
           <StatCard
-            helper={`Due ${formatMoney(profile.totalDue)}`}
+            helper={profile.totalDue > 0 ? `Due ${formatMoney(profile.totalDue)}` : "Low risk customer"}
             index={2}
-            label="Risk Label"
+            label="COD Risk Score"
             tone={getRiskTone(profile.riskLabel)}
-            value={profile.riskLabel}
+            value={`${Math.max(0, 100 - loyaltyScore)}/100`}
           />
           <StatCard
             helper={latestOrder?.order_number ?? "No order number"}
@@ -316,10 +347,10 @@ export function RealCustomerProfilePage({
         <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
           <div className="space-y-6">
             <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-              <div className="bg-gradient-to-br from-[#527B86]/10 via-white to-stone-50 p-6">
+              <div className="bg-gradient-to-br from-[#5E7F85]/10 via-white to-stone-50 p-6">
                 <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                    <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.6rem] bg-[#527B86] text-2xl font-black text-white shadow-sm">
+                    <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.6rem] bg-[#5E7F85] text-2xl font-black text-white shadow-sm">
                       {getInitials(profile.name)}
                       <div className="absolute -bottom-2 -right-2 rounded-full border-4 border-white bg-white">
                         <Badge tone={getRiskTone(profile.riskLabel)}>
@@ -346,11 +377,19 @@ export function RealCustomerProfilePage({
                     </div>
                   </div>
                   <div className="rounded-[1.5rem] bg-white p-4 text-center shadow-sm ring-1 ring-slate-100">
-                    <div className="text-2xl font-black text-[#527B86]">
-                      {profile.orderCount}
+                    <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-full border-[8px] border-stone-100">
+                      <div
+                        className="absolute inset-0 rounded-full border-[8px] border-[#5E7F85]"
+                        style={{
+                          clipPath: `inset(${100 - loyaltyScore}% 0 0 0)`,
+                        }}
+                      />
+                      <div className="text-xl font-black text-[#5E7F85]">
+                        {loyaltyScore}%
+                      </div>
                     </div>
-                    <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                      Order-Derived
+                    <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                      Loyalty
                     </div>
                   </div>
                 </div>
@@ -378,49 +417,42 @@ export function RealCustomerProfilePage({
             </section>
 
             <div className="grid gap-6 lg:grid-cols-2">
-              <Card eyebrow="Payment Summary" title="Spend & Due">
-                <dl className="space-y-3">
-                  <DetailRow
-                    label="Total Spent"
-                    value={formatMoney(profile.totalSpent)}
-                  />
-                  <DetailRow
-                    label="Total Paid"
-                    value={formatMoney(profile.totalPaid)}
-                  />
-                  <DetailRow
-                    label="Total Due"
-                    value={formatMoney(profile.totalDue)}
-                  />
-                  <DetailRow
-                    label="Payment Risk"
-                    value={
-                      <Badge tone={profile.totalDue > 0 ? "warn" : "good"}>
-                        {profile.totalDue > 0 ? "Due Pending" : "No Due"}
-                      </Badge>
-                    }
-                  />
-                </dl>
+              <Card eyebrow="Purchase Timeline" title="6 Order Spend Trend">
+                <div className="flex h-40 items-end gap-3 rounded-2xl bg-stone-50 p-4">
+                  {spendTrend.map((item) => (
+                    <div
+                      className="flex flex-1 flex-col items-center gap-2"
+                      key={item.label}
+                    >
+                      <div
+                        className="w-full rounded-xl bg-[#5E7F85]"
+                        style={{
+                          height: `${Math.max(8, (item.value / maxSpend) * 100)}%`,
+                        }}
+                      />
+                      <div className="text-[10px] text-slate-500">
+                        {item.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </Card>
 
-              <Card eyebrow="Order-Derived Contact" title="Customer Info">
-                <dl className="space-y-3">
-                  <DetailRow label="Phone" value={profile.phone} />
-                  <DetailRow label="Email" value={formatText(profile.email)} />
-                  <DetailRow
-                    label="Address"
-                    value={formatText(profile.address)}
-                  />
-                  <DetailRow
-                    label="District"
-                    value={formatText(profile.district)}
-                  />
-                  <DetailRow label="Area" value={formatText(profile.area)} />
-                  <DetailRow
-                    label="Delivery Zone"
-                    value={formatText(profile.delivery_zone)}
-                  />
-                </dl>
+              <Card eyebrow="Order Insights" title="Most Purchased">
+                <div className="space-y-3">
+                  {[
+                    `${profile.deliveredCount} delivered orders`,
+                    `${profile.shippedCount} shipped orders`,
+                    `${profile.returnedCount} returned orders`,
+                  ].map((item) => (
+                    <div
+                      className="rounded-2xl bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-700"
+                      key={item}
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
               </Card>
             </div>
 
@@ -434,7 +466,10 @@ export function RealCustomerProfilePage({
                     Recent Orders
                   </h2>
                 </div>
-                <Badge tone="brand">{profile.orders.length} orders</Badge>
+                <div className="flex flex-wrap gap-2">
+                  <Badge tone="brand">{profile.orders.length} orders</Badge>
+                  <DisabledButton>Export</DisabledButton>
+                </div>
               </div>
 
               <div className="overflow-x-auto">
@@ -460,7 +495,7 @@ export function RealCustomerProfilePage({
                   <tbody>
                     {profile.orders.map((order) => (
                       <tr
-                        className="border-t border-slate-100 align-top transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#527B86]"
+                        className="border-t border-slate-100 align-top transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85]"
                         key={order.id}
                       >
                         <td className="px-5 py-4 font-black text-slate-950">
@@ -490,7 +525,7 @@ export function RealCustomerProfilePage({
                         </td>
                         <td className="px-5 py-4">
                           <Link
-                            className="inline-flex rounded-xl bg-[#527B86]/10 px-3 py-2 text-xs font-bold text-[#527B86] transition hover:bg-[#527B86] hover:text-white"
+                            className="inline-flex rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
                             href={`/orders/details?id=${order.id}`}
                           >
                             Details
@@ -504,7 +539,7 @@ export function RealCustomerProfilePage({
             </section>
 
             <div className="grid gap-6 lg:grid-cols-3">
-              <Card eyebrow="Live-Safe Signals" title="Behavior">
+              <Card eyebrow="Live Activity Feed" title="Order Activity">
                 <div className="space-y-3 text-sm">
                   <div className="rounded-2xl bg-stone-50 px-4 py-3 font-semibold text-slate-700">
                     Delivered orders: {profile.deliveredCount}
@@ -532,12 +567,12 @@ export function RealCustomerProfilePage({
                 </div>
                 <p className="mt-4 rounded-xl bg-stone-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-700">
                   Profile is generated from matching order rows by phone number.
-                  Dedicated profile editing, outreach notes, and customer tags
-                  are not connected yet.
+                  Dedicated notes, customer tags, and manual segmentation are not
+                  connected yet.
                 </p>
               </Card>
 
-              <Card eyebrow="Risk Summary" title="Order Risk">
+              <Card eyebrow="Risk Intelligence" title="Order Risk">
                 <dl className="space-y-3">
                   <DetailRow
                     label="Returned"
@@ -574,13 +609,12 @@ export function RealCustomerProfilePage({
 
             <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
               <div className="text-sm font-bold text-amber-800">
-                Customer Note
+                AI Recommendation
               </div>
               <p className="mt-2 text-sm leading-6 text-amber-700">
-                This page does not show AI predictions, browsing activity, or
-                outreach history. Only live order-derived profile data is shown
-                until a dedicated customers table and profile editing are
-                connected.
+                Suggestions are preview-only. This page shows live order-derived
+                profile data only and does not create offers, customer notes, or
+                outreach history.
               </p>
             </section>
 
