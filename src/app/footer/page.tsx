@@ -1,10 +1,5 @@
-import { ModulePlaceholderPage } from "@/features/placeholders/ModulePlaceholderPage";
+import { RealFooterCmsPage } from "@/features/storefront/RealFooterCmsPage";
 
 export default function FooterPage() {
-  return (
-    <ModulePlaceholderPage
-      plannedPurpose="Footer CMS will manage storefront footer links, support information, policy links, and social content."
-      title="Footer CMS"
-    />
-  );
+  return <RealFooterCmsPage />;
 }
