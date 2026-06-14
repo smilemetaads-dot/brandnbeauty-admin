@@ -1,10 +1,5 @@
-import { ModulePlaceholderPage } from "@/features/placeholders/ModulePlaceholderPage";
+import { RealReviewsRealResultsPage } from "@/features/storefront/RealReviewsRealResultsPage";
 
 export default function ReviewsPage() {
-  return (
-    <ModulePlaceholderPage
-      plannedPurpose="Reviews & Real Results will manage customer reviews, testimonials, result content, and moderation workflows."
-      title="Reviews & Real Results"
-    />
-  );
+  return <RealReviewsRealResultsPage />;
 }
