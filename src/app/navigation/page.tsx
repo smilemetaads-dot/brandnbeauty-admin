@@ -1,10 +1,5 @@
-import { ModulePlaceholderPage } from "@/features/placeholders/ModulePlaceholderPage";
+import { RealHeaderNavigationPage } from "@/features/storefront/RealHeaderNavigationPage";
 
 export default function NavigationPage() {
-  return (
-    <ModulePlaceholderPage
-      plannedPurpose="Header & Navigation will manage storefront menus, links, category navigation, and header content."
-      title="Header & Navigation"
-    />
-  );
+  return <RealHeaderNavigationPage />;
 }
