@@ -1,19 +1,52 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import {
+  fetchFinanceInventory,
+  type FinanceInventoryProduct,
+} from "@/features/finance-inventory/finance-inventory-client";
 
-import type {
-  InventoryMovementRecord,
-  InventoryProductRecord,
-} from "./inventory-data";
-import { StockAdjustmentForm } from "./StockAdjustmentForm";
+type InventoryRelation = {
+  name: string | null;
+  slug: string | null;
+} | null;
+
+type InventoryProductRecord = {
+  brands: InventoryRelation;
+  categories: InventoryRelation;
+  id: string;
+  image: string | null;
+  name: string;
+  price: number;
+  sku: string | null;
+  slug: string;
+  status: string | null;
+  stock: number;
+  updated_at: string | null;
+};
+
+type InventoryMovementRecord = {
+  created_at: string | null;
+  id: string;
+  movement_type: string;
+  new_stock: number;
+  note: string | null;
+  previous_stock: number;
+  product_id: string | null;
+  products: {
+    name: string | null;
+    sku: string | null;
+    slug: string | null;
+  } | null;
+  quantity: number;
+};
 
 type RealInventoryPageProps = {
-  movements: InventoryMovementRecord[];
-  products: InventoryProductRecord[];
+  movements?: InventoryMovementRecord[];
+  products?: InventoryProductRecord[];
 };
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
@@ -189,12 +222,79 @@ function movementTone(value: string): BadgeTone {
   return "brand";
 }
 
+function normalizeProduct(product: FinanceInventoryProduct): InventoryProductRecord {
+  return {
+    brands: null,
+    categories: null,
+    id: product.id,
+    image: null,
+    name: product.name,
+    price: product.price,
+    sku: product.sku,
+    slug: product.sku ?? product.id,
+    status: product.status,
+    stock: product.stock,
+    updated_at: product.created_at,
+  };
+}
+
+function buildMovement(product: FinanceInventoryProduct): InventoryMovementRecord {
+  return {
+    created_at: product.created_at,
+    id: `stock-${product.id}`,
+    movement_type: product.stock <= LOW_STOCK_THRESHOLD ? "low_stock" : "stock_snapshot",
+    new_stock: product.stock,
+    note: product.low_stock ? "Low stock flag from live inventory" : "Live inventory snapshot",
+    previous_stock: product.stock,
+    product_id: product.id,
+    products: {
+      name: product.name,
+      sku: product.sku,
+      slug: product.sku ?? product.id,
+    },
+    quantity: product.stock,
+  };
+}
+
 export function RealInventoryPage({
-  movements,
-  products,
+  movements: initialMovements = [],
+  products: initialProducts = [],
 }: RealInventoryPageProps) {
+  const [products, setProducts] = useState<InventoryProductRecord[]>(initialProducts);
+  const [movements, setMovements] =
+    useState<InventoryMovementRecord[]>(initialMovements);
+  const [isLoading, setIsLoading] = useState(!initialProducts.length);
   const [inventorySearch, setInventorySearch] = useState("");
   const [stockFilter, setStockFilter] = useState("All");
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadInventory() {
+      try {
+        setIsLoading(true);
+        const data = await fetchFinanceInventory(controller.signal);
+        setProducts(data.inventory.map(normalizeProduct));
+        setMovements(data.inventory.map(buildMovement).slice(0, 10));
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Inventory data could not be loaded.", error);
+          setProducts([]);
+          setMovements([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadInventory();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
 
   const totalSkus = products.length;
   const lowStockProducts = products.filter(
@@ -338,7 +438,16 @@ export function RealInventoryPage({
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.length > 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td
+                      className="px-5 py-14 text-center text-sm text-slate-500"
+                      colSpan={7}
+                    >
+                      Loading live inventory from local MySQL...
+                    </td>
+                  </tr>
+                ) : filteredProducts.length > 0 ? (
                   filteredProducts.map((product) => {
                     const status = getStockLabel(product.stock);
                     const reorderLevel = getReorderLevel(product.stock);
@@ -450,7 +559,19 @@ export function RealInventoryPage({
           </div>
         </section>
 
-        <StockAdjustmentForm products={products} />
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-bold tracking-tight text-slate-950">
+            Stock Adjustment
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Live inventory is connected. Stock mutation controls stay disabled
+            until a local PHP adjustment endpoint is added.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <DisabledAction>Manual Adjustment</DisabledAction>
+            <DisabledAction variant="brand">Receive Stock</DisabledAction>
+          </div>
+        </section>
 
         <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">

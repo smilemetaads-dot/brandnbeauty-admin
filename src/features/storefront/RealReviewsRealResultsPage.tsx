@@ -1,6 +1,13 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import {
+  defaultCmsMeta,
+  fetchCmsMeta,
+  type CmsMeta,
+} from "@/features/cms/cms-meta-client";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
@@ -58,7 +65,7 @@ const galleryCards = [
 
 const safetyItems = [
   "No review/result save, approve, delete or publish workflow exists on this route yet.",
-  "No Supabase writes, SQL, localStorage or storefront sync was added.",
+  "No CMS write action, localStorage or storefront sync was added.",
   "Add, save, review and edit controls stay disabled until real actions exist.",
 ] as const;
 
@@ -148,11 +155,53 @@ function statusTone(status: string): BadgeTone {
 }
 
 export function RealReviewsRealResultsPage() {
+  const [cmsMeta, setCmsMeta] = useState<CmsMeta>(defaultCmsMeta);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchCmsMeta(controller.signal)
+      .then(setCmsMeta)
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          console.error("Reviews CMS metadata could not be loaded.", error);
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const liveStats = useMemo(() => {
+    const approved = cmsMeta.reviews.filter((review) => review.verified).length;
+    const pending = cmsMeta.reviews.length - approved;
+
+    return [
+      ["Total Results", String(cmsMeta.reviews.length), "Live reviews"],
+      ["Approved", String(approved), "Verified storefront"],
+      ["Pending Review", String(pending), "Need approval"],
+      ["Video Reviews", "0", "Awaiting media endpoint"],
+    ] as const;
+  }, [cmsMeta.reviews]);
+
+  const liveResults = cmsMeta.reviews.map((review) => ({
+    comment: review.comment,
+    product: "Customer Review",
+    status: review.verified ? "Approved" : "Pending",
+    title: review.customer_name,
+    type: `${review.rating}/5 Rating`,
+  }));
+
+  const liveGalleryCards = cmsMeta.reviews.slice(0, 3).map((review) => ({
+    label: `${review.rating}/5 Customer Quote`,
+    note: review.comment,
+    product: review.customer_name,
+  }));
+
   return (
     <AdminShell>
       <div className="space-y-6">
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {stats.map(([label, value, helper]) => (
+          {(cmsMeta.reviews.length ? liveStats : stats).map(([label, value, helper]) => (
             <StatCard
               helper={helper}
               key={label}
@@ -175,8 +224,8 @@ export function RealReviewsRealResultsPage() {
                   </h1>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                     Manage PDP visible results, homepage real results and
-                    customer review approval as a Canvas-faithful preview. This
-                    route is not connected to live review moderation actions yet.
+                    customer review approval from the local CMS metadata
+                    endpoint. Moderation write actions remain disabled.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -198,7 +247,7 @@ export function RealReviewsRealResultsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {results.map((row) => (
+                    {(liveResults.length ? liveResults : results).map((row) => (
                       <tr
                         className="border-t border-slate-100 transition hover:bg-stone-50"
                         key={row.title}
@@ -208,7 +257,7 @@ export function RealReviewsRealResultsPage() {
                             {row.title}
                           </div>
                           <div className="mt-1 text-xs text-slate-500">
-                            Mapped to homepage / PDP
+                            {"comment" in row ? row.comment : "Mapped to homepage / PDP"}
                           </div>
                         </td>
                         <td className="px-5 py-4 text-slate-700">
@@ -246,7 +295,7 @@ export function RealReviewsRealResultsPage() {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-3">
-              {galleryCards.map((card) => (
+              {(liveGalleryCards.length ? liveGalleryCards : galleryCards).map((card) => (
                 <div
                   className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm"
                   key={card.label}

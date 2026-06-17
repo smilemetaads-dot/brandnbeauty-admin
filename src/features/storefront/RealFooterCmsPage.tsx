@@ -1,6 +1,13 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import {
+  defaultCmsMeta,
+  fetchCmsMeta,
+  type CmsMeta,
+} from "@/features/cms/cms-meta-client";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
@@ -58,7 +65,7 @@ const detailPanels = [
 
 const safetyItems = [
   "No footer save, publish, reorder or delete workflow exists on this route yet.",
-  "No Supabase writes, SQL, localStorage or storefront sync was added.",
+  "No CMS write action, localStorage or storefront sync was added.",
   "Save, preview, link edit and social link controls stay disabled until real actions exist.",
 ] as const;
 
@@ -136,11 +143,44 @@ function StatCard({
 }
 
 export function RealFooterCmsPage() {
+  const [cmsMeta, setCmsMeta] = useState<CmsMeta>(defaultCmsMeta);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchCmsMeta(controller.signal)
+      .then(setCmsMeta)
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          console.error("Footer CMS metadata could not be loaded.", error);
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const liveStats = useMemo(
+    () =>
+      stats.map(([label, value, helper]) =>
+        label === "Trust Items"
+          ? [label, String(cmsMeta.reviews.length), "Verified reviews"]
+          : label === "Footer Links"
+            ? [label, String(13 + cmsMeta.banners.length), "Static + CMS links"]
+            : [label, value, helper],
+      ),
+    [cmsMeta.banners.length, cmsMeta.reviews.length],
+  );
+  const liveDetailPanels = cmsMeta.banners.slice(0, 3).map((banner) => ({
+    description: banner.text,
+    label: banner.title,
+    status: "Live metadata",
+  }));
+
   return (
     <AdminShell>
       <div className="space-y-6">
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {stats.map(([label, value, helper]) => (
+          {liveStats.map(([label, value, helper]) => (
             <StatCard
               helper={helper}
               key={label}
@@ -163,8 +203,8 @@ export function RealFooterCmsPage() {
                   </h1>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                     Control footer brand block, social links, policy links and
-                    trust strip as a Canvas-faithful preview. This route is not
-                    connected to a live footer save action yet.
+                    trust strip with local CMS metadata available for live
+                    campaign and review previews. Save actions remain disabled.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -217,7 +257,7 @@ export function RealFooterCmsPage() {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-3">
-              {detailPanels.map((panel) => (
+              {(liveDetailPanels.length ? liveDetailPanels : detailPanels).map((panel) => (
                 <div
                   className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm"
                   key={panel.label}

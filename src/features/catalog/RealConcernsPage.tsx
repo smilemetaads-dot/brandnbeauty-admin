@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 import { saveConcern } from "@/features/catalog/concern-actions";
@@ -10,7 +10,7 @@ import { saveConcern } from "@/features/catalog/concern-actions";
 import type { ConcernRecord } from "./concerns-data";
 
 type RealConcernsPageProps = {
-  concerns: ConcernRecord[];
+  concerns?: ConcernRecord[];
   editConcernId?: string;
 };
 
@@ -33,6 +33,47 @@ const inputClassName =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15";
 
 const labelClassName = "text-sm font-semibold text-slate-700";
+
+const CONCERNS_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_concerns.php";
+
+function toNumber(value: unknown) {
+  const numberValue = Number(value);
+
+  return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function toStringOrNull(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : null;
+}
+
+function normalizeConcern(value: unknown): ConcernRecord | null {
+  if (!value || typeof value !== "object") return null;
+
+  const concern = value as Record<string, unknown>;
+  const id = String(concern.id ?? "");
+  const name = String(concern.name ?? "").trim();
+  const slug = String(concern.slug ?? "").trim();
+
+  if (!id || !name) return null;
+
+  return {
+    created_at: toStringOrNull(concern.created_at),
+    featured: Boolean(concern.featured),
+    id,
+    image: toStringOrNull(concern.image),
+    meta_description: toStringOrNull(concern.meta_description),
+    meta_title: toStringOrNull(concern.meta_title),
+    name,
+    product_count: toNumber(concern.product_count),
+    slug: slug || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+    sort_order: concern.sort_order == null ? null : toNumber(concern.sort_order),
+    status: toStringOrNull(concern.status) ?? "active",
+    updated_at: toStringOrNull(concern.updated_at),
+  };
+}
 
 const concernGroups = [
   {
@@ -504,9 +545,10 @@ function ConcernForm({
 }
 
 export function RealConcernsPage({
-  concerns,
+  concerns: initialConcerns = [],
   editConcernId,
 }: RealConcernsPageProps) {
+  const [concerns, setConcerns] = useState<ConcernRecord[]>(initialConcerns);
   const [state, formAction, isPending] = useActionState(saveConcern, {
     ok: false,
     message: "",
@@ -517,6 +559,46 @@ export function RealConcernsPage({
     editingConcern?.id ?? concerns[0]?.id ?? "",
   );
   const [showAddForm, setShowAddForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [concernFilter, setConcernFilter] = useState("All");
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadConcerns() {
+      try {
+        const response = await fetch(CONCERNS_ENDPOINT, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("Concerns could not be loaded.");
+        }
+
+        const payload = (await response.json()) as unknown;
+        const nextConcerns = Array.isArray(payload)
+          ? payload
+              .map(normalizeConcern)
+              .filter((concern): concern is ConcernRecord => Boolean(concern))
+          : [];
+
+        setConcerns(nextConcerns);
+        setSelectedId((current) => current || (nextConcerns[0]?.id ?? ""));
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Admin concerns could not be loaded.", error);
+          setConcerns([]);
+        }
+      }
+    }
+
+    void Promise.resolve().then(() => loadConcerns());
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
 
   const selectedConcern =
     concerns.find((concern) => concern.id === selectedId) ??
@@ -543,17 +625,48 @@ export function RealConcernsPage({
     mappedProductPreview[
       selectedPreview.id as keyof typeof mappedProductPreview
     ] ?? mappedProductPreview.acne;
+  const filteredConcerns = useMemo(
+    () =>
+      concerns.filter((concern) => {
+        const searchText = [
+          concern.name,
+          concern.slug,
+          concern.status,
+          concern.meta_title,
+          concern.meta_description,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        const matchesSearch =
+          searchTerm.trim() === "" ||
+          searchText.includes(searchTerm.trim().toLowerCase());
+        const matchesFilter =
+          concernFilter === "All" ||
+          (concernFilter === "Active" && concern.status !== "inactive") ||
+          (concernFilter === "Draft" && concern.status === "inactive") ||
+          (concernFilter === "Visible" && concern.status !== "inactive") ||
+          (concernFilter === "Hidden" && concern.status === "inactive") ||
+          (concernFilter === "Concern Menu" && concern.status !== "inactive");
+
+        return matchesSearch && matchesFilter;
+      }),
+    [concernFilter, concerns, searchTerm],
+  );
   const liveConcernPreviewRows = useMemo(
     () =>
-      concerns.map((concern, index) => {
+      filteredConcerns.map((concern, index) => {
         const preview = getPreviewForConcern(concern);
 
         return {
           concern,
-          preview: index < 4 ? preview : { ...preview, products: "Preview" },
+          preview: {
+            ...(index < 4 ? preview : { ...preview, products: "Preview" }),
+            products: String(concern.product_count ?? 0),
+          },
         };
       }),
-    [concerns],
+    [filteredConcerns],
   );
   const showForm = showAddForm || Boolean(editingConcern);
 
@@ -598,7 +711,13 @@ export function RealConcernsPage({
               Visible: <b className="text-[#5E7F85]">{visibleCount}</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Products mapped: <b className="text-slate-900">Preview</b>
+              Products mapped:{" "}
+              <b className="text-slate-900">
+                {concerns.reduce(
+                  (sum, concern) => sum + (concern.product_count ?? 0),
+                  0,
+                )}
+              </b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Avg SEO score: <b className="text-emerald-700">{avgSeo}/100</b>
@@ -613,7 +732,16 @@ export function RealConcernsPage({
           {[
             ["Total Concerns", String(concerns.length), "Problem pages"],
             ["Concern Groups", String(concernGroups.length), "Skin, hair, body"],
-            ["Mapped Products", "Preview", "Problem matching"],
+            [
+              "Mapped Products",
+              String(
+                concerns.reduce(
+                  (sum, concern) => sum + (concern.product_count ?? 0),
+                  0,
+                ),
+              ),
+              "Problem matching",
+            ],
             ["SEO Needs Work", String(needsWork), "Review banner/meta"],
           ].map((item, index) => (
             <StatCard
@@ -703,10 +831,11 @@ export function RealConcernsPage({
               <div className="mt-5 grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
                 <div className="relative max-w-xl">
                   <input
-                    className="w-full cursor-not-allowed rounded-2xl border border-slate-300 bg-stone-50 px-4 py-3 pl-10 text-sm text-slate-500 outline-none"
-                    disabled
+                    className="w-full rounded-2xl border border-slate-300 bg-stone-50 px-4 py-3 pl-10 text-sm text-slate-700 outline-none focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15"
+                    onChange={(event) => setSearchTerm(event.target.value)}
                     placeholder="Search concern / slug / parent..."
                     type="search"
+                    value={searchTerm}
                   />
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                     Search
@@ -722,13 +851,13 @@ export function RealConcernsPage({
                     "Concern Menu",
                   ].map((item) => (
                     <button
-                      className={`cursor-not-allowed rounded-full px-4 py-2 text-xs font-semibold ${
-                        item === "All"
+                      className={`rounded-full px-4 py-2 text-xs font-semibold ${
+                        item === concernFilter
                           ? "bg-[#5E7F85] text-white"
-                          : "border border-slate-200 bg-white text-slate-400"
+                          : "border border-slate-200 bg-white text-slate-600"
                       }`}
-                      disabled
                       key={item}
+                      onClick={() => setConcernFilter(item)}
                       type="button"
                     >
                       {item}
@@ -912,7 +1041,7 @@ export function RealConcernsPage({
                             /concern/{selectedConcern.slug}
                           </span>
                           <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold">
-                            Products preview
+                            {selectedConcern.product_count ?? 0} Products
                           </span>
                         </div>
                       </div>
@@ -924,7 +1053,9 @@ export function RealConcernsPage({
                       <Badge tone={selectedConcern.image ? "good" : "warn"}>
                         {selectedConcern.image ? "Ready" : selectedPreview.banner}
                       </Badge>
-                      <Badge tone="default">Products preview</Badge>
+                      <Badge tone="default">
+                        {selectedConcern.product_count ?? 0} Products
+                      </Badge>
                     </div>
                   </div>
                   <div className="mt-5 space-y-3 text-sm">
@@ -932,7 +1063,7 @@ export function RealConcernsPage({
                       ["Concern Group", selectedPreview.parent],
                       ["Concern Type", selectedPreview.concernType],
                       ["Severity", selectedPreview.severity],
-                      ["Products", "Preview"],
+                      ["Products", selectedConcern.product_count ?? 0],
                       ["Routine Steps", selectedPreview.routine.length],
                       ["Status", getStatusLabel(selectedConcern.status)],
                     ].map(([label, value]) => (
@@ -989,7 +1120,9 @@ export function RealConcernsPage({
                   <div className="text-sm font-medium text-slate-500">
                     Top Mapped Products
                   </div>
-                  <Badge tone="good">Preview</Badge>
+                  <Badge tone="good">
+                    {selectedConcern.product_count ?? 0} Products
+                  </Badge>
                 </div>
                 <div className="mt-3 space-y-2">
                   {previewProducts.map((item, index) => (

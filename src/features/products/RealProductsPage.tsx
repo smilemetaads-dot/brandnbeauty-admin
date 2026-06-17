@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   AdminBadge,
@@ -12,11 +15,26 @@ import {
 } from "@/components/admin/AdminUiPrimitives";
 import { AdminShell } from "@/components/admin/AdminShell";
 
-import { updateProductStatus } from "./product-actions";
 import type { ProductRecord } from "./products-data";
 
 type RealProductsPageProps = {
-  products: ProductRecord[];
+  products?: ProductRecord[];
+};
+
+type AdminProductRow = {
+  category?: unknown;
+  created_at?: unknown;
+  description?: unknown;
+  id?: unknown;
+  image_url?: unknown;
+  name?: unknown;
+  price?: unknown;
+  product_name?: unknown;
+  sku?: unknown;
+  status?: unknown;
+  stock?: unknown;
+  stock_quantity?: unknown;
+  updated_at?: unknown;
 };
 
 const PRODUCT_FILTERS = [
@@ -30,6 +48,90 @@ const PRODUCT_FILTERS = [
   "Notify Me",
 ];
 
+const UPDATE_PRODUCT_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/update_product.php";
+const ADMIN_PRODUCTS_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/admin_products.php";
+
+function toNumber(value: unknown) {
+  const numberValue = Number(value);
+
+  return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function toStringOrNull(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : null;
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function normalizeStatus(status: string | null, stock: number) {
+  if (stock <= 0) return "out_of_stock";
+  if (status === "active" || status === "draft" || status === "inactive") {
+    return status;
+  }
+  if (stock <= 10) return "low_stock";
+
+  return "draft";
+}
+
+function normalizeImageUrl(imageUrl: string | null) {
+  if (!imageUrl) return null;
+  if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+
+  return `http://localhost/BrandnBeauty/brandnbeauty-backend/php/${imageUrl}`;
+}
+
+function normalizeAdminProduct(value: unknown): ProductRecord | null {
+  if (!value || typeof value !== "object") return null;
+
+  const product = value as AdminProductRow;
+  const id = String(product.id ?? "");
+  const name = String(product.product_name ?? product.name ?? "").trim();
+
+  if (!id || !name) return null;
+
+  const stock = toNumber(product.stock_quantity ?? product.stock);
+  const categoryName = toStringOrNull(product.category);
+
+  return {
+    attributes: null,
+    brand_id: null,
+    brands: null,
+    category_id: null,
+    categories: categoryName ? { name: categoryName, slug: slugify(categoryName) } : null,
+    concernIds: [],
+    created_at: toStringOrNull(product.created_at),
+    featured: false,
+    id,
+    image: normalizeImageUrl(toStringOrNull(product.image_url)),
+    name,
+    old_price: null,
+    price: toNumber(product.price),
+    short_description: toStringOrNull(product.description),
+    sku: toStringOrNull(product.sku) ?? `BNB-${id.padStart(4, "0")}`,
+    slug: slugify(name) || `product-${id}`,
+    status: normalizeStatus(toStringOrNull(product.status), stock),
+    stock,
+    updated_at: toStringOrNull(product.updated_at),
+  };
+}
+
+function normalizeAdminProducts(payload: unknown) {
+  return Array.isArray(payload)
+    ? payload
+        .map(normalizeAdminProduct)
+        .filter((product): product is ProductRecord => Boolean(product))
+    : [];
+}
+
 const formatPrice = (price: number) =>
   new Intl.NumberFormat("en-BD", {
     maximumFractionDigits: 2,
@@ -40,6 +142,7 @@ const formatStatus = (status: string | null) => {
   const labels: Record<string, string> = {
     active: "Active",
     draft: "Draft",
+    inactive: "Inactive",
     low_stock: "Low Stock",
     out_of_stock: "Out of Stock",
   };
@@ -48,11 +151,11 @@ const formatStatus = (status: string | null) => {
 };
 
 const getVisibilityLabel = (status: string | null) =>
-  status === "draft" ? "Hidden" : "Visible";
+  status === "draft" || status === "inactive" ? "Hidden" : "Visible";
 
 const getStockRuleLabel = (status: string | null) => {
   if (status === "out_of_stock") return "Notify Me";
-  if (status === "draft") return "Disabled";
+  if (status === "draft" || status === "inactive") return "Disabled";
 
   return "Sellable";
 };
@@ -60,21 +163,53 @@ const getStockRuleLabel = (status: string | null) => {
 const hasAttributes = (attributes: ProductRecord["attributes"]) =>
   Boolean(attributes && Object.keys(attributes).length > 0);
 
-async function submitProductStatus(formData: FormData) {
-  "use server";
-
-  await updateProductStatus(formData);
-}
-
 function StatusControl({
   product,
   compact = false,
+  onUpdated,
 }: {
   compact?: boolean;
+  onUpdated: () => Promise<void>;
   product: ProductRecord;
 }) {
+  const [status, setStatus] = useState(
+    product.status === "inactive" ? "inactive" : product.status === "active" ? "active" : "draft",
+  );
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSaving(true);
+
+    try {
+      const response = await fetch(UPDATE_PRODUCT_ENDPOINT, {
+        body: JSON.stringify({
+          price: product.price,
+          product_id: product.id,
+          status,
+          stock_quantity: product.stock,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Product status could not be updated.");
+      }
+
+      await onUpdated();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Product status could not be updated.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <form action={submitProductStatus} className="flex flex-wrap items-center gap-2">
+    <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2">
       <input name="id" type="hidden" value={product.id} />
       <label className="sr-only" htmlFor={`status-${product.id}`}>
         Product status
@@ -83,24 +218,76 @@ function StatusControl({
         className={`rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-stone-50 text-xs font-semibold text-slate-700 shadow-sm outline-none transition focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/20 ${
           compact ? "px-3 py-2" : "px-4 py-3"
         }`}
-        defaultValue={product.status ?? "draft"}
         id={`status-${product.id}`}
         name="status"
+        onChange={(event) => setStatus(event.target.value)}
+        value={status}
       >
         <option value="active">Active</option>
         <option value="draft">Draft</option>
-        <option value="low_stock">Low Stock</option>
-        <option value="out_of_stock">Out of Stock</option>
+        <option value="inactive">Inactive</option>
       </select>
       <button
-        className={`rounded-2xl bg-[#5E7F85] font-semibold text-white transition hover:bg-slate-950 ${
+        className={`rounded-2xl bg-[#5E7F85] font-semibold text-white transition hover:bg-slate-950 disabled:cursor-not-allowed disabled:bg-slate-300 ${
           compact ? "px-3 py-2 text-xs" : "px-4 py-3 text-sm"
         }`}
+        disabled={isSaving}
         type="submit"
       >
-        Update
+        {isSaving ? "Saving..." : "Update"}
       </button>
     </form>
+  );
+}
+
+function DraftArchiveButton({
+  onUpdated,
+  product,
+}: {
+  onUpdated: () => Promise<void>;
+  product: ProductRecord;
+}) {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleClick = async () => {
+    setIsSaving(true);
+
+    try {
+      const response = await fetch(UPDATE_PRODUCT_ENDPOINT, {
+        body: JSON.stringify({
+          price: product.price,
+          product_id: product.id,
+          status: "draft",
+          stock_quantity: product.stock,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Product status could not be updated.");
+      }
+
+      await onUpdated();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Product status could not be updated.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <button
+      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
+      disabled={isSaving}
+      onClick={handleClick}
+      type="button"
+    >
+      {isSaving ? "Saving..." : "Set Draft Archive Safe"}
+    </button>
   );
 }
 
@@ -157,7 +344,40 @@ function DetailRow({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-export function RealProductsPage({ products }: RealProductsPageProps) {
+export function RealProductsPage({ products: initialProducts = [] }: RealProductsPageProps) {
+  const [products, setProducts] = useState<ProductRecord[]>(initialProducts);
+
+  const loadProducts = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const response = await fetch(ADMIN_PRODUCTS_ENDPOINT, {
+        cache: "no-store",
+        signal,
+      });
+
+      if (!response.ok) {
+        throw new Error("Products could not be loaded.");
+      }
+
+      const payload = (await response.json()) as unknown;
+      setProducts(normalizeAdminProducts(payload));
+    } catch (error) {
+      if (!signal?.aborted) {
+        console.error("Admin products could not be loaded.", error);
+        setProducts([]);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void Promise.resolve().then(() => loadProducts(controller.signal));
+
+    return () => {
+      controller.abort();
+    };
+  }, [loadProducts]);
+
   const catalogValue = products.reduce(
     (sum, product) => sum + product.price * product.stock,
     0,
@@ -416,7 +636,12 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                             >
                               View
                             </button>
-                            <StatusControl compact product={product} />
+                            <StatusControl
+                              compact
+                              key={`${product.id}-${product.status}-row`}
+                              onUpdated={loadProducts}
+                              product={product}
+                            />
                           </div>
                         </td>
                       </AdminTableRow>
@@ -545,17 +770,12 @@ export function RealProductsPage({ products }: RealProductsPageProps) {
                     >
                       Edit Product
                     </Link>
-                    <StatusControl product={selectedProduct} />
-                    <form action={submitProductStatus}>
-                      <input name="id" type="hidden" value={selectedProduct.id} />
-                      <input name="status" type="hidden" value="draft" />
-                      <button
-                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-stone-50"
-                        type="submit"
-                      >
-                        Set Draft Archive Safe
-                      </button>
-                    </form>
+                    <StatusControl
+                      key={`${selectedProduct.id}-${selectedProduct.status}-drawer`}
+                      onUpdated={loadProducts}
+                      product={selectedProduct}
+                    />
+                    <DraftArchiveButton onUpdated={loadProducts} product={selectedProduct} />
                     <button
                       className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-500 opacity-60"
                       disabled

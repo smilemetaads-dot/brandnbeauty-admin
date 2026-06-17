@@ -1,13 +1,19 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import {
+  fetchLogisticsOrders,
+  type LogisticsOrderRecord,
+} from "@/features/logistics/logistics-client";
 
-import { MarkPackedButton } from "./MarkPackedButton";
-import type { PackingOrderRecord } from "./packing-data";
+type PackingOrderRecord = LogisticsOrderRecord;
 
 type RealPackingDeskPageProps = {
-  orders: PackingOrderRecord[];
+  orders?: PackingOrderRecord[];
 };
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
@@ -192,11 +198,56 @@ function formatLocation(order: PackingOrderRecord) {
   return `${order.district ?? "No district"} / ${order.area ?? "No area"}`;
 }
 
-export function RealPackingDeskPage({ orders }: RealPackingDeskPageProps) {
-  const readyToPackOrders = getReadyCount(orders);
-  const packedOrders = getPackedCount(orders);
-  const mismatchCount = getMismatchCount(orders);
+const packingStatuses = new Set([
+  "pending",
+  "confirmed",
+  "processing",
+  "ready_to_pack",
+  "packing",
+  "packed",
+  "ready_to_ship",
+]);
+
+export function RealPackingDeskPage({
+  orders: initialOrders = [],
+}: RealPackingDeskPageProps) {
+  const [orders, setOrders] = useState<PackingOrderRecord[]>(initialOrders);
+  const [isLoading, setIsLoading] = useState(!initialOrders.length);
+  const packingOrders = useMemo(
+    () => orders.filter((order) => packingStatuses.has(order.order_status)),
+    [orders],
+  );
+  const readyToPackOrders = getReadyCount(packingOrders);
+  const packedOrders = getPackedCount(packingOrders);
+  const mismatchCount = getMismatchCount(packingOrders);
   const printedSlips = 0;
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadOrders() {
+      try {
+        setIsLoading(true);
+        const nextOrders = await fetchLogisticsOrders(controller.signal);
+        setOrders(nextOrders);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Packing logistics orders could not be loaded.", error);
+          setOrders([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadOrders();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
 
   return (
     <AdminShell>
@@ -249,9 +300,13 @@ export function RealPackingDeskPage({ orders }: RealPackingDeskPageProps) {
             </div>
           </div>
 
-          {orders.length ? (
+          {isLoading ? (
+            <div className="p-10 text-center text-sm text-slate-500">
+              Loading live packing orders from local MySQL...
+            </div>
+          ) : packingOrders.length ? (
             <div className="grid gap-5 p-6 xl:grid-cols-3">
-              {orders.map((order) => {
+              {packingOrders.map((order) => {
                 const itemCount = order.order_items.reduce(
                   (sum, item) => sum + item.quantity,
                   0,
@@ -363,10 +418,11 @@ export function RealPackingDeskPage({ orders }: RealPackingDeskPageProps) {
                       >
                         Print Slip
                       </Link>
-                      <MarkPackedButton
-                        currentStatus={order.order_status}
-                        orderId={order.id}
-                      />
+                      <DisabledButton primary>
+                        {order.order_status === "packed"
+                          ? "Already Packed"
+                          : "Mark Packed"}
+                      </DisabledButton>
                     </div>
 
                     <Link

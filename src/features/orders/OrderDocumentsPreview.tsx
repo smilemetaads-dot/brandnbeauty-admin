@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import type { OrderDetailsRecord } from "./orders-data";
+import type { OrderDetailsRecord } from "./order-details-client";
 
 type OrderDocumentsPreviewProps = {
   order: OrderDetailsRecord;

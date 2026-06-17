@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 import { saveBrand } from "@/features/catalog/brand-actions";
@@ -10,7 +11,7 @@ import { saveBrand } from "@/features/catalog/brand-actions";
 import type { BrandRecord } from "./brands-data";
 
 type RealBrandsPageProps = {
-  brands: BrandRecord[];
+  brands?: BrandRecord[];
   editBrandId?: string;
 };
 
@@ -29,6 +30,48 @@ const inputClassName =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15";
 
 const labelClassName = "text-sm font-semibold text-slate-700";
+
+const BRANDS_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_brands.php";
+
+function toNumber(value: unknown) {
+  const numberValue = Number(value);
+
+  return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function toStringOrNull(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : null;
+}
+
+function normalizeBrand(value: unknown): BrandRecord | null {
+  if (!value || typeof value !== "object") return null;
+
+  const brand = value as Record<string, unknown>;
+  const id = String(brand.id ?? "");
+  const name = String(brand.name ?? "").trim();
+  const slug = String(brand.slug ?? "").trim();
+  const logoUrl = toStringOrNull(brand.logo_url) ?? toStringOrNull(brand.logo);
+
+  if (!id || !name) return null;
+
+  return {
+    created_at: toStringOrNull(brand.created_at),
+    featured: Boolean(brand.featured),
+    id,
+    image: logoUrl ?? toStringOrNull(brand.image),
+    meta_description: toStringOrNull(brand.meta_description),
+    meta_title: toStringOrNull(brand.meta_title),
+    name,
+    product_count: toNumber(brand.product_count),
+    slug: slug || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+    sort_order: brand.sort_order == null ? null : toNumber(brand.sort_order),
+    status: toStringOrNull(brand.status) ?? "active",
+    updated_at: toStringOrNull(brand.updated_at),
+  };
+}
 
 const brandPreviews: Record<string, BrandPreview> = {
   cosrx: {
@@ -443,7 +486,11 @@ function BrandForm({
   );
 }
 
-export function RealBrandsPage({ brands, editBrandId }: RealBrandsPageProps) {
+export function RealBrandsPage({
+  brands: initialBrands = [],
+  editBrandId,
+}: RealBrandsPageProps) {
+  const [brands, setBrands] = useState<BrandRecord[]>(initialBrands);
   const [state, formAction, isPending] = useActionState(saveBrand, {
     ok: false,
     message: "",
@@ -452,6 +499,45 @@ export function RealBrandsPage({ brands, editBrandId }: RealBrandsPageProps) {
   const [filter, setFilter] = useState("All");
   const [selectedBrandId, setSelectedBrandId] = useState(editBrandId ?? "");
   const [showAddForm, setShowAddForm] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadBrands() {
+      try {
+        const response = await fetch(BRANDS_ENDPOINT, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("Brands could not be loaded.");
+        }
+
+        const payload = (await response.json()) as unknown;
+        const nextBrands = Array.isArray(payload)
+          ? payload
+              .map(normalizeBrand)
+              .filter((brand): brand is BrandRecord => Boolean(brand))
+          : [];
+
+        setBrands(nextBrands);
+        setSelectedBrandId((current) => current || (nextBrands[0]?.id ?? ""));
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Admin brands could not be loaded.", error);
+          setBrands([]);
+        }
+      }
+    }
+
+    void Promise.resolve().then(() => loadBrands());
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
   const editingBrand =
     brands.find((brand) => brand.id === editBrandId) ?? null;
   const featuredCount = brands.filter((brand) => brand.featured).length;
@@ -460,9 +546,10 @@ export function RealBrandsPage({ brands, editBrandId }: RealBrandsPageProps) {
     return brands.filter((brand) => {
       const query = search.toLowerCase();
       const preview = getPreviewForBrand(brand);
+      const productCount = brand.product_count ?? 0;
       const matchesSearch =
         !query ||
-        `${brand.name} ${brand.slug} ${brand.status ?? ""} ${preview.type} ${preview.origin}`
+        `${brand.name} ${brand.slug} ${brand.status ?? ""} ${preview.type} ${preview.origin} ${productCount}`
           .toLowerCase()
           .includes(query);
       const matchesFilter =
@@ -488,6 +575,10 @@ export function RealBrandsPage({ brands, editBrandId }: RealBrandsPageProps) {
   const topProductPreview =
     topProductsMap[selectedPreview.id] ?? topProductsMap.cosrx;
   const topBrand = brands[0] ?? null;
+  const mappedProductCount = brands.reduce(
+    (sum, brand) => sum + (brand.product_count ?? 0),
+    0,
+  );
   const showForm = showAddForm || Boolean(editingBrand);
 
   return (
@@ -526,8 +617,8 @@ export function RealBrandsPage({ brands, editBrandId }: RealBrandsPageProps) {
           </div>
           <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-4">
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Filtered revenue:{" "}
-              <b className="text-[#5E7F85]">Preview</b>
+              Mapped products:{" "}
+              <b className="text-[#5E7F85]">{mappedProductCount}</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Date view: <b className="text-slate-900">30D</b>
@@ -547,7 +638,7 @@ export function RealBrandsPage({ brands, editBrandId }: RealBrandsPageProps) {
             ["Filtered Revenue", "Preview", "30D"],
             ["Top Brand", topBrand?.name ?? "Review", "Revenue preview"],
             ["Featured Brands", String(featuredCount), "Homepage visible"],
-            ["Brand SEO Work", String(needsSeoCount), "Logo/banner/meta"],
+            ["Mapped Products", String(mappedProductCount), "Product mapping"],
           ].map((item, index) => (
             <StatCard
               active={item[0] === "Filtered Revenue" || item[0] === "Top Brand"}
@@ -726,11 +817,22 @@ export function RealBrandsPage({ brands, editBrandId }: RealBrandsPageProps) {
                               <div
                                 className={`flex h-11 w-11 items-center justify-center rounded-2xl text-xs font-bold ${
                                   brand.image
-                                    ? "bg-[#5E7F85]/10 text-[#5E7F85]"
+                                    ? "overflow-hidden bg-white text-[#5E7F85]"
                                     : "bg-amber-50 text-amber-700"
                                 }`}
                               >
-                                {brand.name.slice(0, 2).toUpperCase()}
+                                {brand.image ? (
+                                  <Image
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                    height={44}
+                                    src={brand.image}
+                                    unoptimized
+                                    width={44}
+                                  />
+                                ) : (
+                                  brand.name.slice(0, 2).toUpperCase()
+                                )}
                               </div>
                               <div>
                                 <div className="font-bold text-slate-900">
@@ -756,7 +858,7 @@ export function RealBrandsPage({ brands, editBrandId }: RealBrandsPageProps) {
                             </Badge>
                           </td>
                           <td className="px-3 py-4 font-semibold text-slate-500 2xl:px-5">
-                            {preview.products}
+                            {brand.product_count ?? 0}
                           </td>
                           <td className="px-3 py-4 2xl:px-5">
                             <div className="font-bold text-slate-900">Preview</div>
@@ -870,7 +972,18 @@ export function RealBrandsPage({ brands, editBrandId }: RealBrandsPageProps) {
                       <div className="absolute -bottom-10 left-1/2 h-32 w-32 rounded-full bg-white/10" />
                       <div className="relative">
                         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 text-lg font-black">
-                          {selectedBrand.name.slice(0, 2).toUpperCase()}
+                          {selectedBrand.image ? (
+                            <Image
+                              alt=""
+                              className="h-full w-full rounded-2xl object-cover"
+                              height={64}
+                              src={selectedBrand.image}
+                              unoptimized
+                              width={64}
+                            />
+                          ) : (
+                            selectedBrand.name.slice(0, 2).toUpperCase()
+                          )}
                         </div>
                         <div className="mt-4 text-[10px] font-bold uppercase tracking-[0.2em] text-white/75">
                           Featured Brand
@@ -884,7 +997,7 @@ export function RealBrandsPage({ brands, editBrandId }: RealBrandsPageProps) {
                         </div>
                         <div className="mt-5 flex flex-wrap gap-2">
                           <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold">
-                            Products preview
+                            {selectedBrand.product_count ?? 0} Products
                           </span>
                           <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold">
                             {selectedPreview.origin}
@@ -906,7 +1019,7 @@ export function RealBrandsPage({ brands, editBrandId }: RealBrandsPageProps) {
                   </div>
                   <div className="mt-5 grid grid-cols-2 gap-3">
                     {[
-                      ["Products", "Preview"],
+                      ["Products", selectedBrand.product_count ?? 0],
                       ["Revenue", "Preview"],
                       ["Share", "Preview"],
                       ["Date View", "30D"],

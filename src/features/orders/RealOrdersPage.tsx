@@ -1,18 +1,152 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 
-import type { OrderRecord } from "./orders-data";
-
 type RealOrdersPageProps = {
-  orders: OrderRecord[];
+  orders?: OrderRecord[];
 };
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
+
+type OrderRecord = {
+  area: string | null;
+  courier_name: string | null;
+  courier_status: string | null;
+  courier_tracking_id: string | null;
+  created_at: string | null;
+  customer_name: string;
+  customer_phone: string;
+  delivery_charge: number;
+  delivery_zone: string | null;
+  discount: number;
+  district: string | null;
+  due_amount: number;
+  id: string;
+  order_number: string | null;
+  order_status: string;
+  paid_amount: number;
+  payment_status: string;
+  source: string | null;
+  stock_deducted: boolean;
+  stock_restored: boolean;
+  subtotal: number;
+  total: number;
+  updated_at: string | null;
+};
+
+type MysqlOrderRow = {
+  address?: unknown;
+  city?: unknown;
+  created_at?: unknown;
+  customer_name?: unknown;
+  delivery_charge?: unknown;
+  email?: unknown;
+  id?: unknown;
+  payment_method?: unknown;
+  payment_status?: unknown;
+  phone?: unknown;
+  status?: unknown;
+  subtotal_amount?: unknown;
+  total_amount?: unknown;
+  updated_at?: unknown;
+};
+
+const ALL_ORDERS_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_all_orders.php";
+const UPDATE_ORDER_STATUS_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/update_order_status.php";
+const ORDER_STATUS_OPTIONS = [
+  "pending",
+  "confirmed",
+  "processing",
+  "packed",
+  "shipped",
+  "delivered",
+  "cancelled",
+  "returned",
+];
+
+function toNumber(value: unknown) {
+  const numberValue = Number(value);
+
+  return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function toStringOrNull(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : null;
+}
+
+function normalizeOrderStatus(value: unknown) {
+  const status = String(value ?? "pending").trim().toLowerCase();
+
+  return status || "pending";
+}
+
+function normalizePaymentStatus(value: unknown, orderStatus: string) {
+  const paymentStatus = String(value ?? "").trim().toLowerCase();
+
+  if (!paymentStatus || paymentStatus === "not_set") {
+    return orderStatus === "delivered" ? "paid" : "cod_pending";
+  }
+
+  if (paymentStatus === "cash_on_delivery") {
+    return orderStatus === "delivered" ? "paid" : "cod_pending";
+  }
+
+  return paymentStatus;
+}
+
+function normalizeMysqlOrder(row: MysqlOrderRow): OrderRecord {
+  const id = String(row.id ?? "");
+  const total = toNumber(row.total_amount);
+  const createdAt = toStringOrNull(row.created_at);
+  const status = normalizeOrderStatus(row.status);
+  const paymentStatus = normalizePaymentStatus(
+    row.payment_status ?? row.payment_method,
+    status,
+  );
+  const isPaymentComplete = ["paid", "completed", "success", "successful"].includes(
+    paymentStatus,
+  );
+
+  return {
+    area: toStringOrNull(row.address),
+    courier_name: null,
+    courier_status: status === "delivered" ? "delivered" : "not_sent",
+    courier_tracking_id: null,
+    created_at: createdAt,
+    customer_name: String(row.customer_name ?? "Unknown customer"),
+    customer_phone: String(row.phone ?? ""),
+    delivery_charge: toNumber(row.delivery_charge),
+    delivery_zone: toStringOrNull(row.city),
+    district: toStringOrNull(row.city),
+    discount: 0,
+    due_amount: isPaymentComplete ? 0 : total,
+    id,
+    order_number: id ? `BNB-${id.padStart(6, "0")}` : null,
+    order_status: status,
+    paid_amount: isPaymentComplete ? total : 0,
+    payment_status: paymentStatus,
+    source: "MySQL",
+    stock_deducted: true,
+    stock_restored: false,
+    subtotal: toNumber(row.subtotal_amount),
+    total,
+    updated_at: toStringOrNull(row.updated_at) ?? createdAt,
+  };
+}
+
+function normalizeMysqlOrders(payload: unknown) {
+  return Array.isArray(payload)
+    ? payload.map((row) => normalizeMysqlOrder(row as MysqlOrderRow))
+    : [];
+}
 
 function Badge({
   children,
@@ -161,7 +295,9 @@ function QuickActionButton({ children }: { children: ReactNode }) {
 function getOrderStatusTone(status: string): BadgeTone {
   if (status === "delivered" || status === "packed") return "good";
   if (status === "cancelled" || status === "returned") return "bad";
-  if (status === "new" || status === "processing") return "warn";
+  if (status === "new" || status === "pending" || status === "processing") {
+    return "warn";
+  }
   return "brand";
 }
 
@@ -170,7 +306,11 @@ function getRiskLabel(order: OrderRecord) {
     return "High";
   }
 
-  if (order.due_amount > 0 || order.order_status === "new") {
+  if (
+    order.due_amount > 0 ||
+    order.order_status === "new" ||
+    order.order_status === "pending"
+  ) {
     return "Medium";
   }
 
@@ -195,7 +335,7 @@ function getRiskReasons(order: OrderRecord) {
     reasons.push(`Due ${formatMoney(order.due_amount)}`);
   }
 
-  if (order.order_status === "new") {
+  if (order.order_status === "new" || order.order_status === "pending") {
     reasons.push("New order needs confirmation");
   }
 
@@ -207,7 +347,7 @@ function getRowClassName(order: OrderRecord) {
     return "bg-rose-50/35";
   }
 
-  if (order.order_status === "new") {
+  if (order.order_status === "new" || order.order_status === "pending") {
     return "bg-amber-50/35";
   }
 
@@ -267,14 +407,56 @@ function getSearchText(order: OrderRecord) {
     .toLowerCase();
 }
 
-export function RealOrdersPage({ orders }: RealOrdersPageProps) {
+export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPageProps) {
+  const [orders, setOrders] = useState<OrderRecord[]>(initialOrders);
+  const [isLoading, setIsLoading] = useState(!initialOrders.length);
   const [orderFilter, setOrderFilter] = useState("All");
   const [priorityOnly, setPriorityOnly] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [sourceFilter, setSourceFilter] = useState("All Sources");
+  const [updatingOrderIds, setUpdatingOrderIds] = useState<string[]>([]);
   const [zoneFilter, setZoneFilter] = useState("All Zones");
   const [previewOrderId, setPreviewOrderId] = useState(orders[0]?.id ?? "");
+
+  const loadOrders = useCallback(async (signal?: AbortSignal) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(ALL_ORDERS_ENDPOINT, {
+        cache: "no-store",
+        signal,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load orders from PHP endpoint.");
+      }
+
+      const payload = (await response.json()) as unknown;
+      const nextOrders = normalizeMysqlOrders(payload);
+
+      setOrders(nextOrders);
+      setPreviewOrderId((current) => current || nextOrders[0]?.id || "");
+    } catch (error) {
+      if (!signal?.aborted) {
+        console.error("Admin orders could not be loaded.", error);
+        setOrders([]);
+      }
+    } finally {
+      if (!signal?.aborted) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void Promise.resolve().then(() => loadOrders(controller.signal));
+
+    return () => {
+      controller.abort();
+    };
+  }, [loadOrders]);
 
   const sourceOptions = useMemo(
     () => [
@@ -311,7 +493,8 @@ export function RealOrdersPage({ orders }: RealOrdersPageProps) {
         const matchesPriority =
           !priorityOnly ||
           getRiskLabel(order) === "High" ||
-          order.order_status === "new";
+          order.order_status === "new" ||
+          order.order_status === "pending";
 
         return (
           matchesStatus &&
@@ -334,7 +517,7 @@ export function RealOrdersPage({ orders }: RealOrdersPageProps) {
 
   const totalOrders = orders.length;
   const pendingConfirmOrders = orders.filter((order) =>
-    ["new", "processing"].includes(order.order_status),
+    ["new", "pending", "processing"].includes(order.order_status),
   ).length;
   const readyCourierOrders = orders.filter((order) =>
     ["ready", "not_sent"].includes(order.courier_status ?? ""),
@@ -371,6 +554,37 @@ export function RealOrdersPage({ orders }: RealOrdersPageProps) {
     );
   }
 
+  async function handleStatusChange(orderId: string, nextStatus: string) {
+    setUpdatingOrderIds((current) => Array.from(new Set([...current, orderId])));
+
+    try {
+      const response = await fetch(UPDATE_ORDER_STATUS_ENDPOINT, {
+        body: JSON.stringify({
+          order_id: orderId,
+          status: nextStatus,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        message?: string;
+        success?: boolean;
+      } | null;
+
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message ?? "Order status update failed.");
+      }
+
+      await loadOrders();
+    } catch (error) {
+      console.error("Order status could not be updated.", error);
+    } finally {
+      setUpdatingOrderIds((current) => current.filter((id) => id !== orderId));
+    }
+  }
+
   return (
     <AdminShell>
       <div className="space-y-6">
@@ -387,12 +601,12 @@ export function RealOrdersPage({ orders }: RealOrdersPageProps) {
             value={String(totalOrders)}
           />
           <StatCard
-            active={orderFilter === "new"}
+            active={orderFilter === "pending"}
             helper="Need action"
             icon="!"
             label="Pending Confirm"
             onClick={() => {
-              setOrderFilter("new");
+              setOrderFilter("pending");
               setPriorityOnly(false);
             }}
             value={String(pendingConfirmOrders)}
@@ -425,9 +639,9 @@ export function RealOrdersPage({ orders }: RealOrdersPageProps) {
                   Orders Command Center
                 </h1>
                 <p className="max-w-3xl text-sm leading-6 text-slate-500">
-                  Live Supabase order board with source-style filters, risk
-                  badges, customer blocks, and safe detail links. Mutating list
-                  actions remain disabled until a dedicated workflow is wired.
+                  Live MySQL order board with source-style filters, risk
+                  badges, customer blocks, status updates, and safe detail links.
+                  Bulk actions remain disabled until a dedicated workflow is wired.
                 </p>
               </div>
               <Badge tone="brand">Live Orders</Badge>
@@ -496,7 +710,11 @@ export function RealOrdersPage({ orders }: RealOrdersPageProps) {
             </div>
           ) : null}
 
-          {filteredOrders.length ? (
+          {isLoading ? (
+            <div className="px-5 py-12 text-center text-sm text-slate-500">
+              Loading live orders from local MySQL...
+            </div>
+          ) : filteredOrders.length ? (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
                 <thead className="sticky top-0 z-10 bg-stone-50 text-slate-500">
@@ -514,6 +732,7 @@ export function RealOrdersPage({ orders }: RealOrdersPageProps) {
                       "Customer",
                       "Source",
                       "Amount",
+                      "Payment",
                       "Zone",
                       "Risk",
                       "Status",
@@ -581,6 +800,15 @@ export function RealOrdersPage({ orders }: RealOrdersPageProps) {
                           Due {formatMoney(order.due_amount)}
                         </div>
                       </td>
+                      <td className="px-5 py-4">
+                        <Badge
+                          tone={
+                            order.payment_status === "paid" ? "good" : "warn"
+                          }
+                        >
+                          {formatStatus(order.payment_status)}
+                        </Badge>
+                      </td>
                       <td className="px-5 py-4 text-slate-600">
                         {order.district ?? "No district"}
                         <div className="mt-1 text-xs text-slate-500">
@@ -627,10 +855,17 @@ export function RealOrdersPage({ orders }: RealOrdersPageProps) {
                       >
                         <select
                           className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400 outline-none"
-                          disabled
-                          value={formatStatus(order.order_status)}
+                          disabled={updatingOrderIds.includes(order.id)}
+                          onChange={(event) =>
+                            handleStatusChange(order.id, event.target.value)
+                          }
+                          value={order.order_status}
                         >
-                          <option>{formatStatus(order.order_status)}</option>
+                          {ORDER_STATUS_OPTIONS.map((status) => (
+                            <option key={status} value={status}>
+                              {formatStatus(status)}
+                            </option>
+                          ))}
                         </select>
                       </td>
                       <td className="px-5 py-4">

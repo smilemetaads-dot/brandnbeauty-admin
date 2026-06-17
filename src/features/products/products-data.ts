@@ -1,20 +1,9 @@
 import "server-only";
 
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-
 type ProductRelation = {
   name: string | null;
   slug: string | null;
 } | null;
-
-type ProductRow = Omit<ProductRecord, "brands" | "categories"> & {
-  brands: ProductRelation | ProductRelation[];
-  categories: ProductRelation | ProductRelation[];
-};
-
-type ProductConcernRow = {
-  concern_id: string | null;
-};
 
 export type ProductRecord = {
   id: string;
@@ -38,80 +27,114 @@ export type ProductRecord = {
   categories: ProductRelation;
 };
 
-function getSingleRelation(
-  relation: ProductRelation | ProductRelation[],
-): ProductRelation {
-  return Array.isArray(relation) ? (relation[0] ?? null) : relation;
+type ProductsListRow = {
+  created_at: string | null;
+  description: string | null;
+  id: number;
+  image_url: string | null;
+  price: number;
+  product_name: string;
+  status: string | null;
+  stock_quantity: number;
+};
+
+const PRODUCTS_LIST_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_products_list.php";
+
+function toNumber(value: unknown) {
+  const numberValue = Number(value);
+
+  return Number.isFinite(numberValue) ? numberValue : 0;
 }
 
-export async function getProductsFromSupabase(): Promise<ProductRecord[]> {
-  try {
-    const supabase = createAdminSupabaseClient();
-    const { data, error } = await supabase
-      .from("products")
-      .select(
-        "id, name, slug, sku, brand_id, category_id, price, old_price, stock, image, short_description, status, featured, attributes, created_at, updated_at, brands(name, slug), categories(name, slug)",
-      )
-      .order("created_at", { ascending: false });
+function toStringOrNull(value: unknown) {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
 
-    if (error) {
-      console.error("Failed to load products from Supabase.");
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function normalizeStatus(status: string | null, stock: number) {
+  if (stock <= 0) return "out_of_stock";
+  if (status === "active" || status === "draft" || status === "inactive") {
+    return status;
+  }
+  if (stock <= 10) return "low_stock";
+
+  return "draft";
+}
+
+function normalizeImageUrl(imageUrl: string | null) {
+  if (!imageUrl) return null;
+  if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+
+  return `http://localhost/BrandnBeauty/brandnbeauty-backend/php/${imageUrl}`;
+}
+
+function normalizeProduct(value: unknown): ProductRecord | null {
+  if (!value || typeof value !== "object") return null;
+
+  const product = value as Record<string, unknown>;
+  const id = String(product.id ?? "");
+  const name = String(product.product_name ?? "").trim();
+
+  if (!id || !name) return null;
+
+  const stock = toNumber(product.stock_quantity);
+
+  return {
+    attributes: null,
+    brand_id: null,
+    brands: null,
+    category_id: null,
+    categories: null,
+    concernIds: [],
+    created_at: toStringOrNull(product.created_at),
+    featured: false,
+    id,
+    image: normalizeImageUrl(toStringOrNull(product.image_url)),
+    name,
+    old_price: null,
+    price: toNumber(product.price),
+    short_description: toStringOrNull(product.description),
+    sku: `BNB-${id.padStart(4, "0")}`,
+    slug: slugify(name) || `product-${id}`,
+    status: normalizeStatus(toStringOrNull(product.status), stock),
+    stock,
+    updated_at: null,
+  };
+}
+
+export async function getProductsFromPhp(): Promise<ProductRecord[]> {
+  try {
+    const response = await fetch(PRODUCTS_LIST_ENDPOINT, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error("Failed to load products from PHP endpoint.");
       return [];
     }
 
-    return ((data ?? []) as ProductRow[]).map((product) => ({
-      ...product,
-      brands: getSingleRelation(product.brands),
-      categories: getSingleRelation(product.categories),
-      concernIds: [],
-    }));
+    const payload = (await response.json()) as {
+      products?: ProductsListRow[];
+      success?: boolean;
+    };
+
+    if (!payload.success || !Array.isArray(payload.products)) {
+      console.error("PHP products endpoint returned an unsuccessful response.");
+      return [];
+    }
+
+    return payload.products
+      .map(normalizeProduct)
+      .filter((product): product is ProductRecord => Boolean(product));
   } catch {
-    console.error("Failed to initialize products data source.");
+    console.error("Failed to initialize PHP products data source.");
     return [];
-  }
-}
-
-export async function getProductByIdFromSupabase(
-  id: string,
-): Promise<ProductRecord | null> {
-  try {
-    const supabase = createAdminSupabaseClient();
-    const { data, error } = await supabase
-      .from("products")
-      .select(
-        "id, name, slug, sku, brand_id, category_id, price, old_price, stock, image, short_description, status, featured, attributes, created_at, updated_at",
-      )
-      .eq("id", id)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Failed to load product from Supabase.");
-      return null;
-    }
-
-    if (!data) {
-      return null;
-    }
-
-    const { data: concernRows, error: concernError } = await supabase
-      .from("product_concerns")
-      .select("concern_id")
-      .eq("product_id", id);
-
-    if (concernError) {
-      console.error("Failed to load product concerns from Supabase.");
-    }
-
-    return {
-      ...data,
-      brands: null,
-      categories: null,
-      concernIds: ((concernRows ?? []) as ProductConcernRow[])
-        .map((row) => row.concern_id)
-        .filter((concernId): concernId is string => Boolean(concernId)),
-    } as ProductRecord;
-  } catch {
-    console.error("Failed to initialize product detail data source.");
-    return null;
   }
 }

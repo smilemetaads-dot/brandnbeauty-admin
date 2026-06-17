@@ -1,6 +1,13 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import {
+  defaultCmsMeta,
+  fetchCmsMeta,
+  type CmsMeta,
+} from "@/features/cms/cms-meta-client";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
@@ -76,7 +83,7 @@ const previewProducts = [
 
 const safetyItems = [
   "No homepage CMS save action exists on this route yet.",
-  "No Supabase writes, SQL, localStorage or storefront sync was added.",
+  "No CMS write action, localStorage or storefront sync was added.",
   "Save, publish, reorder and preview controls stay disabled until real actions exist.",
 ];
 
@@ -179,6 +186,47 @@ function SectionStatusRow({
 }
 
 export function RealHomepageCmsPage() {
+  const [cmsMeta, setCmsMeta] = useState<CmsMeta>(defaultCmsMeta);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchCmsMeta(controller.signal)
+      .then(setCmsMeta)
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          console.error("Homepage CMS metadata could not be loaded.", error);
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const liveStats = useMemo(
+    () =>
+      stats.map((item) =>
+        item.label === "Homepage module"
+          ? { ...item, helper: "Loaded from local CMS meta", value: "Connected" }
+          : item.label === "Merchandising areas"
+            ? { ...item, value: String(cmsMeta.banners.length) }
+            : item,
+      ),
+    [cmsMeta.banners.length],
+  );
+  const liveSectionBlocks = cmsMeta.banners.map((banner, index) => ({
+    description: banner.text,
+    label: banner.title,
+    placement: index === 0 ? "Hero" : "Campaign",
+    status: "Live",
+  }));
+  const liveProductRows = cmsMeta.banners.map((banner) => [
+    banner.title,
+    "CMS",
+    banner.link,
+    "Homepage Banner",
+    "Live",
+  ]);
+
   return (
     <AdminShell>
       <div className="space-y-6">
@@ -194,11 +242,11 @@ export function RealHomepageCmsPage() {
               <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-white/80">
                 Canvas-style control room for homepage hero, discovery blocks,
                 featured products, routine sections and promotional slots. This
-                route is still preview-only because no live Homepage CMS action
-                is connected here yet.
+                route reads live homepage/banner metadata from the local PHP
+                backend. Save and publish actions remain disabled.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
-                <Badge tone="default">Preview only</Badge>
+                <Badge tone="default">Live metadata</Badge>
                 <Badge tone="default">Admin shell preserved</Badge>
                 <Badge tone="default">No storefront writes</Badge>
               </div>
@@ -211,7 +259,7 @@ export function RealHomepageCmsPage() {
                     Publish Status
                   </div>
                   <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                    Not connected yet
+                    Connected to CMS meta
                   </h2>
                 </div>
                 <Badge tone="warn">Safe preview</Badge>
@@ -233,7 +281,7 @@ export function RealHomepageCmsPage() {
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {stats.map((item) => (
+          {liveStats.map((item) => (
             <StatCard key={item.label} {...item} />
           ))}
         </section>
@@ -260,7 +308,7 @@ export function RealHomepageCmsPage() {
                 </div>
               </div>
               <div>
-                {sectionBlocks.map((item) => (
+                {(liveSectionBlocks.length ? liveSectionBlocks : sectionBlocks).map((item) => (
                   <SectionStatusRow key={item.label} {...item} />
                 ))}
               </div>
@@ -296,15 +344,17 @@ export function RealHomepageCmsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {productRows.map((row) => (
+                    {(liveProductRows.length ? liveProductRows : productRows).map((row) => (
                       <tr
                         className="border-t border-slate-100 bg-white transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85]"
                         key={row[0]}
                       >
                         {row.map((cell, index) => (
                           <td className="px-5 py-4 text-slate-700" key={cell}>
-                            {index === row.length - 1 ? (
-                              <Badge tone="warn">{cell}</Badge>
+                        {index === row.length - 1 ? (
+                              <Badge tone={cell === "Live" ? "good" : "warn"}>
+                                {cell}
+                              </Badge>
                             ) : (
                               <span
                                 className={

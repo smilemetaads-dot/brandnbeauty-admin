@@ -8,6 +8,7 @@ export type ConcernRecord = {
   slug: string;
   image: string | null;
   status: string | null;
+  product_count?: number;
   featured: boolean | null;
   meta_title: string | null;
   meta_description: string | null;

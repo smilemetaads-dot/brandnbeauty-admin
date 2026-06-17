@@ -1,6 +1,13 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import {
+  defaultCmsMeta,
+  fetchCmsMeta,
+  type CmsMeta,
+} from "@/features/cms/cms-meta-client";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
@@ -51,7 +58,7 @@ const megaMenuBlocks = [
 
 const safetyItems = [
   "No header/navigation save, publish, reorder or delete workflow exists on this route yet.",
-  "No Supabase writes, SQL, localStorage or storefront sync was added.",
+  "No CMS write action, localStorage or storefront sync was added.",
   "Save, preview, menu edit and mobile navigation controls stay disabled until real actions exist.",
 ];
 
@@ -129,11 +136,44 @@ function StatCard({
 }
 
 export function RealHeaderNavigationPage() {
+  const [cmsMeta, setCmsMeta] = useState<CmsMeta>(defaultCmsMeta);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchCmsMeta(controller.signal)
+      .then(setCmsMeta)
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          console.error("Navigation CMS metadata could not be loaded.", error);
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const liveStats = useMemo(
+    () =>
+      stats.map(([label, value, helper]) =>
+        label === "Menu Items"
+          ? [label, String(Math.max(navItems.length, cmsMeta.banners.length)), "Live CMS meta"]
+          : label === "Search Status"
+            ? [label, "Connected", "Local endpoint"]
+            : [label, value, helper],
+      ),
+    [cmsMeta.banners.length],
+  );
+  const liveMegaMenuBlocks = cmsMeta.banners.slice(0, 3).map((banner) => ({
+    description: banner.text,
+    label: banner.title,
+    links: [banner.link, "Homepage", "Campaign"],
+  }));
+
   return (
     <AdminShell>
       <div className="space-y-6">
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {stats.map(([label, value, helper]) => (
+          {liveStats.map(([label, value, helper]) => (
             <StatCard
               helper={helper}
               key={label}
@@ -156,8 +196,8 @@ export function RealHeaderNavigationPage() {
                   </h1>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                     Manage logo, search, top menu, bag button and storefront
-                    navigation order as a Canvas-faithful preview. This route
-                    is not connected to a live navigation save action yet.
+                    navigation order with local CMS metadata available for
+                    campaign links. Save actions remain disabled.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -205,14 +245,14 @@ export function RealHeaderNavigationPage() {
                     Navigation Builder
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                    Menu groups are displayed as preview-only blocks until a
-                    real header/navigation CMS workflow is connected.
+                    Menu groups display live campaign metadata when available
+                    while the header/navigation write workflow stays disabled.
                   </p>
                 </div>
                 <DisabledButton>Reorder Menu</DisabledButton>
               </div>
               <div className="grid gap-4 p-5 lg:grid-cols-3">
-                {megaMenuBlocks.map((block) => (
+                {(liveMegaMenuBlocks.length ? liveMegaMenuBlocks : megaMenuBlocks).map((block) => (
                   <div
                     className="rounded-[1.5rem] border border-slate-200 bg-stone-50 p-5"
                     key={block.label}

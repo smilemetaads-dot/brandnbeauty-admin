@@ -1,7 +1,5 @@
 import "server-only";
 
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-
 export type DashboardInventoryMovement = {
   created_at: string | null;
   id: string;
@@ -11,6 +9,16 @@ export type DashboardInventoryMovement = {
   product_name: string | null;
   product_sku: string | null;
   quantity: number;
+};
+
+export type DashboardRecentProduct = {
+  created_at: string | null;
+  id: number;
+  image_url: string | null;
+  price: number;
+  product_name: string;
+  status: string;
+  stock_quantity: number;
 };
 
 export type DashboardSummary = {
@@ -23,32 +31,12 @@ export type DashboardSummary = {
   outOfStockProducts: number;
   packedOrders: number;
   packingQueue: number;
+  recentProducts: DashboardRecentProduct[];
   returnedOrders: number;
   shippedOrders: number;
   totalOrders: number;
   totalProducts: number;
-};
-
-type DashboardOrderRow = {
-  courier_status: string | null;
-  due_amount: number | null;
-  order_status: string | null;
-};
-
-type DashboardProductRow = {
-  stock: number | null;
-};
-
-type ProductSummary = {
-  name: string | null;
-  sku: string | null;
-} | null;
-
-type DashboardMovementRow = Omit<
-  DashboardInventoryMovement,
-  "product_name" | "product_sku"
-> & {
-  products: ProductSummary | ProductSummary[];
+  totalRevenue: number;
 };
 
 const defaultSummary: DashboardSummary = {
@@ -61,102 +49,127 @@ const defaultSummary: DashboardSummary = {
   outOfStockProducts: 0,
   packedOrders: 0,
   packingQueue: 0,
+  recentProducts: [],
   returnedOrders: 0,
   shippedOrders: 0,
   totalOrders: 0,
   totalProducts: 0,
+  totalRevenue: 0,
 };
 
-const PACKING_QUEUE_STATUSES = [
-  "confirmed",
-  "processing",
-  "ready_to_pack",
-  "packed",
-];
+const DASHBOARD_DATA_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_dashboard_data.php";
 
-const COURIER_QUEUE_STATUSES = ["ready", "sent", "delivered", "returned", "failed"];
+function toNumber(value: unknown) {
+  const numberValue = Number(value);
 
-function getSingleProductSummary(
-  relation: ProductSummary | ProductSummary[],
-): ProductSummary {
-  return Array.isArray(relation) ? (relation[0] ?? null) : relation;
+  return Number.isFinite(numberValue) ? numberValue : 0;
 }
 
-export async function getDashboardSummaryFromSupabase(): Promise<DashboardSummary> {
-  try {
-    const supabase = createAdminSupabaseClient();
-    const [ordersResponse, productsResponse, movementsResponse] =
-      await Promise.all([
-        supabase.from("orders").select("order_status, courier_status, due_amount"),
-        supabase.from("products").select("stock"),
-        supabase
-          .from("inventory_movements")
-          .select(
-            "id, movement_type, quantity, previous_stock, new_stock, created_at, products(name, sku)",
-          )
-          .order("created_at", { ascending: false })
-          .limit(5),
-      ]);
+function toStringOrNull(value: unknown) {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
 
-    if (ordersResponse.error || productsResponse.error || movementsResponse.error) {
-      console.error("Failed to load dashboard summary from Supabase.");
+function normalizeMovement(value: unknown): DashboardInventoryMovement | null {
+  if (!value || typeof value !== "object") return null;
+
+  const movement = value as Record<string, unknown>;
+
+  return {
+    created_at: toStringOrNull(movement.created_at),
+    id: String(movement.id ?? ""),
+    movement_type: String(movement.movement_type ?? "product_added"),
+    new_stock: toNumber(movement.new_stock),
+    previous_stock: toNumber(movement.previous_stock),
+    product_name: toStringOrNull(movement.product_name),
+    product_sku: toStringOrNull(movement.product_sku),
+    quantity: toNumber(movement.quantity),
+  };
+}
+
+function normalizeRecentProduct(value: unknown): DashboardRecentProduct | null {
+  if (!value || typeof value !== "object") return null;
+
+  const product = value as Record<string, unknown>;
+  const productName = String(product.product_name ?? "").trim();
+
+  if (!productName) return null;
+
+  return {
+    created_at: toStringOrNull(product.created_at),
+    id: toNumber(product.id),
+    image_url: toStringOrNull(product.image_url),
+    price: toNumber(product.price),
+    product_name: productName,
+    status: String(product.status ?? "draft"),
+    stock_quantity: toNumber(product.stock_quantity),
+  };
+}
+
+function normalizeDashboardSummary(value: unknown): DashboardSummary {
+  if (!value || typeof value !== "object") return defaultSummary;
+
+  const summary = value as Record<string, unknown>;
+  const latestInventoryMovements = Array.isArray(
+    summary.latestInventoryMovements,
+  )
+    ? summary.latestInventoryMovements
+        .map(normalizeMovement)
+        .filter((movement): movement is DashboardInventoryMovement =>
+          Boolean(movement),
+        )
+    : [];
+  const recentProducts = Array.isArray(summary.recentProducts)
+    ? summary.recentProducts
+        .map(normalizeRecentProduct)
+        .filter((product): product is DashboardRecentProduct =>
+          Boolean(product),
+        )
+    : [];
+
+  return {
+    codDue: toNumber(summary.codDue),
+    courierQueue: toNumber(summary.courierQueue),
+    deliveredOrders: toNumber(summary.deliveredOrders),
+    latestInventoryMovements,
+    lowStockProducts: toNumber(summary.lowStockProducts),
+    newOrders: toNumber(summary.newOrders),
+    outOfStockProducts: toNumber(summary.outOfStockProducts),
+    packedOrders: toNumber(summary.packedOrders),
+    packingQueue: toNumber(summary.packingQueue),
+    recentProducts,
+    returnedOrders: toNumber(summary.returnedOrders),
+    shippedOrders: toNumber(summary.shippedOrders),
+    totalOrders: toNumber(summary.totalOrders),
+    totalProducts: toNumber(summary.totalProducts),
+    totalRevenue: toNumber(summary.totalRevenue),
+  };
+}
+
+export async function getDashboardSummaryFromPhp(): Promise<DashboardSummary> {
+  try {
+    const response = await fetch(DASHBOARD_DATA_ENDPOINT, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error("Failed to load dashboard summary from PHP endpoint.");
       return defaultSummary;
     }
 
-    const orders = (ordersResponse.data ?? []) as DashboardOrderRow[];
-    const products = (productsResponse.data ?? []) as DashboardProductRow[];
-    const movements = (movementsResponse.data ?? []) as DashboardMovementRow[];
-
-    return {
-      codDue: orders.reduce(
-        (sum, order) => sum + Math.max(Number(order.due_amount ?? 0), 0),
-        0,
-      ),
-      courierQueue: orders.filter(
-        (order) =>
-          order.order_status === "packed" ||
-          order.order_status === "shipped" ||
-          COURIER_QUEUE_STATUSES.includes(order.courier_status ?? ""),
-      ).length,
-      deliveredOrders: orders.filter(
-        (order) => order.order_status === "delivered",
-      ).length,
-      latestInventoryMovements: movements.map((movement) => {
-        const product = getSingleProductSummary(movement.products);
-
-        return {
-          created_at: movement.created_at,
-          id: movement.id,
-          movement_type: movement.movement_type,
-          new_stock: movement.new_stock,
-          previous_stock: movement.previous_stock,
-          product_name: product?.name ?? null,
-          product_sku: product?.sku ?? null,
-          quantity: movement.quantity,
-        };
-      }),
-      lowStockProducts: products.filter((product) => {
-        const stock = Number(product.stock ?? 0);
-        return stock > 0 && stock <= 10;
-      }).length,
-      newOrders: orders.filter((order) => order.order_status === "new").length,
-      outOfStockProducts: products.filter(
-        (product) => Number(product.stock ?? 0) <= 0,
-      ).length,
-      packedOrders: orders.filter((order) => order.order_status === "packed")
-        .length,
-      packingQueue: orders.filter((order) =>
-        PACKING_QUEUE_STATUSES.includes(order.order_status ?? ""),
-      ).length,
-      returnedOrders: orders.filter((order) => order.order_status === "returned")
-        .length,
-      shippedOrders: orders.filter((order) => order.order_status === "shipped")
-        .length,
-      totalOrders: orders.length,
-      totalProducts: products.length,
+    const payload = (await response.json()) as {
+      success?: boolean;
+      summary?: unknown;
     };
+
+    if (!payload.success) {
+      console.error("PHP dashboard endpoint returned an unsuccessful response.");
+      return defaultSummary;
+    }
+
+    return normalizeDashboardSummary(payload.summary);
   } catch {
-    console.error("Failed to initialize dashboard summary data source.");
+    console.error("Failed to initialize PHP dashboard summary data source.");
     return defaultSummary;
   }
 }

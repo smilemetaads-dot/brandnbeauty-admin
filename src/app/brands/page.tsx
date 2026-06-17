@@ -1,7 +1,4 @@
-import { getBrandsFromSupabase } from "@/features/catalog/brands-data";
 import { RealBrandsPage } from "@/features/catalog/RealBrandsPage";
-
-export const dynamic = "force-dynamic";
 
 type BrandsPageProps = {
   searchParams?: Promise<{
@@ -14,7 +11,6 @@ export default async function BrandsPage({ searchParams }: BrandsPageProps) {
   const editBrandId = Array.isArray(params?.edit)
     ? params.edit[0]
     : params?.edit;
-  const brands = await getBrandsFromSupabase();
 
-  return <RealBrandsPage brands={brands} editBrandId={editBrandId} />;
+  return <RealBrandsPage editBrandId={editBrandId} />;
 }

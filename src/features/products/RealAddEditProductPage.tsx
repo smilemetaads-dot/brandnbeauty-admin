@@ -2,9 +2,7 @@
 // @ts-nocheck
 "use client";
 
-// DESIGN TEST ONLY.
-// Original Canvas Add/Edit Product visual code copied into production target for screenshot comparison.
-// Live saveProduct is intentionally disconnected in this temporary design-first test.
+// Product editor UI connected to the custom PHP/MySQL backend.
 /* eslint-disable */
 /*
 Full-context page file generated from the uploaded final admin source.
@@ -14,6 +12,7 @@ Use this as reference for live injection. Do not import from _reference into pro
 */
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 
@@ -58,7 +57,10 @@ function TableHead({ children, className = "" }) {
   return <thead className={`sticky top-0 z-10 bg-stone-50 text-slate-500 ${className}`}>{children}</thead>;
 }
 
+const ADMIN_PRODUCTS_ENDPOINT = "http://localhost/BrandnBeauty/brandnbeauty-backend/php/admin_products.php";
+
 export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
+  const router = useRouter();
   const [trackStock, setTrackStock] = useState(true);
   const [featured, setFeatured] = useState(true);
   const [freeDelivery, setFreeDelivery] = useState(false);
@@ -94,6 +96,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   ]);
   const [variantDraft, setVariantDraft] = useState({ option: "", cost: "", regular: "", sale: "", stock: "", lowStock: "", status: "Active" });
   const [mainImageReady, setMainImageReady] = useState(false);
+  const [mainImageFile, setMainImageFile] = useState(null);
   const [galleryImages, setGalleryImages] = useState(["Angle 1", "Texture", "Box", "Routine"]);
   const [productLabel, setProductLabel] = useState("Bestseller");
   const [productBadge, setProductBadge] = useState("Authentic Product");
@@ -115,6 +118,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   ]);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState("Unsaved changes");
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [aiContentMode, setAiContentMode] = useState("Conversion + SEO");
   const [aiContentLanguage, setAiContentLanguage] = useState("English + Bangla Friendly");
   const [aiTargetCustomer, setAiTargetCustomer] = useState("Bangladesh skincare buyer");
@@ -165,12 +169,73 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
     setTimeout(() => setActionToast(""), 2200);
   };
 
-  const saveDraft = () => {
+  const saveProductToBackend = async (nextStatus = "Draft") => {
+    if (isSavingProduct) {
+      return;
+    }
+
+    if (!productName.trim()) {
+      showActionToast("Product name is required");
+      return;
+    }
+
+    if (!previewSalePrice || Number(previewSalePrice) < 0) {
+      showActionToast("Sale price must be valid");
+      return;
+    }
+
+    if (!previewStockQty || Number(previewStockQty) < 0 || !Number.isInteger(Number(previewStockQty))) {
+      showActionToast("Stock quantity must be a whole number");
+      return;
+    }
+
     setSaveStatus("Saving...");
-    setTimeout(() => {
-      setSaveStatus("Saved just now");
-      showActionToast("Draft saved successfully");
-    }, 500);
+    setIsSavingProduct(true);
+
+    const payload = {
+      category,
+      image_url: "",
+      name: productName.trim(),
+      price: String(previewSalePrice),
+      status: nextStatus === "Published" ? "active" : "draft",
+      stock: String(previewStockQty),
+    };
+
+    try {
+      const response = await fetch(ADMIN_PRODUCTS_ENDPOINT, {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Product could not be saved.");
+      }
+
+      setStatus(nextStatus === "Published" ? "Published" : "Draft");
+      setSaveStatus(nextStatus === "Published" ? "Published just now" : "Saved just now");
+      showActionToast(result.message || "Product saved successfully");
+      router.push("/products");
+    } catch (error) {
+      setSaveStatus("Save failed");
+      showActionToast(error instanceof Error ? error.message : "Product could not be saved");
+    } finally {
+      setIsSavingProduct(false);
+    }
+  };
+
+  const saveDraft = () => {
+    saveProductToBackend("Draft");
+  };
+
+  const handleMainImageChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    setMainImageFile(file);
+    setMainImageReady(Boolean(file));
+    showActionToast(file ? "Main image selected" : "Main image removed");
   };
 
   const generateAutomationContent = () => {
@@ -228,9 +293,9 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
             <div className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ${saveStatus.includes("Saved") || saveStatus.includes("Published") ? "bg-emerald-50 text-emerald-700" : saveStatus.includes("Saving") ? "bg-amber-50 text-amber-700" : "bg-stone-100 text-slate-600"}`}>{saveStatus}</div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={saveDraft} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700">Save Draft</button>
+            <button type="button" onClick={saveDraft} disabled={isSavingProduct} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60">{isSavingProduct ? "Saving..." : "Save Draft"}</button>
             <button onClick={() => showActionToast("Preview opened")} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700">Preview</button>
-            <button onClick={() => setPublishModalOpen(true)} className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white">Publish</button>
+            <button type="button" onClick={() => setPublishModalOpen(true)} disabled={isSavingProduct} className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">Publish</button>
           </div>
         </div>
       </div>
@@ -247,7 +312,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Product Name</div><input value={productName} onChange={(event) => setProductName(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" placeholder="Product Name" /></label>
               <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Slug (auto)</div><input value={autoSlug} readOnly className="w-full rounded-2xl border border-slate-300 bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none" /></label>
-              <label className="space-y-2"><div className="flex items-center justify-between gap-2"><div className="text-sm font-medium text-slate-600">Parent SKU</div><span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">AUTO GENERATED</span></div><div className="relative"><input value={autoSku} readOnly className="w-full rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 pr-28 text-sm font-bold text-emerald-800 outline-none" /><button type="button" onClick={() => setSkuCounter((current) => current + 1)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-white px-3 py-2 text-xs font-bold text-[#5E7F85] shadow-sm">Regenerate</button></div></label>
+              <label className="space-y-2"><div className="flex items-center justify-between gap-2"><div className="text-sm font-medium text-slate-600">Parent SKU</div><span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">AUTO GENERATED</span></div><input disabled placeholder="Auto-generated Number" className="w-full rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 outline-none disabled:opacity-100" /></label>
               <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Barcode (optional)</div><input className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" placeholder="Barcode (optional)" /></label>
               <label className="space-y-2"><div className="flex items-center justify-between gap-2"><div className="text-sm font-medium text-slate-600">Brand</div><button type="button" onClick={() => setBrandList((current) => current.includes("New Brand") ? current : [...current, "New Brand"])} className="text-xs font-bold text-[#5E7F85]">+ Add Brand</button></div><select value={brand} onChange={(event) => setBrand(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">{brandList.map((item) => <option key={item}>{item}</option>)}</select></label>
               <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Category</div><select value={category} onChange={(event) => { setCategory(event.target.value); setSubcategory(categoryTree[event.target.value]?.[0] || ""); }} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">{Object.keys(categoryTree).map((item) => <option key={item}>{item}</option>)}</select></label>
@@ -265,7 +330,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div><h2 className="text-xl font-bold tracking-tight">Content & Media</h2></div><div className="flex items-center gap-3 rounded-2xl bg-stone-50 px-4 py-3"><div className="h-2.5 w-28 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-[#5E7F85]" style={{ width: `${contentScore}%` }} /></div><b className="text-sm text-[#5E7F85]">{contentScore}%</b></div></div>
             <div className="mt-5 rounded-[1.7rem] border border-[#5E7F85]/15 bg-gradient-to-br from-[#5E7F85]/10 via-white to-stone-50 p-5 shadow-sm"><div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between"><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-lg font-black text-slate-900">AI Content Studio</h3><Badge tone="brand">Automation Ready</Badge></div><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Generate product content, SEO, FAQ, routine copy and visible result text from the product master data. Human review required before publish.</p></div><button type="button" onClick={generateAutomationContent} className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white shadow-sm">Generate All Content</button></div><div className="mt-5 grid gap-3 md:grid-cols-3"><label className="space-y-2"><div className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">Generation Mode</div><select value={aiContentMode} onChange={(event) => setAiContentMode(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none"><option>Conversion + SEO</option><option>SEO Only</option><option>PDP Content Only</option><option>FAQ + Routine Only</option></select></label><label className="space-y-2"><div className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">Language Style</div><select value={aiContentLanguage} onChange={(event) => setAiContentLanguage(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none"><option>English + Bangla Friendly</option><option>English Only</option><option>Bangla + English Mix</option></select></label><label className="space-y-2"><div className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">Target Customer</div><input value={aiTargetCustomer} onChange={(event) => setAiTargetCustomer(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none" /></label></div></div>
-            <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_340px]"><div className="space-y-5"><div className={`overflow-hidden rounded-[1.7rem] border bg-white shadow-sm ${mainImageReady ? "border-emerald-200 ring-2 ring-emerald-100" : "border-slate-200"}`}><div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><div><div className="text-sm font-bold text-slate-900">Main Image</div><div className="mt-1 text-xs text-slate-500">Large square product preview for storefront and PDP hero.</div></div><Badge tone={mainImageReady ? "good" : "warn"}>{mainImageReady ? "Ready" : "Missing"}</Badge></div><div className="p-5"><div className={`group relative flex aspect-square w-full flex-col items-center justify-center overflow-hidden rounded-[1.5rem] border border-dashed text-center transition ${mainImageReady ? "border-emerald-300 bg-emerald-50" : "border-slate-300 bg-stone-50 hover:border-[#5E7F85]/40 hover:bg-[#5E7F85]/5"}`}><div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold text-slate-600 shadow-sm">1:1 Preview</div><div className="flex h-20 w-20 items-center justify-center rounded-[1.4rem] bg-white text-3xl text-[#5E7F85] shadow-sm">▧</div><div className="mt-5 text-base font-bold text-slate-900">{mainImageReady ? "Main image selected" : "Drop main product image here"}</div><div className="mt-2 max-w-xs text-xs leading-5 text-slate-500">Use a clean square image with visible product label. Recommended 1200 × 1200 px.</div><button type="button" onClick={() => { setMainImageReady(!mainImageReady); showActionToast(mainImageReady ? "Main image removed" : "Main image uploaded"); }} className="mt-5 rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white">{mainImageReady ? "Remove" : "Upload"}</button></div></div></div><div className="overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white shadow-sm"><div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-sm font-bold text-slate-900">Gallery Images</div><div className="mt-1 text-xs text-slate-500">Equal square cards with drag, replace and remove controls.</div></div><button type="button" onClick={() => setGalleryImages((current) => [...current, `Gallery ${current.length + 1}`])} className="rounded-2xl bg-[#5E7F85]/10 px-4 py-2.5 text-xs font-bold text-[#5E7F85]">+ Add Gallery Image</button></div><div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-3">{galleryImages.map((item, index) => <div key={`${item}-${index}`} className="rounded-[1.25rem] border bg-white p-3 transition hover:-translate-y-0.5 hover:shadow-md"><div className="flex aspect-square items-center justify-center rounded-2xl bg-stone-50 text-xs font-bold text-slate-400">{item}</div><div className="mt-3 flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">Image {index + 1}</span><button onClick={() => setGalleryImages((current) => current.filter((_, i) => i !== index))} className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700">Remove</button></div></div>)}</div></div></div><div className="rounded-[1.7rem] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-sm font-bold text-slate-900">Live PDP Preview</div><div className="mt-4 rounded-3xl bg-stone-50 p-4"><div className="flex h-44 items-center justify-center rounded-3xl bg-white text-xs font-bold text-slate-400">Product Image</div><div className="mt-4 text-lg font-black text-slate-900">{productName || "Product Name Preview"}</div><div className="mt-1 text-xs font-semibold text-[#5E7F85]">{brand}</div><div className="mt-3 flex items-center gap-2"><span className="text-xl font-black text-slate-900">৳{previewSalePrice}</span><span className="text-sm text-slate-400 line-through">৳{previewRegularPrice}</span><Badge tone="warn">{discount}% OFF</Badge></div><div className="mt-3 flex flex-wrap gap-2">{trustBadges.map((badge) => <Badge key={badge} tone="brand">{badge}</Badge>)}</div></div></div></div>
+            <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_340px]"><div className="space-y-5"><div className={`overflow-hidden rounded-[1.7rem] border bg-white shadow-sm ${mainImageReady ? "border-emerald-200 ring-2 ring-emerald-100" : "border-slate-200"}`}><div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><div><div className="text-sm font-bold text-slate-900">Main Image</div><div className="mt-1 text-xs text-slate-500">Large square product preview for storefront and PDP hero.</div></div><Badge tone={mainImageReady ? "good" : "warn"}>{mainImageReady ? "Ready" : "Missing"}</Badge></div><div className="p-5"><div className={`group relative flex aspect-square w-full flex-col items-center justify-center overflow-hidden rounded-[1.5rem] border border-dashed text-center transition ${mainImageReady ? "border-emerald-300 bg-emerald-50" : "border-slate-300 bg-stone-50 hover:border-[#5E7F85]/40 hover:bg-[#5E7F85]/5"}`}><div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold text-slate-600 shadow-sm">1:1 Preview</div><div className="flex h-20 w-20 items-center justify-center rounded-[1.4rem] bg-white text-3xl text-[#5E7F85] shadow-sm">▧</div><div className="mt-5 text-base font-bold text-slate-900">{mainImageFile ? mainImageFile.name : "Drop main product image here"}</div><div className="mt-2 max-w-xs text-xs leading-5 text-slate-500">Use JPG, PNG, or WEBP. Max upload size is 5MB.</div><label className="mt-5 cursor-pointer rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleMainImageChange} className="sr-only" />{mainImageFile ? "Replace Image" : "Upload Image"}</label>{mainImageFile && <button type="button" onClick={() => { setMainImageFile(null); setMainImageReady(false); showActionToast("Main image removed"); }} className="mt-3 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">Remove</button>}</div></div></div><div className="overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white shadow-sm"><div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-sm font-bold text-slate-900">Gallery Images</div><div className="mt-1 text-xs text-slate-500">Equal square cards with drag, replace and remove controls.</div></div><button type="button" onClick={() => setGalleryImages((current) => [...current, `Gallery ${current.length + 1}`])} className="rounded-2xl bg-[#5E7F85]/10 px-4 py-2.5 text-xs font-bold text-[#5E7F85]">+ Add Gallery Image</button></div><div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-3">{galleryImages.map((item, index) => <div key={`${item}-${index}`} className="rounded-[1.25rem] border bg-white p-3 transition hover:-translate-y-0.5 hover:shadow-md"><div className="flex aspect-square items-center justify-center rounded-2xl bg-stone-50 text-xs font-bold text-slate-400">{item}</div><div className="mt-3 flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">Image {index + 1}</span><button type="button" onClick={() => setGalleryImages((current) => current.filter((_, i) => i !== index))} className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700">Remove</button></div></div>)}</div></div></div><div className="rounded-[1.7rem] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-sm font-bold text-slate-900">Live PDP Preview</div><div className="mt-4 rounded-3xl bg-stone-50 p-4"><div className="flex h-44 items-center justify-center rounded-3xl bg-white text-xs font-bold text-slate-400">{mainImageFile ? mainImageFile.name : "Product Image"}</div><div className="mt-4 text-lg font-black text-slate-900">{productName || "Product Name Preview"}</div><div className="mt-1 text-xs font-semibold text-[#5E7F85]">{brand}</div><div className="mt-3 flex items-center gap-2"><span className="text-xl font-black text-slate-900">৳{previewSalePrice}</span><span className="text-sm text-slate-400 line-through">৳{previewRegularPrice}</span><Badge tone="warn">{discount}% OFF</Badge></div><div className="mt-3 flex flex-wrap gap-2">{trustBadges.map((badge) => <Badge key={badge} tone="brand">{badge}</Badge>)}</div></div></div></div>
             <div className="mt-5 grid gap-4 md:grid-cols-2"><label className="space-y-2"><div className="text-sm font-medium text-slate-600">Short Description</div><textarea value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2"><div className="text-sm font-medium text-slate-600">How to Use</div><textarea value={howToUse} onChange={(e) => setHowToUse(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2 md:col-span-2"><div className="text-sm font-medium text-slate-600">Full Description</div><textarea value={fullDescription} onChange={(e) => setFullDescription(e.target.value)} className="h-32 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2 md:col-span-2"><div className="text-sm font-medium text-slate-600">Ingredients</div><textarea value={ingredients} onChange={(e) => setIngredients(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label></div>
           </div>
 
@@ -279,7 +344,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
         </div>
       </div>
 
-      {publishModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"><div className="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-4"><div><div className="text-sm font-medium text-slate-500">Publish Check</div><h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Ready to Publish?</h3></div><button onClick={() => setPublishModalOpen(false)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold">✕</button></div><div className="mt-6 grid gap-3">{publishChecks.map((check) => <div key={check.label} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${check.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{check.ok ? "✅" : "⚠"} {check.label}</div>)}</div><div className="mt-6 grid gap-3 sm:grid-cols-2"><button onClick={() => setPublishModalOpen(false)} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold">Cancel</button><button onClick={() => { if (publishBlocked) { showActionToast("Fix publish checklist before publishing"); setPublishModalOpen(false); } else { setStatus("Published"); setSaveStatus("Published just now"); setPublishModalOpen(false); showActionToast("Product published successfully"); } }} className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white">Publish</button></div></div></div>}
+      {publishModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"><div className="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-4"><div><div className="text-sm font-medium text-slate-500">Publish Check</div><h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Ready to Publish?</h3></div><button type="button" onClick={() => setPublishModalOpen(false)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold">✕</button></div><div className="mt-6 grid gap-3">{publishChecks.map((check) => <div key={check.label} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${check.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{check.ok ? "✅" : "⚠"} {check.label}</div>)}</div><div className="mt-6 grid gap-3 sm:grid-cols-2"><button type="button" onClick={() => setPublishModalOpen(false)} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold">Cancel</button><button type="button" disabled={isSavingProduct} onClick={() => { if (publishBlocked) { showActionToast("Fix publish checklist before publishing"); setPublishModalOpen(false); } else { setPublishModalOpen(false); saveProductToBackend("Published"); } }} className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">{isSavingProduct ? "Publishing..." : "Publish"}</button></div></div></div>}
       </div>
     </AdminShell>
   );

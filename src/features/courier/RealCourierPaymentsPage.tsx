@@ -1,15 +1,19 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import {
+  fetchLogisticsOrders,
+  type LogisticsOrderRecord,
+} from "@/features/logistics/logistics-client";
 
-import { MarkCourierSentForm } from "./MarkCourierSentForm";
-import { MarkDeliveredCodPaidButton } from "./MarkDeliveredCodPaidButton";
-import { MarkReturnedButton } from "./MarkReturnedButton";
-import type { CourierPaymentOrderRecord } from "./courier-data";
+type CourierPaymentOrderRecord = LogisticsOrderRecord;
 
 type RealCourierPaymentsPageProps = {
-  orders: CourierPaymentOrderRecord[];
+  orders?: CourierPaymentOrderRecord[];
 };
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
@@ -254,20 +258,60 @@ function getItemsSummary(order: CourierPaymentOrderRecord) {
 }
 
 export function RealCourierPaymentsPage({
-  orders,
+  orders: initialOrders = [],
 }: RealCourierPaymentsPageProps) {
-  const readyDispatchOrders = getReadyDispatchCount(orders);
-  const deliveredOrders = getDeliveredCount(orders);
-  const returnedOrders = getReturnedCount(orders);
-  const mismatchOrders = getMismatchCount(orders);
-  const codPipeline = orders.reduce((sum, order) => sum + order.due_amount, 0);
-  const totalPaid = orders.reduce((sum, order) => sum + order.paid_amount, 0);
+  const [orders, setOrders] = useState<CourierPaymentOrderRecord[]>(initialOrders);
+  const [isLoading, setIsLoading] = useState(!initialOrders.length);
+  const courierOrders = useMemo(
+    () =>
+      orders.filter((order) =>
+        ["packed", "ready_to_ship", "shipped", "delivered", "returned"].includes(
+          order.order_status,
+        ) || ["ready", "sent", "delivered", "returned"].includes(
+          order.courier_status ?? "",
+        ),
+      ),
+    [orders],
+  );
+  const readyDispatchOrders = getReadyDispatchCount(courierOrders);
+  const deliveredOrders = getDeliveredCount(courierOrders);
+  const returnedOrders = getReturnedCount(courierOrders);
+  const mismatchOrders = getMismatchCount(courierOrders);
+  const codPipeline = courierOrders.reduce((sum, order) => sum + order.due_amount, 0);
+  const totalPaid = courierOrders.reduce((sum, order) => sum + order.paid_amount, 0);
   const settlementBase = codPipeline + totalPaid;
   const collectedPercent =
     settlementBase > 0
       ? Math.round((totalPaid / settlementBase) * 100)
       : 0;
-  const focusedOrder = orders[0] ?? null;
+  const focusedOrder = courierOrders[0] ?? null;
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadOrders() {
+      try {
+        setIsLoading(true);
+        const nextOrders = await fetchLogisticsOrders(controller.signal);
+        setOrders(nextOrders);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Courier logistics orders could not be loaded.", error);
+          setOrders([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadOrders();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
 
   return (
     <AdminShell>
@@ -356,12 +400,16 @@ export function RealCourierPaymentsPage({
             </div>
 
             <div className="border-b border-slate-100 bg-stone-50/70 px-6 py-4 text-sm font-semibold text-slate-600">
-              Live records: {orders.length}. Selection, courier upload, COD
+              Live records: {courierOrders.length}. Selection, courier upload, COD
               reconciliation, tracking sync, export, and hard delete are
               preview-only here. Connected row actions remain available below.
             </div>
 
-            {orders.length ? (
+            {isLoading ? (
+              <div className="px-5 py-14 text-center text-sm text-slate-500">
+                Loading live courier orders from local MySQL...
+              </div>
+            ) : courierOrders.length ? (
               <div className="overflow-x-auto lg:overflow-x-visible">
                 <table className="w-full table-fixed text-left text-sm">
                   <colgroup>
@@ -407,7 +455,7 @@ export function RealCourierPaymentsPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((order) => (
+                    {courierOrders.map((order) => (
                       <tr
                         className={`border-t border-slate-100 align-top transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${getRowClassName(
                           order,
@@ -500,21 +548,9 @@ export function RealCourierPaymentsPage({
                             >
                               Open
                             </Link>
-                            <MarkCourierSentForm
-                              currentCourierName={order.courier_name}
-                              currentCourierNote={order.courier_note}
-                              currentOrderStatus={order.order_status}
-                              currentTrackingId={order.courier_tracking_id}
-                              orderId={order.id}
-                            />
-                            <MarkDeliveredCodPaidButton
-                              currentOrderStatus={order.order_status}
-                              orderId={order.id}
-                            />
-                            <MarkReturnedButton
-                              currentOrderStatus={order.order_status}
-                              orderId={order.id}
-                            />
+                            <DisabledButton small>Mark Courier Sent</DisabledButton>
+                            <DisabledButton small>Mark Delivered</DisabledButton>
+                            <DisabledButton small>Mark Returned</DisabledButton>
                             <DisabledButton small>Sync</DisabledButton>
                             </div>
                           </details>

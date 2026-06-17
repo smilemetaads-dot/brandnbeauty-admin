@@ -1,17 +1,90 @@
+"use client";
+
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import {
   AdminBadge,
   AdminChartCard,
   AdminSectionCard,
+  AdminStatCard,
   AdminTable,
   AdminTableHead,
 } from "@/components/admin/AdminUiPrimitives";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { getDashboardSummaryFromSupabase } from "@/features/dashboard/dashboard-data";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
+
+type DashboardInventoryMovement = {
+  created_at: string | null;
+  id: string;
+  movement_type: string;
+  new_stock: number;
+  previous_stock: number;
+  product_name: string | null;
+  product_sku: string | null;
+  quantity: number;
+};
+
+type DashboardRecentProduct = {
+  created_at: string | null;
+  id: number;
+  image_url: string | null;
+  price: number;
+  product_name: string;
+  status: string;
+  stock_quantity: number;
+};
+
+type DashboardRevenueTrend = {
+  date: string;
+  label: string;
+  revenue: number;
+};
+
+type DashboardSummary = {
+  codDue: number;
+  courierQueue: number;
+  dailyRevenueTrends: DashboardRevenueTrend[];
+  deliveredOrders: number;
+  latestInventoryMovements: DashboardInventoryMovement[];
+  lowStockProducts: number;
+  newOrders: number;
+  outOfStockProducts: number;
+  packedOrders: number;
+  packingQueue: number;
+  pendingOrders: number;
+  recentProducts: DashboardRecentProduct[];
+  returnedOrders: number;
+  shippedOrders: number;
+  totalOrders: number;
+  totalProducts: number;
+  totalRevenue: number;
+};
+
+type DashboardStatsPayload = {
+  daily_revenue_trends?: unknown;
+  pending_orders?: unknown;
+  total_orders?: unknown;
+  total_revenue?: unknown;
+};
+
+type DashboardStatsResponse = {
+  stats?: DashboardStatsPayload;
+  success?: boolean;
+};
+
+type AdminProductRow = {
+  created_at?: unknown;
+  id?: unknown;
+  image_url?: unknown;
+  name?: unknown;
+  price?: unknown;
+  product_name?: unknown;
+  status?: unknown;
+  stock?: unknown;
+  stock_quantity?: unknown;
+};
 
 const dashboardShortcuts = [
   ["Confirm Orders", "/orders"],
@@ -19,6 +92,135 @@ const dashboardShortcuts = [
   ["Send Courier", "/courier"],
   ["Create Purchase Entry", "/purchases"],
 ];
+
+const DASHBOARD_STATS_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_dashboard_stats.php";
+const ADMIN_PRODUCTS_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/admin_products.php";
+
+const defaultSummary: DashboardSummary = {
+  codDue: 0,
+  courierQueue: 0,
+  dailyRevenueTrends: [],
+  deliveredOrders: 0,
+  latestInventoryMovements: [],
+  lowStockProducts: 0,
+  newOrders: 0,
+  outOfStockProducts: 0,
+  packedOrders: 0,
+  packingQueue: 0,
+  pendingOrders: 0,
+  recentProducts: [],
+  returnedOrders: 0,
+  shippedOrders: 0,
+  totalOrders: 0,
+  totalProducts: 0,
+  totalRevenue: 0,
+};
+
+function toNumber(value: unknown) {
+  const numberValue = Number(value);
+
+  return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function normalizeRevenueTrend(value: unknown): DashboardRevenueTrend | null {
+  if (!value || typeof value !== "object") return null;
+
+  const trend = value as Record<string, unknown>;
+  const date = String(trend.date ?? "");
+  const label = String(trend.label ?? date);
+
+  if (!date && !label) return null;
+
+  return {
+    date,
+    label,
+    revenue: toNumber(trend.revenue),
+  };
+}
+
+function normalizeDashboardStats(value: unknown): Pick<
+  DashboardSummary,
+  "dailyRevenueTrends" | "newOrders" | "pendingOrders" | "totalOrders" | "totalRevenue"
+> {
+  if (!value || typeof value !== "object") {
+    return {
+      dailyRevenueTrends: [],
+      newOrders: 0,
+      pendingOrders: 0,
+      totalOrders: 0,
+      totalRevenue: 0,
+    };
+  }
+
+  const payload = value as DashboardStatsResponse;
+  const stats = payload.stats ?? {};
+  const pendingOrders = toNumber(stats.pending_orders);
+  const dailyRevenueTrends = Array.isArray(stats.daily_revenue_trends)
+    ? stats.daily_revenue_trends
+        .map(normalizeRevenueTrend)
+        .filter((trend): trend is DashboardRevenueTrend => Boolean(trend))
+    : [];
+
+  return {
+    dailyRevenueTrends,
+    newOrders: pendingOrders,
+    pendingOrders,
+    totalOrders: toNumber(stats.total_orders),
+    totalRevenue: toNumber(stats.total_revenue),
+  };
+}
+
+function normalizeRecentProduct(value: unknown): DashboardRecentProduct | null {
+  if (!value || typeof value !== "object") return null;
+
+  const product = value as AdminProductRow;
+  const id = toNumber(product.id);
+  const productName = String(product.product_name ?? product.name ?? "").trim();
+
+  if (!id || !productName) return null;
+
+  return {
+    created_at:
+      typeof product.created_at === "string" && product.created_at.length > 0
+        ? product.created_at
+        : null,
+    id,
+    image_url:
+      typeof product.image_url === "string" && product.image_url.length > 0
+        ? product.image_url
+        : null,
+    price: toNumber(product.price),
+    product_name: productName,
+    status: String(product.status ?? "draft"),
+    stock_quantity: toNumber(product.stock_quantity ?? product.stock),
+  };
+}
+
+function normalizeDashboardProducts(value: unknown): Pick<
+  DashboardSummary,
+  "lowStockProducts" | "outOfStockProducts" | "recentProducts" | "totalProducts"
+> {
+  const products = Array.isArray(value)
+    ? value
+        .map(normalizeRecentProduct)
+        .filter((product): product is DashboardRecentProduct =>
+          Boolean(product),
+        )
+    : [];
+
+  return {
+    lowStockProducts: products.filter(
+      (product) => product.stock_quantity > 0 && product.stock_quantity < 5,
+    ).length,
+    outOfStockProducts: products.filter(
+      (product) => product.stock_quantity === 0,
+    ).length,
+    recentProducts: products.slice(0, 5),
+    totalProducts: products.length,
+  };
+}
 
 function getPercent(value: number, total: number) {
   if (!total) return 0;
@@ -97,78 +299,79 @@ function EmptyTableRow({ children }: { children: ReactNode }) {
   );
 }
 
-export const dynamic = "force-dynamic";
+export default function Home() {
+  const [summary, setSummary] = useState<DashboardSummary>(defaultSummary);
 
-export default async function Home() {
-  const summary = await getDashboardSummaryFromSupabase();
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadDashboardStats() {
+      try {
+        const [statsResponse, productsResponse] = await Promise.all([
+          fetch(DASHBOARD_STATS_ENDPOINT, {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+          fetch(ADMIN_PRODUCTS_ENDPOINT, {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+        ]);
+
+        if (!statsResponse.ok) {
+          throw new Error("Failed to load admin dashboard stats.");
+        }
+
+        const statsPayload = (await statsResponse.json()) as unknown;
+        const dashboardStats = normalizeDashboardStats(statsPayload);
+        const dashboardProducts = productsResponse.ok
+          ? normalizeDashboardProducts((await productsResponse.json()) as unknown)
+          : normalizeDashboardProducts([]);
+
+        setSummary((currentSummary) => ({
+          ...currentSummary,
+          ...dashboardStats,
+          ...dashboardProducts,
+        }));
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Admin dashboard stats could not be loaded.", error);
+          setSummary(defaultSummary);
+        }
+      }
+    }
+
+    void Promise.resolve().then(() => loadDashboardStats());
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
   const readyForDispatch = summary.packingQueue + summary.courierQueue;
   const stockAlertTotal = summary.lowStockProducts + summary.outOfStockProducts;
-  const activeOrderTotal =
-    summary.newOrders + summary.packingQueue + summary.courierQueue;
-  const maxChartValue = Math.max(
-    summary.totalOrders,
-    activeOrderTotal,
-    summary.packingQueue,
-    summary.packedOrders,
-    summary.courierQueue,
-    summary.shippedOrders,
-    summary.deliveredOrders,
-    1,
+  const hasRevenueTrend = summary.dailyRevenueTrends.some(
+    (trend) => trend.revenue > 0,
   );
-  const chartBars = [
-    {
-      label: "Mon",
-      value: summary.totalOrders,
-      valueLabel: `${summary.totalOrders} orders`,
-    },
-    {
-      label: "Tue",
-      value: summary.newOrders,
-      valueLabel: `${summary.newOrders} new`,
-    },
-    {
-      label: "Wed",
-      value: summary.packingQueue,
-      valueLabel: `${summary.packingQueue} packing`,
-    },
-    {
-      label: "Thu",
-      value: summary.packedOrders,
-      valueLabel: `${summary.packedOrders} packed`,
-    },
-    {
-      label: "Fri",
-      value: summary.courierQueue,
-      valueLabel: `${summary.courierQueue} courier`,
-    },
-    {
-      label: "Sat",
-      value: summary.shippedOrders,
-      valueLabel: `${summary.shippedOrders} shipped`,
-    },
-    {
-      label: "Sun",
-      value: summary.deliveredOrders,
-      valueLabel: `${summary.deliveredOrders} delivered`,
-    },
-  ].map((bar) => ({
-    ...bar,
-    value: Math.max(bar.value, maxChartValue ? 0.08 : 0),
+  const chartBars = summary.dailyRevenueTrends.map((trend) => ({
+    label: trend.label,
+    value: hasRevenueTrend ? trend.revenue : 0,
+    valueLabel: formatMoney(trend.revenue),
   }));
   const priorityItems = [
     {
       helper: "Order queue",
       label:
-        summary.newOrders > 0
-          ? `${summary.newOrders} orders need confirmation`
-          : "No new orders waiting",
-      tone: summary.newOrders > 0 ? "bad" : "good",
+        summary.pendingOrders > 0
+          ? `${summary.pendingOrders} orders need confirmation`
+          : "All orders confirmed",
+      tone: summary.pendingOrders > 0 ? "bad" : "good",
     },
     {
       helper: "Inventory",
       label:
         stockAlertTotal > 0
-          ? `${stockAlertTotal} products need stock attention`
+          ? `${summary.lowStockProducts} low / ${summary.outOfStockProducts} out of stock`
           : "Stock alerts clear",
       tone: stockAlertTotal > 0 ? "warn" : "good",
     },
@@ -262,6 +465,35 @@ export default async function Home() {
           </div>
         </section>
 
+        <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          <AdminStatCard
+            helper="Live MySQL orders"
+            index={0}
+            label="Total Orders"
+            value={summary.totalOrders || 0}
+          />
+          <AdminStatCard
+            helper="All order revenue"
+            index={1}
+            label="Revenue"
+            value={formatMoney(summary.totalRevenue || 0)}
+          />
+          <AdminStatCard
+            active={summary.lowStockProducts > 0}
+            helper="Below reorder threshold"
+            index={2}
+            label="Low Stock"
+            value={summary.lowStockProducts || 0}
+          />
+          <AdminStatCard
+            active={summary.pendingOrders > 0}
+            helper="Awaiting confirmation"
+            index={3}
+            label="Pending Orders"
+            value={summary.pendingOrders || 0}
+          />
+        </section>
+
         <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <AdminChartCard
             bars={chartBars}
@@ -296,7 +528,7 @@ export default async function Home() {
                   Operations
                 </div>
                 <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                  Recent Orders
+                  Recent Products
                 </h2>
               </div>
               <AdminBadge tone="brand">Live</AdminBadge>
@@ -305,7 +537,7 @@ export default async function Home() {
               <AdminTable>
                 <AdminTableHead>
                   <tr>
-                    {["Order", "Customer", "Amount", "Source", "Status", "Action"].map(
+                    {["Product", "Stock", "Price", "Source", "Status", "Action"].map(
                       (heading) => (
                         <th className="px-5 py-4 font-medium" key={heading}>
                           {heading}
@@ -315,10 +547,52 @@ export default async function Home() {
                   </tr>
                 </AdminTableHead>
                 <tbody>
-                  <EmptyTableRow>
-                    Recent order rows are not loaded by the current dashboard
-                    summary. Open Orders for live row-level order data.
-                  </EmptyTableRow>
+                  {summary.recentProducts.length > 0 ? (
+                    summary.recentProducts.map((product) => (
+                      <tr
+                        className="border-t border-slate-100 transition hover:bg-stone-50"
+                        key={product.id}
+                      >
+                        <td className="px-5 py-4">
+                          <div className="font-bold text-slate-900">
+                            {product.product_name}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            Product #{product.id}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 font-semibold text-slate-700">
+                          {product.stock_quantity}
+                        </td>
+                        <td className="px-5 py-4 font-semibold text-slate-700">
+                          {formatMoney(product.price)}
+                        </td>
+                        <td className="px-5 py-4">
+                          <AdminBadge tone="brand">MySQL</AdminBadge>
+                        </td>
+                        <td className="px-5 py-4">
+                          <AdminBadge
+                            tone={product.status === "active" ? "good" : "warn"}
+                          >
+                            {formatStatus(product.status)}
+                          </AdminBadge>
+                        </td>
+                        <td className="px-5 py-4">
+                          <Link
+                            className="text-sm font-bold text-[#5E7F85] hover:text-slate-950"
+                            href="/products/edit"
+                          >
+                            Open
+                          </Link>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <EmptyTableRow>
+                      Recent products will appear here after products are added
+                      from the product editor.
+                    </EmptyTableRow>
+                  )}
                 </tbody>
               </AdminTable>
             </div>

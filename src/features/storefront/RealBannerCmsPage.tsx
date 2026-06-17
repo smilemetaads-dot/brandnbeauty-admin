@@ -1,6 +1,13 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import {
+  defaultCmsMeta,
+  fetchCmsMeta,
+  type CmsMeta,
+} from "@/features/cms/cms-meta-client";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
@@ -83,7 +90,7 @@ const slotCards = [
 
 const safetyItems = [
   "No banner save, publish, reorder or delete workflow exists on this route yet.",
-  "No Supabase writes, SQL, localStorage or storefront sync was added.",
+  "No CMS write action, localStorage or storefront sync was added.",
   "Create, preview, schedule and publish controls stay disabled until real actions exist.",
 ];
 
@@ -186,6 +193,41 @@ function SlotCard({
 }
 
 export function RealBannerCmsPage() {
+  const [cmsMeta, setCmsMeta] = useState<CmsMeta>(defaultCmsMeta);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchCmsMeta(controller.signal)
+      .then(setCmsMeta)
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          console.error("Banner CMS metadata could not be loaded.", error);
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const liveStats = useMemo(
+    () =>
+      stats.map((item) =>
+        item.label === "Banner slots"
+          ? { ...item, value: String(cmsMeta.banners.length) }
+          : item.label === "Publish status"
+            ? { ...item, helper: "Loaded from CMS meta endpoint", value: "Live" }
+            : item,
+      ),
+    [cmsMeta.banners.length],
+  );
+  const liveBannerRows = cmsMeta.banners.map((banner) => ({
+    cta: banner.link,
+    placement: "Homepage hero slider",
+    schedule: "Live metadata",
+    status: "Live",
+    title: banner.title,
+  }));
+
   return (
     <AdminShell>
       <div className="space-y-6">
@@ -201,11 +243,11 @@ export function RealBannerCmsPage() {
               <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-white/80">
                 Canvas-style workspace for hero banners, campaign strips,
                 image slots, CTA copy, schedules and storefront preview. This
-                page stays preview-only because the current Banner CMS route
-                has no connected save or publish action.
+                page reads banner metadata from the local PHP backend. Save and
+                publish actions remain disabled until CMS write endpoints exist.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
-                <Badge tone="default">Preview only</Badge>
+                <Badge tone="default">Live metadata</Badge>
                 <Badge tone="default">Create Banner disabled</Badge>
                 <Badge tone="default">No storefront writes</Badge>
               </div>
@@ -221,7 +263,7 @@ export function RealBannerCmsPage() {
                     Create Banner / Preview
                   </h2>
                 </div>
-                <Badge tone="warn">Not connected</Badge>
+                <Badge tone="good">Connected</Badge>
               </div>
               <div className="mt-5 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-500 shadow-sm">
                 Search banners...
@@ -235,7 +277,7 @@ export function RealBannerCmsPage() {
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {stats.map((item) => (
+          {liveStats.map((item) => (
             <StatCard key={item.label} {...item} />
           ))}
         </section>
@@ -286,7 +328,7 @@ export function RealBannerCmsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {bannerRows.map((row) => (
+                    {(liveBannerRows.length ? liveBannerRows : bannerRows).map((row) => (
                       <tr
                         className="border-t border-slate-100 bg-white transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85]"
                         key={row.title}
@@ -304,7 +346,9 @@ export function RealBannerCmsPage() {
                           {row.schedule}
                         </td>
                         <td className="px-5 py-4">
-                          <Badge tone="warn">{row.status}</Badge>
+                          <Badge tone={row.status === "Live" ? "good" : "warn"}>
+                            {row.status}
+                          </Badge>
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">

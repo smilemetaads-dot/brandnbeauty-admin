@@ -1,13 +1,29 @@
+"use client";
+
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 
 import type { CustomerSummaryRecord } from "./customers-data";
 
 type RealCustomersPageProps = {
-  customers: CustomerSummaryRecord[];
+  customers?: CustomerSummaryRecord[];
 };
+
+type ApiCustomerRecord = {
+  created_at?: string | null;
+  email?: string | null;
+  id?: string | number | null;
+  name?: string | null;
+  phone?: string | null;
+  status?: string | null;
+  total_orders?: string | number | null;
+  total_spend?: string | number | null;
+};
+
+const CUSTOMERS_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_customers.php";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
@@ -153,6 +169,37 @@ function formatLocation(customer: CustomerSummaryRecord) {
   return `${customer.district ?? "No district"} / ${customer.area ?? "No area"}`;
 }
 
+function normalizeCustomer(customer: ApiCustomerRecord): CustomerSummaryRecord {
+  const totalOrders = Number(customer.total_orders ?? 0);
+  const totalSpend = Number(customer.total_spend ?? 0);
+  const orderCount = Number.isFinite(totalOrders) ? totalOrders : 0;
+  const status = customer.status?.trim() || (orderCount >= 2 ? "repeat" : "new");
+  const totalSpent = Number.isFinite(totalSpend) ? totalSpend : 0;
+  const createdAt = customer.created_at ?? null;
+
+  return {
+    address: null,
+    area: null,
+    cancelledCount: 0,
+    deliveredCount: status.toLowerCase() === "active" ? orderCount : 0,
+    delivery_zone: null,
+    district: null,
+    email: customer.email ?? null,
+    lastOrderAt: createdAt,
+    lastOrderId: String(customer.id ?? ""),
+    lastOrderNumber: null,
+    lastOrderStatus: status,
+    name: customer.name?.trim() || "Unknown Customer",
+    orderCount,
+    phone: customer.phone?.trim() || "Not available",
+    recentOrders: [],
+    returnedCount: 0,
+    riskLabel: orderCount >= 2 ? "Repeat Customer" : "New Customer",
+    totalDue: 0,
+    totalSpent,
+  };
+}
+
 function getTableSegment(customer: CustomerSummaryRecord) {
   if (customer.returnedCount >= 2) {
     return "High Return Risk";
@@ -167,6 +214,14 @@ function getTableSegment(customer: CustomerSummaryRecord) {
   }
 
   return "New Customer";
+}
+
+function getFilterSegment(customer: CustomerSummaryRecord) {
+  if (customer.totalSpent >= 5000 || customer.orderCount >= 5) {
+    return "VIP";
+  }
+
+  return getTableSegment(customer);
 }
 
 function DetailRow({
@@ -279,7 +334,86 @@ function CustomerProfilePanel({
   );
 }
 
-export function RealCustomersPage({ customers }: RealCustomersPageProps) {
+export function RealCustomersPage({
+  customers: initialCustomers = [],
+}: RealCustomersPageProps) {
+  const [customers, setCustomers] = useState<CustomerSummaryRecord[]>(initialCustomers);
+  const [isLoading, setIsLoading] = useState(!initialCustomers.length);
+  const [query, setQuery] = useState("");
+  const [activeSegment, setActiveSegment] = useState("All");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadCustomers() {
+      try {
+        setIsLoading(true);
+
+        const response = await fetch(CUSTOMERS_ENDPOINT, {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("Customers request failed.");
+        }
+
+        const data = (await response.json()) as ApiCustomerRecord[];
+        const liveCustomers = Array.isArray(data) ? data.map(normalizeCustomer) : [];
+
+        if (isMounted) {
+          setCustomers(liveCustomers);
+        }
+      } catch (error) {
+        console.error("Failed to load live customers.", error);
+
+        if (isMounted) {
+          setCustomers([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadCustomers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredCustomers = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return customers.filter((customer) => {
+      const matchesSearch =
+        !normalizedQuery ||
+        [
+          customer.name,
+          customer.email,
+          customer.phone,
+          customer.district,
+          customer.area,
+          customer.lastOrderStatus,
+        ]
+          .filter(Boolean)
+          .some((value) => value?.toLowerCase().includes(normalizedQuery));
+
+      const tableSegment = getTableSegment(customer);
+      const filterSegment = getFilterSegment(customer);
+      const matchesSegment =
+        activeSegment === "All" ||
+        activeSegment === tableSegment ||
+        activeSegment === filterSegment ||
+        (activeSegment === "Repeat Customer" && customer.orderCount >= 2) ||
+        (activeSegment === "Sleeping" && customer.orderCount === 1) ||
+        (activeSegment === "Risk" && tableSegment === "High Return Risk");
+
+      return matchesSearch && matchesSegment;
+    });
+  }, [activeSegment, customers, query]);
+
   const repeatCustomers = customers.filter(
     (customer) => customer.orderCount >= 2,
   ).length;
@@ -292,7 +426,7 @@ export function RealCustomersPage({ customers }: RealCustomersPageProps) {
   const returnRiskCustomers = customers.filter(
     (customer) => customer.riskLabel === "High Return Risk",
   ).length;
-  const featuredCustomer = customers[0];
+  const featuredCustomer = filteredCustomers[0] ?? customers[0];
 
   return (
     <AdminShell>
@@ -353,8 +487,9 @@ export function RealCustomersPage({ customers }: RealCustomersPageProps) {
               <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
                 <input
                   className="w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm font-medium text-slate-500 outline-none"
-                  disabled
-                  placeholder="Search customer / phone / district - Not connected"
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search customer / email / phone"
+                  value={query}
                 />
                 <div className="flex flex-wrap gap-2">
                   {[
@@ -366,9 +501,13 @@ export function RealCustomersPage({ customers }: RealCustomersPageProps) {
                     "Risk",
                   ].map((item) => (
                     <button
-                      className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-500 opacity-75"
-                      disabled
+                      className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+                        activeSegment === item
+                          ? "border-[#5E7F85] bg-[#5E7F85] text-white"
+                          : "border-slate-200 bg-white text-slate-500 hover:border-[#5E7F85]/40 hover:text-[#5E7F85]"
+                      }`}
                       key={item}
+                      onClick={() => setActiveSegment(item)}
                       type="button"
                     >
                       {item}
@@ -378,18 +517,22 @@ export function RealCustomersPage({ customers }: RealCustomersPageProps) {
               </div>
             </div>
 
-            {customers.length ? (
+            {isLoading ? (
+              <div className="px-6 py-14 text-center text-sm font-semibold text-slate-500">
+                Loading customers from local order history...
+              </div>
+            ) : filteredCustomers.length ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
                   <thead className="bg-stone-50 text-slate-500">
                     <tr>
                       {[
-                        "Customer",
-                        "Orders",
-                        "Lifetime Spend",
-                        "City/District",
-                        "Segment/Risk",
-                        "Last Order",
+                        "Name",
+                        "Email",
+                        "Total Orders",
+                        "Total Spend (LTV)",
+                        "Status",
+                        "Join Date",
                         "Recent",
                         "Action",
                       ].map((heading) => (
@@ -400,14 +543,14 @@ export function RealCustomersPage({ customers }: RealCustomersPageProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {customers.map((customer, index) => (
+                    {filteredCustomers.map((customer, index) => (
                       <tr
                         className={`border-t border-slate-100 align-top transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${
                           index === 0
                             ? "bg-[#5E7F85]/[0.06] shadow-[inset_3px_0_0_#5E7F85]"
                             : "bg-white"
                         }`}
-                        key={customer.phone}
+                        key={`${customer.lastOrderId}-${customer.phone}`}
                       >
                         <td className="px-5 py-4">
                           <div className="font-black text-slate-950">
@@ -416,65 +559,49 @@ export function RealCustomersPage({ customers }: RealCustomersPageProps) {
                           <div className="mt-1 text-xs font-semibold text-slate-500">
                             {customer.phone}
                           </div>
-                          <div className="mt-1 text-xs text-slate-400">
-                            {formatText(customer.email)}
-                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-xs font-semibold text-slate-500">
+                          {formatText(customer.email)}
                         </td>
                         <td className="px-5 py-4 font-black text-slate-950">
                           {customer.orderCount}
                         </td>
                         <td className="px-5 py-4 font-bold text-slate-800">
                           {formatMoney(customer.totalSpent)}
-                          <div className="mt-1 text-xs font-semibold text-slate-400">
-                            Due {formatMoney(customer.totalDue)}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="font-semibold text-slate-700">
-                            {formatLocation(customer)}
-                          </div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            {formatText(customer.delivery_zone)}
-                          </div>
                         </td>
                         <td className="px-5 py-4">
                           <Badge tone={getRiskTone(customer.riskLabel)}>
-                            {getTableSegment(customer)}
+                            {formatStatus(customer.lastOrderStatus)}
                           </Badge>
-                          <div className="mt-2 space-y-1 text-xs font-semibold text-slate-500">
-                            <div>Delivered {customer.deliveredCount}</div>
-                            <div>Returned {customer.returnedCount}</div>
-                            <div>Cancelled {customer.cancelledCount}</div>
-                          </div>
                         </td>
                         <td className="px-5 py-4">
-                          <div className="font-bold text-slate-900">
-                            {customer.lastOrderNumber ?? "No order number"}
-                          </div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            {formatStatus(customer.lastOrderStatus)}
-                          </div>
-                          <div className="mt-1 text-xs text-slate-400">
+                          <div className="text-xs font-semibold text-slate-500">
                             {formatDate(customer.lastOrderAt)}
                           </div>
                         </td>
                         <td className="max-w-[240px] px-5 py-4">
                           <div className="space-y-2">
-                            {customer.recentOrders.map((order) => (
-                              <div
-                                className="rounded-xl bg-stone-50 px-3 py-2 text-xs"
-                                key={order.id}
-                              >
-                                <div className="font-bold text-slate-800">
-                                  {order.order_number ?? "No order number"} /{" "}
-                                  {formatMoney(order.total)}
+                            {customer.recentOrders.length ? (
+                              customer.recentOrders.map((order) => (
+                                <div
+                                  className="rounded-xl bg-stone-50 px-3 py-2 text-xs"
+                                  key={order.id}
+                                >
+                                  <div className="font-bold text-slate-800">
+                                    {order.order_number ?? "No order number"} /{" "}
+                                    {formatMoney(order.total)}
+                                  </div>
+                                  <div className="mt-1 text-slate-500">
+                                    {formatStatus(order.order_status)} / Due{" "}
+                                    {formatMoney(order.due_amount)}
+                                  </div>
                                 </div>
-                                <div className="mt-1 text-slate-500">
-                                  {formatStatus(order.order_status)} / Due{" "}
-                                  {formatMoney(order.due_amount)}
-                                </div>
+                              ))
+                            ) : (
+                              <div className="rounded-xl bg-stone-50 px-3 py-2 text-xs font-semibold text-slate-500">
+                                {formatStatus(customer.lastOrderStatus)}
                               </div>
-                            ))}
+                            )}
                           </div>
                         </td>
                         <td className="px-5 py-4">

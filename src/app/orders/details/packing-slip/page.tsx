@@ -1,18 +1,14 @@
+"use client";
+
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
-import {
-  getOrderDetailsFromSupabase,
-  type OrderDetailsRecord,
-} from "@/features/orders/orders-data";
 import { PrintPageButton } from "@/features/orders/PrintPageButton";
-
-export const dynamic = "force-dynamic";
-
-type PackingSlipPrintPageProps = {
-  searchParams?: Promise<{
-    id?: string;
-  }>;
-};
+import {
+  fetchOrderDetails,
+  type OrderDetailsRecord,
+} from "@/features/orders/order-details-client";
 
 function formatDate(value: string | null) {
   if (!value) {
@@ -54,6 +50,22 @@ function MissingOrderState({ id }: { id?: string }) {
         >
           Back to Orders
         </Link>
+      </div>
+    </main>
+  );
+}
+
+function LoadingOrderState() {
+  return (
+    <main className="min-h-screen bg-white px-6 py-10 text-slate-950">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-slate-200 p-8 print:border-neutral-300">
+        <div className="text-xs font-black uppercase tracking-[0.18em] text-[#527B86] print:text-black">
+          BrandnBeauty
+        </div>
+        <h1 className="mt-3 text-2xl font-black">Loading packing slip</h1>
+        <p className="mt-3 text-sm leading-6 text-slate-600 print:text-neutral-700">
+          Pulling live order details from the local MySQL backend.
+        </p>
       </div>
     </main>
   );
@@ -121,6 +133,13 @@ function PackingSlipPrintDocument({ order }: { order: OrderDetailsRecord }) {
               <div className="mt-2 text-xl font-black">{orderNumber}</div>
               <div className="mt-2 text-sm font-medium text-slate-600 print:text-neutral-700">
                 {formatDate(order.created_at)}
+              </div>
+              <div
+                className="mt-4 h-10 rounded bg-[repeating-linear-gradient(90deg,#111_0,#111_2px,transparent_2px,transparent_5px,#111_5px,#111_7px,transparent_7px,transparent_11px)] print:border print:border-black"
+                aria-label={`Barcode ${orderNumber}`}
+              />
+              <div className="mt-1 font-mono text-xs font-bold tracking-[0.16em]">
+                {orderNumber}
               </div>
             </div>
           </header>
@@ -229,17 +248,50 @@ function PackingSlipPrintDocument({ order }: { order: OrderDetailsRecord }) {
   );
 }
 
-export default async function PackingSlipPrintPage({
-  searchParams,
-}: PackingSlipPrintPageProps) {
-  const params = await searchParams;
-  const id = params?.id;
+export default function PackingSlipPrintPage() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") ?? undefined;
+  const [order, setOrder] = useState<OrderDetailsRecord | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function loadOrder() {
+      try {
+        setIsLoading(true);
+        const nextOrder = await fetchOrderDetails(id, controller.signal);
+        setOrder(nextOrder);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Packing slip order details could not be loaded.", error);
+          setOrder(null);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadOrder();
+
+    return () => {
+      controller.abort();
+    };
+  }, [id]);
 
   if (!id) {
     return <MissingOrderState />;
   }
 
-  const order = await getOrderDetailsFromSupabase(id);
+  if (isLoading) {
+    return <LoadingOrderState />;
+  }
 
   if (!order) {
     return <MissingOrderState id={id} />;

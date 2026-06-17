@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 
@@ -10,6 +12,29 @@ const settingsStats = [
   ["Security Alerts", "2", "Need review"],
   ["System Status", "Healthy", "Core modules online"],
 ] as const;
+
+type StoreSettings = {
+  admin_email: string;
+  currency: string;
+  shipping_fee_inside_dhaka: number;
+  shipping_fee_outside_dhaka: number;
+  store_name: string;
+};
+
+type SettingsPayload = Partial<
+  Record<keyof StoreSettings, string | number | null>
+>;
+
+const SETTINGS_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_settings.php";
+
+const defaultStoreSettings: StoreSettings = {
+  admin_email: "admin@brandnbeauty.com",
+  currency: "BDT",
+  shipping_fee_inside_dhaka: 60,
+  shipping_fee_outside_dhaka: 120,
+  store_name: "BRAND & BEAUTY",
+};
 
 const systemControls = [
   {
@@ -41,17 +66,9 @@ const systemToggles = [
   ["Allow manual discount override", false],
 ] as const;
 
-const brandDefaults = [
-  ["Store Name", "BrandnBeauty"],
-  ["Currency", "BDT"],
-  ["Timezone", "Asia/Dhaka"],
-  ["Support Phone", "01XXXXXXXXX"],
-  ["Support Email", "support@brandnbeauty.com"],
-] as const;
-
 const safetyItems = [
   "No settings save, reset, delivery, payment, courier, checkout or stock mutation workflow exists on this route yet.",
-  "No Supabase writes, SQL, localStorage, auth helper changes or route protection changes were added.",
+  "No settings writes, localStorage, auth helper changes or route protection changes were added.",
   "Save, reset, configure and system toggle controls stay disabled until real settings actions exist.",
 ] as const;
 
@@ -136,7 +153,88 @@ function StatCard({
   );
 }
 
+function toNumber(value: string | number | null | undefined, fallback: number) {
+  const numericValue = Number(value ?? fallback);
+
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+}
+
+function normalizeSettings(payload: SettingsPayload): StoreSettings {
+  return {
+    admin_email:
+      String(payload.admin_email ?? defaultStoreSettings.admin_email).trim() ||
+      defaultStoreSettings.admin_email,
+    currency:
+      String(payload.currency ?? defaultStoreSettings.currency).trim() ||
+      defaultStoreSettings.currency,
+    shipping_fee_inside_dhaka: toNumber(
+      payload.shipping_fee_inside_dhaka,
+      defaultStoreSettings.shipping_fee_inside_dhaka,
+    ),
+    shipping_fee_outside_dhaka: toNumber(
+      payload.shipping_fee_outside_dhaka,
+      defaultStoreSettings.shipping_fee_outside_dhaka,
+    ),
+    store_name:
+      String(payload.store_name ?? defaultStoreSettings.store_name).trim() ||
+      defaultStoreSettings.store_name,
+  };
+}
+
 export function RealSettingsPage() {
+  const [settings, setSettings] = useState<StoreSettings>(defaultStoreSettings);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSettings() {
+      try {
+        setIsLoading(true);
+        const response = await fetch(SETTINGS_ENDPOINT, {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("Settings request failed.");
+        }
+
+        const payload = (await response.json()) as SettingsPayload;
+
+        if (isMounted) {
+          setSettings(normalizeSettings(payload));
+        }
+      } catch (error) {
+        console.error("Failed to load live settings.", error);
+
+        if (isMounted) {
+          setSettings(defaultStoreSettings);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadSettings();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const brandDefaults = useMemo(
+    () => [
+      ["Store Name", settings.store_name],
+      ["Currency", settings.currency],
+      ["Inside Dhaka Shipping", String(settings.shipping_fee_inside_dhaka)],
+      ["Outside Dhaka Shipping", String(settings.shipping_fee_outside_dhaka)],
+      ["Admin Email", settings.admin_email],
+    ],
+    [settings],
+  );
+
   return (
     <AdminShell>
       <div className="space-y-6">
@@ -160,8 +258,8 @@ export function RealSettingsPage() {
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                 Manage store rules, automation, integrations and admin system
-                controls as a Canvas-faithful preview. This route is not
-                connected to live settings persistence yet.
+                controls with live local settings loaded from the MySQL backend.
+                Save workflows remain disabled until update actions exist.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -171,10 +269,13 @@ export function RealSettingsPage() {
           </div>
           <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-3">
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Environment: <b className="text-[#5E7F85]">Preview only</b>
+              Environment: <b className="text-[#5E7F85]">Local MySQL</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Last update: <b className="text-slate-900">Not connected</b>
+              Last update:{" "}
+              <b className="text-slate-900">
+                {isLoading ? "Loading..." : "Loaded from settings API"}
+              </b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Review focus: <b className="text-amber-700">Automation rules</b>
@@ -253,9 +354,11 @@ export function RealSettingsPage() {
                     <div className="text-sm font-semibold text-slate-700">
                       {label}
                     </div>
-                    <div className="mt-2 rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-600">
-                      {value}
-                    </div>
+                    <input
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-600 outline-none"
+                      readOnly
+                      value={value}
+                    />
                   </div>
                 ))}
               </div>

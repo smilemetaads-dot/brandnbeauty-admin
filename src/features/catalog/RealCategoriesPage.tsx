@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 import { saveCategory } from "@/features/catalog/category-actions";
@@ -10,7 +10,7 @@ import { saveCategory } from "@/features/catalog/category-actions";
 import type { CategoryRecord } from "./categories-data";
 
 type RealCategoriesPageProps = {
-  categories: CategoryRecord[];
+  categories?: CategoryRecord[];
   editCategoryId?: string;
 };
 
@@ -66,6 +66,47 @@ const inputClassName =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15";
 
 const labelClassName = "text-sm font-semibold text-slate-700";
+
+const CATEGORIES_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_categories.php";
+
+function toNumber(value: unknown) {
+  const numberValue = Number(value);
+
+  return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function toStringOrNull(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : null;
+}
+
+function normalizeCategory(value: unknown): CategoryRecord | null {
+  if (!value || typeof value !== "object") return null;
+
+  const category = value as Record<string, unknown>;
+  const id = String(category.id ?? "");
+  const name = String(category.name ?? "").trim();
+  const slug = String(category.slug ?? "").trim();
+
+  if (!id || !name) return null;
+
+  return {
+    created_at: toStringOrNull(category.created_at),
+    featured: Boolean(category.featured),
+    id,
+    image: toStringOrNull(category.image),
+    meta_description: toStringOrNull(category.meta_description),
+    meta_title: toStringOrNull(category.meta_title),
+    name,
+    product_count: toNumber(category.product_count),
+    slug: slug || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+    sort_order: category.sort_order == null ? null : toNumber(category.sort_order),
+    status: toStringOrNull(category.status) ?? "active",
+    updated_at: toStringOrNull(category.updated_at),
+  };
+}
 
 const getStatusLabel = (status: string | null) =>
   status === "inactive" ? "Draft" : "Active";
@@ -428,9 +469,10 @@ function CategoryForm({
 }
 
 export function RealCategoriesPage({
-  categories,
+  categories: initialCategories = [],
   editCategoryId,
 }: RealCategoriesPageProps) {
+  const [categories, setCategories] = useState<CategoryRecord[]>(initialCategories);
   const [state, formAction, isPending] = useActionState(saveCategory, {
     ok: false,
     message: "",
@@ -441,6 +483,46 @@ export function RealCategoriesPage({
     editingCategory?.id ?? categories[0]?.id ?? "",
   );
   const [showAddForm, setShowAddForm] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadCategories() {
+      try {
+        const response = await fetch(CATEGORIES_ENDPOINT, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("Categories could not be loaded.");
+        }
+
+        const payload = (await response.json()) as unknown;
+        const nextCategories = Array.isArray(payload)
+          ? payload
+              .map(normalizeCategory)
+              .filter((category): category is CategoryRecord =>
+                Boolean(category),
+              )
+          : [];
+
+        setCategories(nextCategories);
+        setSelectedId((current) => current || (nextCategories[0]?.id ?? ""));
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Admin categories could not be loaded.", error);
+          setCategories([]);
+        }
+      }
+    }
+
+    void Promise.resolve().then(() => loadCategories());
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
 
   const selectedCategory =
     categories.find((category) => category.id === selectedId) ??
@@ -524,7 +606,12 @@ export function RealCategoriesPage({
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Products mapped:{" "}
-              <b className="text-slate-900">Preview</b>
+              <b className="text-slate-900">
+                {categories.reduce(
+                  (sum, category) => sum + (category.product_count ?? 0),
+                  0,
+                )}
+              </b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Avg SEO score: <b className="text-emerald-700">{avgSeo}/100</b>
@@ -539,7 +626,16 @@ export function RealCategoriesPage({
           {[
             ["Total Categories", String(categories.length), "Catalog structure"],
             ["Subcategories", "Preview", "Nested discovery"],
-            ["Mapped Products", "Preview", "Product discovery"],
+            [
+              "Mapped Products",
+              String(
+                categories.reduce(
+                  (sum, category) => sum + (category.product_count ?? 0),
+                  0,
+                ),
+              ),
+              "Product discovery",
+            ],
             ["SEO Needs Work", String(needsWork), "Review banner/meta"],
           ].map((item, index) => (
             <StatCard
@@ -714,7 +810,7 @@ export function RealCategoriesPage({
                         </td>
                         <td className="px-5 py-4">Root</td>
                         <td className="px-5 py-4 font-semibold text-slate-500">
-                          Preview
+                          {category.product_count ?? 0}
                         </td>
                         <td className="px-5 py-4">
                           <Badge
@@ -839,7 +935,9 @@ export function RealCategoriesPage({
                       <Badge tone={selectedCategory.image ? "good" : "warn"}>
                         {selectedCategory.image ? "Ready" : "Needs Image"}
                       </Badge>
-                      <Badge tone="default">Products preview</Badge>
+                      <Badge tone="default">
+                        {selectedCategory.product_count ?? 0} Products
+                      </Badge>
                     </div>
                   </div>
                   <div className="mt-5 space-y-3 text-sm">
@@ -852,7 +950,7 @@ export function RealCategoriesPage({
                           : "Header",
                       ],
                       ["Display Priority", selectedCategory.sort_order ?? 0],
-                      ["Products", "Preview"],
+                      ["Products", selectedCategory.product_count ?? 0],
                       ["Sub Items", selectedPreview.sub.length],
                       ["Status", getStatusLabel(selectedCategory.status)],
                     ].map(([label, value]) => (

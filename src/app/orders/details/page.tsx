@@ -1,25 +1,58 @@
-import { getOrderDetailsFromSupabase } from "@/features/orders/orders-data";
+"use client";
+
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+
 import { RealOrderDetailsPage } from "@/features/orders/RealOrderDetailsPage";
+import {
+  fetchOrderDetails,
+  type OrderDetailsRecord,
+} from "@/features/orders/order-details-client";
 
-export const dynamic = "force-dynamic";
+export default function OrderDetailsPage() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id");
+  const [order, setOrder] = useState<OrderDetailsRecord | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-type OrderDetailsPageProps = {
-  searchParams?: Promise<{
-    id?: string;
-  }>;
-};
+  useEffect(() => {
+    if (!id) {
+      return;
+    }
 
-export default async function OrderDetailsPage({
-  searchParams,
-}: OrderDetailsPageProps) {
-  const params = await searchParams;
-  const id = params?.id;
+    const controller = new AbortController();
+
+    async function loadOrder() {
+      try {
+        setIsLoading(true);
+        const nextOrder = await fetchOrderDetails(id, controller.signal);
+        setOrder(nextOrder);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Order details could not be loaded.", error);
+          setOrder(null);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadOrder();
+
+    return () => {
+      controller.abort();
+    };
+  }, [id]);
 
   if (!id) {
     return <RealOrderDetailsPage order={null} />;
   }
 
-  const order = await getOrderDetailsFromSupabase(id);
+  if (isLoading) {
+    return <RealOrderDetailsPage order={null} />;
+  }
 
   return <RealOrderDetailsPage order={order} />;
 }

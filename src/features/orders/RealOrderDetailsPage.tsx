@@ -4,8 +4,7 @@ import type { ReactNode } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 
 import { OrderDocumentsPreview } from "./OrderDocumentsPreview";
-import { OrderStatusForm } from "./OrderStatusForm";
-import type { OrderDetailsRecord } from "./orders-data";
+import type { OrderDetailsRecord } from "./order-details-client";
 
 type RealOrderDetailsPageProps = {
   order: OrderDetailsRecord | null;
@@ -568,12 +567,24 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
                 </div>
               </div>
 
-              <OrderStatusForm
-                courierStatus={order.courier_status}
-                orderId={order.id}
-                orderStatus={order.order_status}
-                paymentStatus={order.payment_status}
-              />
+              <div className="mt-4 grid gap-3">
+                <InfoTile
+                  label="Order Status"
+                  value={formatStatus(order.order_status)}
+                />
+                <InfoTile
+                  label="Payment Status"
+                  value={formatStatus(order.payment_status)}
+                />
+                <InfoTile
+                  label="Courier Status"
+                  value={formatStatus(order.courier_status)}
+                />
+                <p className="rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-700">
+                  Status changes are handled from the live Orders list through
+                  the local PHP update endpoint.
+                </p>
+              </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 <DisabledButton>Call Customer</DisabledButton>
