@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 import {
   fetchLogisticsOrders,
   type LogisticsOrderRecord,
+  updateOrderStatus,
 } from "@/features/logistics/logistics-client";
 
 type PackingOrderRecord = LogisticsOrderRecord;
@@ -213,6 +214,8 @@ export function RealPackingDeskPage({
 }: RealPackingDeskPageProps) {
   const [orders, setOrders] = useState<PackingOrderRecord[]>(initialOrders);
   const [isLoading, setIsLoading] = useState(!initialOrders.length);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [updatingOrderIds, setUpdatingOrderIds] = useState<string[]>([]);
   const packingOrders = useMemo(
     () => orders.filter((order) => packingStatuses.has(order.order_status)),
     [orders],
@@ -222,36 +225,59 @@ export function RealPackingDeskPage({
   const mismatchCount = getMismatchCount(packingOrders);
   const printedSlips = 0;
 
+  const loadOrders = useCallback(async (signal?: AbortSignal) => {
+    try {
+      setIsLoading(true);
+      const nextOrders = await fetchLogisticsOrders(signal);
+      setOrders(nextOrders);
+    } catch (error) {
+      if (!signal?.aborted) {
+        console.error("Packing logistics orders could not be loaded.", error);
+        setOrders([]);
+      }
+    } finally {
+      if (!signal?.aborted) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
 
-    async function loadOrders() {
-      try {
-        setIsLoading(true);
-        const nextOrders = await fetchLogisticsOrders(controller.signal);
-        setOrders(nextOrders);
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          console.error("Packing logistics orders could not be loaded.", error);
-          setOrders([]);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadOrders();
+    void Promise.resolve().then(() => loadOrders(controller.signal));
 
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [loadOrders]);
+
+  async function handleMarkPacked(orderId: string) {
+    setUpdatingOrderIds((current) => Array.from(new Set([...current, orderId])));
+    setStatusMessage("");
+
+    try {
+      const result = await updateOrderStatus(orderId, "packed");
+      setStatusMessage(result.message ?? "Order status updated successfully");
+      await loadOrders();
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error ? error.message : "Order status update failed.",
+      );
+    } finally {
+      setUpdatingOrderIds((current) => current.filter((id) => id !== orderId));
+    }
+  }
 
   return (
     <AdminShell>
       <div className="space-y-6">
+        {statusMessage ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-700">
+            {statusMessage}
+          </div>
+        ) : null}
+
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
             helper="Confirmed orders"
@@ -418,11 +444,21 @@ export function RealPackingDeskPage({
                       >
                         Print Slip
                       </Link>
-                      <DisabledButton primary>
-                        {order.order_status === "packed"
-                          ? "Already Packed"
-                          : "Mark Packed"}
-                      </DisabledButton>
+                      <button
+                        className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-950 disabled:cursor-not-allowed disabled:bg-slate-300"
+                        disabled={
+                          order.order_status === "packed" ||
+                          updatingOrderIds.includes(order.id)
+                        }
+                        onClick={() => handleMarkPacked(order.id)}
+                        type="button"
+                      >
+                        {updatingOrderIds.includes(order.id)
+                          ? "Updating..."
+                          : order.order_status === "packed"
+                            ? "Already Packed"
+                            : "Mark Packed"}
+                      </button>
                     </div>
 
                     <Link

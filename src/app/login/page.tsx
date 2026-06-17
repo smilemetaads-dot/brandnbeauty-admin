@@ -20,8 +20,8 @@ export default function LoginPage() {
           <div className="p-6">
             <LoginForm />
             <div className="mt-5 rounded-2xl bg-stone-50 px-4 py-3 text-xs font-semibold leading-5 text-slate-500">
-              Admin route protection and role enforcement are not connected
-              yet. This page only signs in with Supabase Auth.
+              Admin access is checked through the local PHP/MySQL auth gateway.
+              Successful sessions are stored locally for this admin dashboard.
             </div>
           </div>
         </section>

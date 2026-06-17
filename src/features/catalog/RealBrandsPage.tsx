@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import type { ReactNode } from "react";
-import { useActionState, useEffect, useMemo, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
-import { saveBrand } from "@/features/catalog/brand-actions";
 
 import type { BrandRecord } from "./brands-data";
 
@@ -33,6 +32,10 @@ const labelClassName = "text-sm font-semibold text-slate-700";
 
 const BRANDS_ENDPOINT =
   "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_brands.php";
+const MANAGE_CATALOG_META_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/manage_catalog_meta.php";
+const DELETE_CATALOG_ITEM_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/delete_catalog_item.php";
 
 function toNumber(value: unknown) {
   const numberValue = Number(value);
@@ -269,14 +272,14 @@ function getPreviewForBrand(brand: BrandRecord | null): BrandPreview {
 
 function BrandForm({
   editingBrand,
-  formAction,
   isPending,
+  onSubmit,
   state,
   onClose,
 }: {
   editingBrand: BrandRecord | null;
-  formAction: (payload: FormData) => void;
   isPending: boolean;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   state: { ok: boolean; message: string };
   onClose: () => void;
 }) {
@@ -294,9 +297,9 @@ function BrandForm({
               {isEditing ? `Edit ${editingBrand?.name}` : "Add Brand"}
             </h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              This form submits through the existing live brand server action.
-              Brand type, origin, logo/banner upload, storefront revenue, and
-              product mapping are preview-only until connected.
+              This form now creates live brand metadata through the local PHP
+              backend. Brand type, origin, logo/banner upload, storefront
+              revenue, and product mapping are preview-only until connected.
             </p>
           </div>
           {isEditing ? (
@@ -317,7 +320,7 @@ function BrandForm({
           )}
         </div>
 
-        <form action={formAction} className="mt-5 grid gap-4 md:grid-cols-2">
+        <form onSubmit={onSubmit} className="mt-5 grid gap-4 md:grid-cols-2">
           <input name="id" type="hidden" value={editingBrand?.id ?? ""} />
 
           <label className={labelClassName}>
@@ -491,52 +494,156 @@ export function RealBrandsPage({
   editBrandId,
 }: RealBrandsPageProps) {
   const [brands, setBrands] = useState<BrandRecord[]>(initialBrands);
-  const [state, formAction, isPending] = useActionState(saveBrand, {
+  const [formState, setFormState] = useState({
     ok: false,
     message: "",
   });
+  const [isPending, setIsPending] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
+  const [deletingBrandIds, setDeletingBrandIds] = useState<string[]>([]);
   const [selectedBrandId, setSelectedBrandId] = useState(editBrandId ?? "");
   const [showAddForm, setShowAddForm] = useState(false);
+
+  const loadBrands = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const response = await fetch(BRANDS_ENDPOINT, {
+        cache: "no-store",
+        signal,
+      });
+
+      if (!response.ok) {
+        throw new Error("Brands could not be loaded.");
+      }
+
+      const payload = (await response.json()) as unknown;
+      const nextBrands = Array.isArray(payload)
+        ? payload
+            .map(normalizeBrand)
+            .filter((brand): brand is BrandRecord => Boolean(brand))
+        : [];
+
+      setBrands(nextBrands);
+      setSelectedBrandId((current) => current || (nextBrands[0]?.id ?? ""));
+    } catch (error) {
+      if (!signal?.aborted) {
+        console.error("Admin brands could not be loaded.", error);
+        setBrands([]);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
 
-    async function loadBrands() {
-      try {
-        const response = await fetch(BRANDS_ENDPOINT, {
-          cache: "no-store",
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error("Brands could not be loaded.");
-        }
-
-        const payload = (await response.json()) as unknown;
-        const nextBrands = Array.isArray(payload)
-          ? payload
-              .map(normalizeBrand)
-              .filter((brand): brand is BrandRecord => Boolean(brand))
-          : [];
-
-        setBrands(nextBrands);
-        setSelectedBrandId((current) => current || (nextBrands[0]?.id ?? ""));
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          console.error("Admin brands could not be loaded.", error);
-          setBrands([]);
-        }
-      }
-    }
-
-    void Promise.resolve().then(() => loadBrands());
+    void Promise.resolve().then(() => loadBrands(controller.signal));
 
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [loadBrands]);
+
+  async function handleBrandSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (editingBrand) {
+      setFormState({
+        ok: false,
+        message: "Brand editing needs the update endpoint. Use Add Brand for new records.",
+      });
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    setIsPending(true);
+    setFormState({ ok: false, message: "" });
+
+    try {
+      const response = await fetch(MANAGE_CATALOG_META_ENDPOINT, {
+        body: JSON.stringify({
+          action: "add_brand",
+          data: {
+            description: String(formData.get("metaDescription") ?? ""),
+            featured: formData.get("featured") === "on",
+            image_url: String(formData.get("image") ?? ""),
+            logo_url: String(formData.get("image") ?? ""),
+            meta_description: String(formData.get("metaDescription") ?? ""),
+            meta_title: String(formData.get("metaTitle") ?? ""),
+            name: String(formData.get("name") ?? ""),
+            slug: String(formData.get("slug") ?? ""),
+            sort_order: Number(formData.get("sortOrder") ?? 0),
+            status: String(formData.get("status") ?? "active"),
+          },
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const result = (await response.json()) as {
+        message?: string;
+        success?: boolean;
+      };
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message ?? "Brand could not be added.");
+      }
+
+      setFormState({ ok: true, message: result.message ?? "Brand added successfully." });
+      await loadBrands();
+      setShowAddForm(false);
+    } catch (error) {
+      setFormState({
+        ok: false,
+        message: error instanceof Error ? error.message : "Brand could not be added.",
+      });
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  async function handleDeleteBrand(brandId: string) {
+    if (!window.confirm("Delete this brand?")) {
+      return;
+    }
+
+    setDeletingBrandIds((current) => Array.from(new Set([...current, brandId])));
+    setFormState({ ok: false, message: "" });
+
+    try {
+      const response = await fetch(DELETE_CATALOG_ITEM_ENDPOINT, {
+        body: JSON.stringify({
+          id: brandId,
+          type: "brand",
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const result = (await response.json().catch(() => null)) as {
+        message?: string;
+        success?: boolean;
+      } | null;
+
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message ?? "Brand could not be deleted.");
+      }
+
+      setBrands((current) => current.filter((brand) => brand.id !== brandId));
+      setSelectedBrandId((current) =>
+        current === brandId
+          ? brands.find((brand) => brand.id !== brandId)?.id ?? ""
+          : current,
+      );
+      setFormState({ ok: true, message: result.message ?? "Item deleted successfully" });
+    } catch (error) {
+      setFormState({
+        ok: false,
+        message: error instanceof Error ? error.message : "Brand could not be deleted.",
+      });
+    } finally {
+      setDeletingBrandIds((current) => current.filter((id) => id !== brandId));
+    }
+  }
 
   const editingBrand =
     brands.find((brand) => brand.id === editBrandId) ?? null;
@@ -584,6 +691,18 @@ export function RealBrandsPage({
   return (
     <AdminShell>
       <div className="space-y-6">
+        {formState.message ? (
+          <div
+            className={`fixed right-5 top-5 z-[60] rounded-2xl px-5 py-3 text-sm font-semibold shadow-lg ${
+              formState.ok
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-rose-50 text-rose-700"
+            }`}
+          >
+            {formState.message}
+          </div>
+        ) : null}
+
         <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-4 p-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -926,6 +1045,16 @@ export function RealBrandsPage({
                               >
                                 Open
                               </button>
+                              <button
+                                className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                disabled={deletingBrandIds.includes(brand.id)}
+                                onClick={() => handleDeleteBrand(brand.id)}
+                                type="button"
+                              >
+                                {deletingBrandIds.includes(brand.id)
+                                  ? "Deleting..."
+                                  : "Delete"}
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -1158,10 +1287,10 @@ export function RealBrandsPage({
         {showForm ? (
           <BrandForm
             editingBrand={editingBrand}
-            formAction={formAction}
             isPending={isPending}
             onClose={() => setShowAddForm(false)}
-            state={state}
+            onSubmit={handleBrandSubmit}
+            state={formState}
           />
         ) : null}
       </div>

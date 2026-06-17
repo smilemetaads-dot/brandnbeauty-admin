@@ -1,0 +1,95 @@
+
+> brandnbeauty-admin@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.121:3000
+- Environments: .env.local
+✓ Ready in 926ms
+Creating turbopack project {
+  dir: 'C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin',
+  testMode: true
+}
+
+○ Compiling / ...
+ GET /products/edit 200 in 3.8s (next.js: 3.0s, application-code: 803ms)
+✓ Finished writing to filesystem cache in 14.2s
+ GET /products/edit 200 in 207ms (next.js: 37ms, application-code: 170ms)
+○ Compiling /products ...
+ GET /products 200 in 4.3s (next.js: 3.3s, application-code: 953ms)
+ GET /products 200 in 854ms (next.js: 12ms, application-code: 842ms)
+ GET /products/edit 200 in 71ms (next.js: 8ms, application-code: 62ms)
+ GET /products 200 in 418ms (next.js: 9ms, application-code: 409ms)
+ GET /products/edit 200 in 177ms (next.js: 8ms, application-code: 169ms)
+ GET /products 200 in 324ms (next.js: 8ms, application-code: 317ms)
+✓ Compiled in 1179ms
+ GET /products 200 in 3.3s (next.js: 1019ms, application-code: 2.3s)
+ GET /products 200 in 1787ms (next.js: 32ms, application-code: 1755ms)
+ GET /products 200 in 1263ms (next.js: 12ms, application-code: 1251ms)
+ GET /products 200 in 1263ms (next.js: 198ms, application-code: 1066ms)
+ GET /products 200 in 1266ms (next.js: 790ms, application-code: 476ms)
+ GET / 200 in 1096ms (next.js: 213ms, application-code: 883ms)
+ POST /products 200 in 1709ms (next.js: 8ms, application-code: 1701ms)
+  └─ ƒ <inline action>({}) in 1343ms src/features/products/RealProductsPage.tsx
+ GET / 200 in 415ms (next.js: 8ms, application-code: 407ms)
+ GET /business-analytics 200 in 2000ms (next.js: 1896ms, application-code: 104ms)
+ GET /business-analytics 200 in 510ms (next.js: 7ms, application-code: 503ms)
+ GET /business-analytics 200 in 259ms (next.js: 6ms, application-code: 253ms)
+ GET /business-analytics 200 in 211ms (next.js: 8ms, application-code: 204ms)
+ GET /business-analytics 200 in 452ms (next.js: 12ms, application-code: 440ms)
+ GET /business-analytics 200 in 294ms (next.js: 9ms, application-code: 284ms)
+ GET /business-analytics 200 in 356ms (next.js: 8ms, application-code: 347ms)
+ GET /business-analytics 200 in 511ms (next.js: 8ms, application-code: 503ms)
+ GET /business-analytics 200 in 236ms (next.js: 5ms, application-code: 231ms)
+ GET /business-analytics 200 in 204ms (next.js: 9ms, application-code: 195ms)
+ GET /business-analytics 200 in 184ms (next.js: 8ms, application-code: 175ms)
+ GET /business-analytics 200 in 220ms (next.js: 5ms, application-code: 215ms)
+ GET /business-analytics 200 in 211ms (next.js: 8ms, application-code: 203ms)
+ GET /business-analytics 200 in 204ms (next.js: 5ms, application-code: 198ms)
+ GET /business-analytics 200 in 184ms (next.js: 6ms, application-code: 178ms)
+ GET /business-analytics 200 in 205ms (next.js: 9ms, application-code: 196ms)
+ GET /business-analytics 200 in 201ms (next.js: 6ms, application-code: 195ms)
+ GET /business-analytics 200 in 211ms (next.js: 18ms, application-code: 193ms)
+ GET /business-analytics 200 in 190ms (next.js: 8ms, application-code: 182ms)
+ GET /business-analytics 200 in 235ms (next.js: 8ms, application-code: 227ms)
+ GET /business-analytics 200 in 191ms (next.js: 9ms, application-code: 182ms)
+ GET /business-analytics 200 in 180ms (next.js: 7ms, application-code: 173ms)
+ GET /business-analytics 200 in 203ms (next.js: 6ms, application-code: 197ms)
+ GET /business-analytics 200 in 208ms (next.js: 6ms, application-code: 202ms)
+ GET /business-analytics 200 in 195ms (next.js: 8ms, application-code: 187ms)
+ GET /business-analytics 200 in 189ms (next.js: 8ms, application-code: 181ms)
+ GET /business-analytics 200 in 244ms (next.js: 7ms, application-code: 236ms)
+ GET /business-analytics 200 in 194ms (next.js: 10ms, application-code: 185ms)
+ GET /business-analytics 200 in 199ms (next.js: 6ms, application-code: 193ms)
+ GET /business-analytics 200 in 186ms (next.js: 8ms, application-code: 177ms)
+ GET /business-analytics 200 in 211ms (next.js: 7ms, application-code: 204ms)
+ GET /business-analytics 200 in 189ms (next.js: 6ms, application-code: 183ms)
+ GET /business-analytics 200 in 184ms (next.js: 6ms, application-code: 179ms)
+ GET /business-analytics 200 in 232ms (next.js: 9ms, application-code: 223ms)
+ GET /business-analytics 200 in 219ms (next.js: 9ms, application-code: 209ms)
+ GET /business-analytics 200 in 230ms (next.js: 7ms, application-code: 223ms)
+ GET /business-analytics 200 in 208ms (next.js: 6ms, application-code: 202ms)
+ GET /business-analytics 200 in 199ms (next.js: 6ms, application-code: 193ms)
+ GET /business-analytics 200 in 202ms (next.js: 6ms, application-code: 196ms)
+ GET /business-analytics 200 in 215ms (next.js: 6ms, application-code: 209ms)
+ GET /business-analytics 200 in 223ms (next.js: 6ms, application-code: 218ms)
+ GET /business-analytics 200 in 199ms (next.js: 6ms, application-code: 193ms)
+ GET /business-analytics 200 in 250ms (next.js: 6ms, application-code: 244ms)
+ GET /business-analytics 200 in 243ms (next.js: 9ms, application-code: 234ms)
+ GET /business-analytics 200 in 341ms (next.js: 6ms, application-code: 335ms)
+ GET /business-analytics 200 in 218ms (next.js: 7ms, application-code: 211ms)
+ GET /business-analytics 200 in 216ms (next.js: 7ms, application-code: 209ms)
+ GET /business-analytics 200 in 230ms (next.js: 9ms, application-code: 221ms)
+ GET /business-analytics 200 in 184ms (next.js: 9ms, application-code: 175ms)
+ GET /dashboard 307 in 195ms (next.js: 7ms, application-code: 188ms)
+ GET / 200 in 268ms (next.js: 4ms, application-code: 264ms)
+ GET /products 200 in 967ms (next.js: 7ms, application-code: 960ms)
+ GET / 200 in 301ms (next.js: 9ms, application-code: 293ms)
+✓ Compiled in 452ms
+ GET / 200 in 441ms (next.js: 155ms, application-code: 286ms)
+ GET / 200 in 97ms (next.js: 5ms, application-code: 92ms)
+ GET /products 200 in 1390ms (next.js: 345ms, application-code: 1046ms)
+ GET /products 200 in 257ms (next.js: 9ms, application-code: 248ms)
+○ Compiling /_error ...
+[?25h

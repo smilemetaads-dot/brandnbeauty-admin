@@ -3,10 +3,10 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-
 const LOGIN_TIMEOUT_MS = 15_000;
 const timeoutErrorMessage = "LOGIN_TIMEOUT";
+const AUTH_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/auth.php";
 
 export function LoginForm() {
   const router = useRouter();
@@ -40,44 +40,58 @@ export function LoginForm() {
     setIsSubmitting(true);
 
     try {
-      const supabase = createBrowserSupabaseClient();
-      setClientStatus("Supabase browser client loaded.");
+      setClientStatus("Checking local admin credentials...");
       const timeoutPromise = new Promise<never>((_, reject) => {
         window.setTimeout(
           () => reject(new Error(timeoutErrorMessage)),
           LOGIN_TIMEOUT_MS,
         );
       });
-      const { data, error } = await Promise.race([
-        supabase.auth.signInWithPassword({
-          email: trimmedEmail,
-          password,
+      const response = await Promise.race([
+        fetch(AUTH_ENDPOINT, {
+          body: JSON.stringify({
+            action: "admin_login",
+            email: trimmedEmail,
+            password,
+          }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          method: "POST",
         }),
         timeoutPromise,
       ]);
+      const data = (await response.json().catch(() => null)) as {
+        message?: string;
+        success?: boolean;
+        token?: string;
+        user?: unknown;
+      } | null;
 
-      if (error) {
-        setErrorMessage("Unable to sign in with those credentials.");
+      if (!response.ok || !data?.success || !data.token) {
+        setErrorMessage(data?.message ?? "Unable to sign in with those credentials.");
         return;
       }
 
-      if (data.session) {
-        router.replace("/");
-        router.refresh();
-        return;
-      }
-
-      setErrorMessage(
-        "Sign in response received, but no session was created. Check email confirmation or password.",
+      window.localStorage.setItem("brandnbeauty_admin_token", data.token);
+      window.localStorage.setItem(
+        "brandnbeauty_admin_user",
+        JSON.stringify(data.user ?? { email: trimmedEmail }),
       );
+      document.cookie = `brandnbeauty_admin_token=${encodeURIComponent(
+        data.token,
+      )}; path=/; max-age=86400; SameSite=Lax`;
+      setClientStatus("Local admin session created.");
+      router.replace("/");
+      router.refresh();
     } catch (error) {
       if (error instanceof Error && error.message === timeoutErrorMessage) {
         setErrorMessage("Sign in timed out. Check your connection and try again.");
         return;
       }
 
-      setClientStatus("Supabase browser client not loaded.");
-      setErrorMessage("Sign in could not start. Check admin browser configuration.");
+      setClientStatus("Local auth endpoint not reachable.");
+      setErrorMessage("Sign in could not start. Check local PHP backend.");
     } finally {
       setIsSubmitting(false);
     }

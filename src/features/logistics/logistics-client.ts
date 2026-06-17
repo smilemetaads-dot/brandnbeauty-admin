@@ -58,6 +58,8 @@ type ApiLogisticsOrder = {
 
 export const LOGISTICS_META_ENDPOINT =
   "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_logistics_meta.php";
+export const UPDATE_ORDER_STATUS_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/update_order_status.php";
 
 function toNumber(value: string | number | null | undefined) {
   const numericValue = Number(value ?? 0);
@@ -127,4 +129,27 @@ export async function fetchLogisticsOrders(signal?: AbortSignal) {
   }
 
   return payload.map(normalizeLogisticsOrder);
+}
+
+export async function updateOrderStatus(orderId: string, status: string) {
+  const response = await fetch(UPDATE_ORDER_STATUS_ENDPOINT, {
+    body: JSON.stringify({
+      order_id: orderId,
+      status,
+    }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+  const payload = (await response.json().catch(() => null)) as {
+    message?: string;
+    success?: boolean;
+  } | null;
+
+  if (!response.ok || !payload?.success) {
+    throw new Error(payload?.message ?? "Order status update failed.");
+  }
+
+  return payload;
 }

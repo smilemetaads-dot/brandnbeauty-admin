@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { useActionState, useEffect, useMemo, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
-import { saveConcern } from "@/features/catalog/concern-actions";
 
 import type { ConcernRecord } from "./concerns-data";
 
@@ -36,6 +35,10 @@ const labelClassName = "text-sm font-semibold text-slate-700";
 
 const CONCERNS_ENDPOINT =
   "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_concerns.php";
+const MANAGE_CATALOG_META_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/manage_catalog_meta.php";
+const DELETE_CATALOG_ITEM_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/delete_catalog_item.php";
 
 function toNumber(value: unknown) {
   const numberValue = Number(value);
@@ -291,14 +294,14 @@ function getPreviewForConcern(concern: ConcernRecord | null) {
 
 function ConcernForm({
   editingConcern,
-  formAction,
   isPending,
+  onSubmit,
   state,
   onClose,
 }: {
   editingConcern: ConcernRecord | null;
-  formAction: (payload: FormData) => void;
   isPending: boolean;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   state: { ok: boolean; message: string };
   onClose: () => void;
 }) {
@@ -316,9 +319,9 @@ function ConcernForm({
               {isEditing ? `Edit ${editingConcern?.name}` : "Add Concern"}
             </h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              This form submits through the existing live concern server action.
-              Routine mapping, severity, education copy, and product matching
-              controls are preview-only until connected.
+              This form now creates live concern metadata through the local PHP
+              backend. Routine mapping, severity, education copy, and product
+              matching controls are preview-only until connected.
             </p>
           </div>
           {isEditing ? (
@@ -357,7 +360,7 @@ function ConcernForm({
           ))}
         </div>
 
-        <form action={formAction} className="mt-5 grid gap-4 md:grid-cols-2">
+        <form onSubmit={onSubmit} className="mt-5 grid gap-4 md:grid-cols-2">
           <input name="id" type="hidden" value={editingConcern?.id ?? ""} />
 
           <label className={labelClassName}>
@@ -549,56 +552,161 @@ export function RealConcernsPage({
   editConcernId,
 }: RealConcernsPageProps) {
   const [concerns, setConcerns] = useState<ConcernRecord[]>(initialConcerns);
-  const [state, formAction, isPending] = useActionState(saveConcern, {
+  const [formState, setFormState] = useState({
     ok: false,
     message: "",
   });
+  const [isPending, setIsPending] = useState(false);
   const editingConcern =
     concerns.find((concern) => concern.id === editConcernId) ?? null;
   const [selectedId, setSelectedId] = useState(
     editingConcern?.id ?? concerns[0]?.id ?? "",
   );
   const [showAddForm, setShowAddForm] = useState(false);
+  const [deletingConcernIds, setDeletingConcernIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [concernFilter, setConcernFilter] = useState("All");
+
+  const loadConcerns = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const response = await fetch(CONCERNS_ENDPOINT, {
+        cache: "no-store",
+        signal,
+      });
+
+      if (!response.ok) {
+        throw new Error("Concerns could not be loaded.");
+      }
+
+      const payload = (await response.json()) as unknown;
+      const nextConcerns = Array.isArray(payload)
+        ? payload
+            .map(normalizeConcern)
+            .filter((concern): concern is ConcernRecord => Boolean(concern))
+        : [];
+
+      setConcerns(nextConcerns);
+      setSelectedId((current) => current || (nextConcerns[0]?.id ?? ""));
+    } catch (error) {
+      if (!signal?.aborted) {
+        console.error("Admin concerns could not be loaded.", error);
+        setConcerns([]);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
 
-    async function loadConcerns() {
-      try {
-        const response = await fetch(CONCERNS_ENDPOINT, {
-          cache: "no-store",
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error("Concerns could not be loaded.");
-        }
-
-        const payload = (await response.json()) as unknown;
-        const nextConcerns = Array.isArray(payload)
-          ? payload
-              .map(normalizeConcern)
-              .filter((concern): concern is ConcernRecord => Boolean(concern))
-          : [];
-
-        setConcerns(nextConcerns);
-        setSelectedId((current) => current || (nextConcerns[0]?.id ?? ""));
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          console.error("Admin concerns could not be loaded.", error);
-          setConcerns([]);
-        }
-      }
-    }
-
-    void Promise.resolve().then(() => loadConcerns());
+    void Promise.resolve().then(() => loadConcerns(controller.signal));
 
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [loadConcerns]);
+
+  async function handleConcernSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (editingConcern) {
+      setFormState({
+        ok: false,
+        message: "Concern editing needs the update endpoint. Use Add Concern for new records.",
+      });
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    setIsPending(true);
+    setFormState({ ok: false, message: "" });
+
+    try {
+      const response = await fetch(MANAGE_CATALOG_META_ENDPOINT, {
+        body: JSON.stringify({
+          action: "add_concern",
+          data: {
+            description: String(formData.get("metaDescription") ?? ""),
+            featured: formData.get("featured") === "on",
+            image_url: String(formData.get("image") ?? ""),
+            meta_description: String(formData.get("metaDescription") ?? ""),
+            meta_title: String(formData.get("metaTitle") ?? ""),
+            name: String(formData.get("name") ?? ""),
+            slug: String(formData.get("slug") ?? ""),
+            sort_order: Number(formData.get("sortOrder") ?? 0),
+            status: String(formData.get("status") ?? "active"),
+          },
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const result = (await response.json()) as {
+        message?: string;
+        success?: boolean;
+      };
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message ?? "Concern could not be added.");
+      }
+
+      setFormState({ ok: true, message: result.message ?? "Concern added successfully." });
+      await loadConcerns();
+      setShowAddForm(false);
+    } catch (error) {
+      setFormState({
+        ok: false,
+        message:
+          error instanceof Error ? error.message : "Concern could not be added.",
+      });
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  async function handleDeleteConcern(concernId: string) {
+    if (!window.confirm("Delete this concern?")) {
+      return;
+    }
+
+    setDeletingConcernIds((current) => Array.from(new Set([...current, concernId])));
+    setFormState({ ok: false, message: "" });
+
+    try {
+      const response = await fetch(DELETE_CATALOG_ITEM_ENDPOINT, {
+        body: JSON.stringify({
+          id: concernId,
+          type: "concern",
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const result = (await response.json().catch(() => null)) as {
+        message?: string;
+        success?: boolean;
+      } | null;
+
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message ?? "Concern could not be deleted.");
+      }
+
+      setConcerns((current) => current.filter((concern) => concern.id !== concernId));
+      setSelectedId((current) =>
+        current === concernId
+          ? concerns.find((concern) => concern.id !== concernId)?.id ?? ""
+          : current,
+      );
+      setFormState({ ok: true, message: result.message ?? "Item deleted successfully" });
+    } catch (error) {
+      setFormState({
+        ok: false,
+        message:
+          error instanceof Error ? error.message : "Concern could not be deleted.",
+      });
+    } finally {
+      setDeletingConcernIds((current) => current.filter((id) => id !== concernId));
+    }
+  }
 
   const selectedConcern =
     concerns.find((concern) => concern.id === selectedId) ??
@@ -673,6 +781,18 @@ export function RealConcernsPage({
   return (
     <AdminShell>
       <div className="space-y-6">
+        {formState.message ? (
+          <div
+            className={`fixed right-5 top-5 z-[60] rounded-2xl px-5 py-3 text-sm font-semibold shadow-lg ${
+              formState.ok
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-rose-50 text-rose-700"
+            }`}
+          >
+            {formState.message}
+          </div>
+        ) : null}
+
         <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-5 p-6 xl:flex-row xl:items-center xl:justify-between">
             <div>
@@ -982,6 +1102,16 @@ export function RealConcernsPage({
                             >
                               Open
                             </button>
+                            <button
+                              className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                              disabled={deletingConcernIds.includes(concern.id)}
+                              onClick={() => handleDeleteConcern(concern.id)}
+                              type="button"
+                            >
+                              {deletingConcernIds.includes(concern.id)
+                                ? "Deleting..."
+                                : "Delete"}
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1169,10 +1299,10 @@ export function RealConcernsPage({
         {showForm ? (
           <ConcernForm
             editingConcern={editingConcern}
-            formAction={formAction}
             isPending={isPending}
             onClose={() => setShowAddForm(false)}
-            state={state}
+            onSubmit={handleConcernSubmit}
+            state={formState}
           />
         ) : null}
       </div>

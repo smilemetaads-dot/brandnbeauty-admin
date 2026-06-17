@@ -70,6 +70,7 @@ type DashboardStatsPayload = {
 };
 
 type DashboardStatsResponse = {
+  chart_data?: unknown;
   stats?: DashboardStatsPayload;
   success?: boolean;
 };
@@ -95,6 +96,8 @@ const dashboardShortcuts = [
 
 const DASHBOARD_STATS_ENDPOINT =
   "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_dashboard_stats.php";
+const DASHBOARD_CHART_STATS_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/dashboard_stats.php";
 const ADMIN_PRODUCTS_ENDPOINT =
   "http://localhost/BrandnBeauty/brandnbeauty-backend/php/admin_products.php";
 
@@ -129,7 +132,14 @@ function normalizeRevenueTrend(value: unknown): DashboardRevenueTrend | null {
 
   const trend = value as Record<string, unknown>;
   const date = String(trend.date ?? "");
-  const label = String(trend.label ?? date);
+  const label = String(
+    trend.label ??
+      (date
+        ? new Intl.DateTimeFormat("en", { weekday: "short" }).format(
+            new Date(`${date}T00:00:00`),
+          )
+        : ""),
+  );
 
   if (!date && !label) return null;
 
@@ -170,6 +180,18 @@ function normalizeDashboardStats(value: unknown): Pick<
     totalOrders: toNumber(stats.total_orders),
     totalRevenue: toNumber(stats.total_revenue),
   };
+}
+
+function normalizeDashboardChart(value: unknown): DashboardRevenueTrend[] {
+  if (!value || typeof value !== "object") return [];
+
+  const payload = value as DashboardStatsResponse;
+
+  return Array.isArray(payload.chart_data)
+    ? payload.chart_data
+        .map(normalizeRevenueTrend)
+        .filter((trend): trend is DashboardRevenueTrend => Boolean(trend))
+    : [];
 }
 
 function normalizeRecentProduct(value: unknown): DashboardRecentProduct | null {
@@ -307,8 +329,12 @@ export default function Home() {
 
     async function loadDashboardStats() {
       try {
-        const [statsResponse, productsResponse] = await Promise.all([
+        const [statsResponse, chartResponse, productsResponse] = await Promise.all([
           fetch(DASHBOARD_STATS_ENDPOINT, {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+          fetch(DASHBOARD_CHART_STATS_ENDPOINT, {
             cache: "no-store",
             signal: controller.signal,
           }),
@@ -324,6 +350,9 @@ export default function Home() {
 
         const statsPayload = (await statsResponse.json()) as unknown;
         const dashboardStats = normalizeDashboardStats(statsPayload);
+        const dashboardChart = chartResponse.ok
+          ? normalizeDashboardChart((await chartResponse.json()) as unknown)
+          : [];
         const dashboardProducts = productsResponse.ok
           ? normalizeDashboardProducts((await productsResponse.json()) as unknown)
           : normalizeDashboardProducts([]);
@@ -331,6 +360,9 @@ export default function Home() {
         setSummary((currentSummary) => ({
           ...currentSummary,
           ...dashboardStats,
+          dailyRevenueTrends: dashboardChart.length
+            ? dashboardChart
+            : dashboardStats.dailyRevenueTrends,
           ...dashboardProducts,
         }));
       } catch (error) {

@@ -52,6 +52,8 @@ const UPDATE_PRODUCT_ENDPOINT =
   "http://localhost/BrandnBeauty/brandnbeauty-backend/php/update_product.php";
 const ADMIN_PRODUCTS_ENDPOINT =
   "http://localhost/BrandnBeauty/brandnbeauty-backend/php/admin_products.php";
+const DELETE_CATALOG_ITEM_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/delete_catalog_item.php";
 
 function toNumber(value: unknown) {
   const numberValue = Number(value);
@@ -346,6 +348,8 @@ function DetailRow({ label, value }: { label: string; value: ReactNode }) {
 
 export function RealProductsPage({ products: initialProducts = [] }: RealProductsPageProps) {
   const [products, setProducts] = useState<ProductRecord[]>(initialProducts);
+  const [deleteMessage, setDeleteMessage] = useState("");
+  const [deletingProductIds, setDeletingProductIds] = useState<string[]>([]);
 
   const loadProducts = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -397,9 +401,54 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
   ).length;
   const selectedProduct = products[0] ?? null;
 
+  async function handleDeleteProduct(productId: string) {
+    if (!window.confirm("Delete this product from the catalog?")) {
+      return;
+    }
+
+    setDeletingProductIds((current) => Array.from(new Set([...current, productId])));
+    setDeleteMessage("");
+
+    try {
+      const response = await fetch(DELETE_CATALOG_ITEM_ENDPOINT, {
+        body: JSON.stringify({
+          id: productId,
+          type: "product",
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const result = (await response.json().catch(() => null)) as {
+        message?: string;
+        success?: boolean;
+      } | null;
+
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message ?? "Product could not be deleted.");
+      }
+
+      setProducts((current) => current.filter((product) => product.id !== productId));
+      setDeleteMessage(result.message ?? "Item deleted successfully");
+    } catch (error) {
+      setDeleteMessage(
+        error instanceof Error ? error.message : "Product could not be deleted.",
+      );
+    } finally {
+      setDeletingProductIds((current) => current.filter((id) => id !== productId));
+    }
+  }
+
   return (
     <AdminShell>
       <div className="space-y-6">
+        {deleteMessage ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-700">
+            {deleteMessage}
+          </div>
+        ) : null}
+
         <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-5 p-6 xl:flex-row xl:items-center xl:justify-between">
             <div>
@@ -630,11 +679,14 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                               Edit
                             </Link>
                             <button
-                              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500 opacity-60"
-                              disabled
+                              className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                              disabled={deletingProductIds.includes(product.id)}
+                              onClick={() => handleDeleteProduct(product.id)}
                               type="button"
                             >
-                              View
+                              {deletingProductIds.includes(product.id)
+                                ? "Deleting..."
+                                : "Delete"}
                             </button>
                             <StatusControl
                               compact

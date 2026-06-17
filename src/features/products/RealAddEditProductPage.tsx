@@ -57,10 +57,30 @@ function TableHead({ children, className = "" }) {
   return <thead className={`sticky top-0 z-10 bg-stone-50 text-slate-500 ${className}`}>{children}</thead>;
 }
 
-const ADMIN_PRODUCTS_ENDPOINT = "http://localhost/BrandnBeauty/brandnbeauty-backend/php/admin_products.php";
+const ADD_EDIT_PRODUCT_ENDPOINT = "http://localhost/BrandnBeauty/brandnbeauty-backend/php/add_edit_product.php";
+const UPLOAD_MEDIA_ENDPOINT = "http://localhost/BrandnBeauty/brandnbeauty-backend/php/upload_media.php";
+const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024;
+
+function readProductField(product, keys, fallback = "") {
+  if (!product || typeof product !== "object") {
+    return fallback;
+  }
+
+  for (const key of keys) {
+    const value = product[key];
+
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      return String(value);
+    }
+  }
+
+  return fallback;
+}
 
 export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   const router = useRouter();
+  const editingProduct = _props.product && typeof _props.product === "object" ? _props.product : null;
+  const editingProductId = readProductField(editingProduct, ["id", "product_id"], "");
   const [trackStock, setTrackStock] = useState(true);
   const [featured, setFeatured] = useState(true);
   const [freeDelivery, setFreeDelivery] = useState(false);
@@ -69,19 +89,19 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   const [productType, setProductType] = useState("Single Product");
   const [stockRule, setStockRule] = useState("Sellable");
   const [outOfStockBehavior, setOutOfStockBehavior] = useState("Show with Notify Me");
-  const [status, setStatus] = useState("Draft");
-  const [productName, setProductName] = useState("");
+  const [status, setStatus] = useState(readProductField(editingProduct, ["status"], "Draft") === "active" ? "Published" : "Draft");
+  const [productName, setProductName] = useState(readProductField(editingProduct, ["product_name", "name"], ""));
   const [brandList, setBrandList] = useState(["BrandnBeauty", "The Derma Plus", "COSRX", "Some By Mi", "Beauty of Joseon", "Simple"]);
   const [brand, setBrand] = useState("BrandnBeauty");
   const [category, setCategory] = useState("Skincare");
   const [subcategory, setSubcategory] = useState("Face Wash");
   const [concern, setConcern] = useState("Acne");
   const [skuCounter, setSkuCounter] = useState(1001);
-  const [costPrice, setCostPrice] = useState("420");
-  const [regularPrice, setRegularPrice] = useState("1290");
-  const [salePrice, setSalePrice] = useState("990");
-  const [stockQty, setStockQty] = useState("24");
-  const [lowStockAlert, setLowStockAlert] = useState("6");
+  const [costPrice, setCostPrice] = useState(readProductField(editingProduct, ["purchase_cost", "cost_price", "cost"], "420"));
+  const [regularPrice, setRegularPrice] = useState(readProductField(editingProduct, ["price", "regular_price"], "1290"));
+  const [salePrice, setSalePrice] = useState(readProductField(editingProduct, ["sale_price", "price"], "990"));
+  const [stockQty, setStockQty] = useState(readProductField(editingProduct, ["stock_quantity", "stock", "quantity"], "24"));
+  const [lowStockAlert, setLowStockAlert] = useState(readProductField(editingProduct, ["low_stock_threshold", "low_stock_limit", "reorder_level"], "6"));
   const [weight, setWeight] = useState("100");
   const [courierCost, setCourierCost] = useState("80");
   const [duplicateCheck, setDuplicateCheck] = useState(true);
@@ -98,10 +118,12 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   const [mainImageReady, setMainImageReady] = useState(false);
   const [mainImageFile, setMainImageFile] = useState(null);
   const [galleryImages, setGalleryImages] = useState(["Angle 1", "Texture", "Box", "Routine"]);
+  const [imageUrl, setImageUrl] = useState(readProductField(editingProduct, ["image_url", "image"], ""));
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [productLabel, setProductLabel] = useState("Bestseller");
   const [productBadge, setProductBadge] = useState("Authentic Product");
-  const [shortDescription, setShortDescription] = useState("");
-  const [fullDescription, setFullDescription] = useState("");
+  const [shortDescription, setShortDescription] = useState(readProductField(editingProduct, ["short_description"], ""));
+  const [fullDescription, setFullDescription] = useState(readProductField(editingProduct, ["description"], ""));
   const [howToUse, setHowToUse] = useState("");
   const [ingredients, setIngredients] = useState("");
   const [productDetails, setProductDetails] = useState("");
@@ -174,6 +196,11 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
       return;
     }
 
+    if (isUploadingImage) {
+      showActionToast("Wait for image upload to finish");
+      return;
+    }
+
     if (!productName.trim()) {
       showActionToast("Product name is required");
       return;
@@ -193,16 +220,23 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
     setIsSavingProduct(true);
 
     const payload = {
+      ...(editingProductId ? { id: editingProductId } : {}),
       category,
-      image_url: "",
+      description: [shortDescription, fullDescription].filter(Boolean).join("\n\n"),
+      image_url: imageUrl,
+      low_stock_threshold: String(lowStockAlert || "0"),
       name: productName.trim(),
+      product_name: productName.trim(),
       price: String(previewSalePrice),
+      purchase_cost: String(previewCostPrice || "0"),
+      sale_price: String(previewSalePrice || "0"),
       status: nextStatus === "Published" ? "active" : "draft",
       stock: String(previewStockQty),
+      stock_quantity: String(previewStockQty),
     };
 
     try {
-      const response = await fetch(ADMIN_PRODUCTS_ENDPOINT, {
+      const response = await fetch(ADD_EDIT_PRODUCT_ENDPOINT, {
         body: JSON.stringify(payload),
         headers: {
           "Content-Type": "application/json",
@@ -218,6 +252,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
       setStatus(nextStatus === "Published" ? "Published" : "Draft");
       setSaveStatus(nextStatus === "Published" ? "Published just now" : "Saved just now");
       showActionToast(result.message || "Product saved successfully");
+      router.refresh();
       router.push("/products");
     } catch (error) {
       setSaveStatus("Save failed");
@@ -231,11 +266,62 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
     saveProductToBackend("Draft");
   };
 
-  const handleMainImageChange = (event) => {
+  const handleImageUpload = async (event) => {
     const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setMainImageFile(null);
+      setMainImageReady(false);
+      setImageUrl("");
+      showActionToast("Main image removed");
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+      event.target.value = "";
+      showActionToast("Image is too large. Maximum size is 5MB.");
+      return;
+    }
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+
+    if (!allowedTypes.includes(file.type)) {
+      event.target.value = "";
+      showActionToast("Only JPG, PNG, and WEBP images are allowed.");
+      return;
+    }
+
     setMainImageFile(file);
-    setMainImageReady(Boolean(file));
-    showActionToast(file ? "Main image selected" : "Main image removed");
+    setMainImageReady(false);
+    setIsUploadingImage(true);
+    showActionToast("Uploading main image...");
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const response = await fetch(UPLOAD_MEDIA_ENDPOINT, {
+        body: formData,
+        method: "POST",
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success || !data.image_url) {
+        throw new Error(data.message || "Image upload failed.");
+      }
+
+      setImageUrl(data.image_url);
+      setMainImageReady(true);
+      showActionToast("Main image uploaded successfully");
+    } catch (error) {
+      setMainImageFile(null);
+      setMainImageReady(false);
+      setImageUrl("");
+      event.target.value = "";
+      showActionToast(error instanceof Error ? error.message : "Image upload failed.");
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   const generateAutomationContent = () => {
@@ -293,9 +379,9 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
             <div className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ${saveStatus.includes("Saved") || saveStatus.includes("Published") ? "bg-emerald-50 text-emerald-700" : saveStatus.includes("Saving") ? "bg-amber-50 text-amber-700" : "bg-stone-100 text-slate-600"}`}>{saveStatus}</div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={saveDraft} disabled={isSavingProduct} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60">{isSavingProduct ? "Saving..." : "Save Draft"}</button>
+            <button type="button" onClick={saveDraft} disabled={isSavingProduct || isUploadingImage} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60">{isSavingProduct ? "Saving..." : isUploadingImage ? "Uploading image..." : "Save Draft"}</button>
             <button onClick={() => showActionToast("Preview opened")} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700">Preview</button>
-            <button type="button" onClick={() => setPublishModalOpen(true)} disabled={isSavingProduct} className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">Publish</button>
+            <button type="button" onClick={() => setPublishModalOpen(true)} disabled={isSavingProduct || isUploadingImage} className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">Publish</button>
           </div>
         </div>
       </div>
@@ -330,7 +416,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div><h2 className="text-xl font-bold tracking-tight">Content & Media</h2></div><div className="flex items-center gap-3 rounded-2xl bg-stone-50 px-4 py-3"><div className="h-2.5 w-28 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-[#5E7F85]" style={{ width: `${contentScore}%` }} /></div><b className="text-sm text-[#5E7F85]">{contentScore}%</b></div></div>
             <div className="mt-5 rounded-[1.7rem] border border-[#5E7F85]/15 bg-gradient-to-br from-[#5E7F85]/10 via-white to-stone-50 p-5 shadow-sm"><div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between"><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-lg font-black text-slate-900">AI Content Studio</h3><Badge tone="brand">Automation Ready</Badge></div><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Generate product content, SEO, FAQ, routine copy and visible result text from the product master data. Human review required before publish.</p></div><button type="button" onClick={generateAutomationContent} className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white shadow-sm">Generate All Content</button></div><div className="mt-5 grid gap-3 md:grid-cols-3"><label className="space-y-2"><div className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">Generation Mode</div><select value={aiContentMode} onChange={(event) => setAiContentMode(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none"><option>Conversion + SEO</option><option>SEO Only</option><option>PDP Content Only</option><option>FAQ + Routine Only</option></select></label><label className="space-y-2"><div className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">Language Style</div><select value={aiContentLanguage} onChange={(event) => setAiContentLanguage(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none"><option>English + Bangla Friendly</option><option>English Only</option><option>Bangla + English Mix</option></select></label><label className="space-y-2"><div className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">Target Customer</div><input value={aiTargetCustomer} onChange={(event) => setAiTargetCustomer(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none" /></label></div></div>
-            <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_340px]"><div className="space-y-5"><div className={`overflow-hidden rounded-[1.7rem] border bg-white shadow-sm ${mainImageReady ? "border-emerald-200 ring-2 ring-emerald-100" : "border-slate-200"}`}><div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><div><div className="text-sm font-bold text-slate-900">Main Image</div><div className="mt-1 text-xs text-slate-500">Large square product preview for storefront and PDP hero.</div></div><Badge tone={mainImageReady ? "good" : "warn"}>{mainImageReady ? "Ready" : "Missing"}</Badge></div><div className="p-5"><div className={`group relative flex aspect-square w-full flex-col items-center justify-center overflow-hidden rounded-[1.5rem] border border-dashed text-center transition ${mainImageReady ? "border-emerald-300 bg-emerald-50" : "border-slate-300 bg-stone-50 hover:border-[#5E7F85]/40 hover:bg-[#5E7F85]/5"}`}><div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold text-slate-600 shadow-sm">1:1 Preview</div><div className="flex h-20 w-20 items-center justify-center rounded-[1.4rem] bg-white text-3xl text-[#5E7F85] shadow-sm">▧</div><div className="mt-5 text-base font-bold text-slate-900">{mainImageFile ? mainImageFile.name : "Drop main product image here"}</div><div className="mt-2 max-w-xs text-xs leading-5 text-slate-500">Use JPG, PNG, or WEBP. Max upload size is 5MB.</div><label className="mt-5 cursor-pointer rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleMainImageChange} className="sr-only" />{mainImageFile ? "Replace Image" : "Upload Image"}</label>{mainImageFile && <button type="button" onClick={() => { setMainImageFile(null); setMainImageReady(false); showActionToast("Main image removed"); }} className="mt-3 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">Remove</button>}</div></div></div><div className="overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white shadow-sm"><div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-sm font-bold text-slate-900">Gallery Images</div><div className="mt-1 text-xs text-slate-500">Equal square cards with drag, replace and remove controls.</div></div><button type="button" onClick={() => setGalleryImages((current) => [...current, `Gallery ${current.length + 1}`])} className="rounded-2xl bg-[#5E7F85]/10 px-4 py-2.5 text-xs font-bold text-[#5E7F85]">+ Add Gallery Image</button></div><div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-3">{galleryImages.map((item, index) => <div key={`${item}-${index}`} className="rounded-[1.25rem] border bg-white p-3 transition hover:-translate-y-0.5 hover:shadow-md"><div className="flex aspect-square items-center justify-center rounded-2xl bg-stone-50 text-xs font-bold text-slate-400">{item}</div><div className="mt-3 flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">Image {index + 1}</span><button type="button" onClick={() => setGalleryImages((current) => current.filter((_, i) => i !== index))} className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700">Remove</button></div></div>)}</div></div></div><div className="rounded-[1.7rem] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-sm font-bold text-slate-900">Live PDP Preview</div><div className="mt-4 rounded-3xl bg-stone-50 p-4"><div className="flex h-44 items-center justify-center rounded-3xl bg-white text-xs font-bold text-slate-400">{mainImageFile ? mainImageFile.name : "Product Image"}</div><div className="mt-4 text-lg font-black text-slate-900">{productName || "Product Name Preview"}</div><div className="mt-1 text-xs font-semibold text-[#5E7F85]">{brand}</div><div className="mt-3 flex items-center gap-2"><span className="text-xl font-black text-slate-900">৳{previewSalePrice}</span><span className="text-sm text-slate-400 line-through">৳{previewRegularPrice}</span><Badge tone="warn">{discount}% OFF</Badge></div><div className="mt-3 flex flex-wrap gap-2">{trustBadges.map((badge) => <Badge key={badge} tone="brand">{badge}</Badge>)}</div></div></div></div>
+            <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_340px]"><div className="space-y-5"><div className={`overflow-hidden rounded-[1.7rem] border bg-white shadow-sm ${mainImageReady ? "border-emerald-200 ring-2 ring-emerald-100" : "border-slate-200"}`}><div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><div><div className="text-sm font-bold text-slate-900">Main Image</div><div className="mt-1 text-xs text-slate-500">Large square product preview for storefront and PDP hero.</div></div><Badge tone={mainImageReady ? "good" : "warn"}>{isUploadingImage ? "Uploading" : mainImageReady ? "Ready" : "Missing"}</Badge></div><div className="p-5"><div className={`group relative flex aspect-square w-full flex-col items-center justify-center overflow-hidden rounded-[1.5rem] border border-dashed text-center transition ${mainImageReady ? "border-emerald-300 bg-emerald-50" : "border-slate-300 bg-stone-50 hover:border-[#5E7F85]/40 hover:bg-[#5E7F85]/5"}`}><div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold text-slate-600 shadow-sm">1:1 Preview</div><div className="flex h-20 w-20 items-center justify-center rounded-[1.4rem] bg-white text-3xl text-[#5E7F85] shadow-sm">▧</div><div className="mt-5 text-base font-bold text-slate-900">{mainImageFile ? mainImageFile.name : "Drop main product image here"}</div>{imageUrl && <div className="mt-2 max-w-xs truncate rounded-full bg-white px-3 py-1 text-[11px] font-bold text-emerald-700">{imageUrl}</div>}<div className="mt-2 max-w-xs text-xs leading-5 text-slate-500">Use JPG, PNG, or WEBP. Max upload size is 5MB.</div><label className={`mt-5 rounded-2xl px-5 py-3 text-sm font-semibold text-white ${isUploadingImage ? "cursor-not-allowed bg-slate-300" : "cursor-pointer bg-[#5E7F85]"}`}><input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageUpload} disabled={isUploadingImage} className="sr-only" />{isUploadingImage ? "Uploading..." : mainImageFile ? "Replace Image" : "Upload Image"}</label>{mainImageFile && <button type="button" disabled={isUploadingImage} onClick={() => { setMainImageFile(null); setMainImageReady(false); setImageUrl(""); showActionToast("Main image removed"); }} className="mt-3 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60">Remove</button>}</div></div></div><div className="overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white shadow-sm"><div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-sm font-bold text-slate-900">Gallery Images</div><div className="mt-1 text-xs text-slate-500">Equal square cards with drag, replace and remove controls.</div></div><button type="button" onClick={() => setGalleryImages((current) => [...current, `Gallery ${current.length + 1}`])} className="rounded-2xl bg-[#5E7F85]/10 px-4 py-2.5 text-xs font-bold text-[#5E7F85]">+ Add Gallery Image</button></div><div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-3">{galleryImages.map((item, index) => <div key={`${item}-${index}`} className="rounded-[1.25rem] border bg-white p-3 transition hover:-translate-y-0.5 hover:shadow-md"><div className="flex aspect-square items-center justify-center rounded-2xl bg-stone-50 text-xs font-bold text-slate-400">{item}</div><div className="mt-3 flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">Image {index + 1}</span><button type="button" onClick={() => setGalleryImages((current) => current.filter((_, i) => i !== index))} className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700">Remove</button></div></div>)}</div></div></div><div className="rounded-[1.7rem] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-sm font-bold text-slate-900">Live PDP Preview</div><div className="mt-4 rounded-3xl bg-stone-50 p-4"><div className="flex h-44 items-center justify-center overflow-hidden rounded-3xl bg-white text-xs font-bold text-slate-400">{imageUrl ? <img src={imageUrl} alt="" className="h-full w-full object-cover" /> : mainImageFile ? mainImageFile.name : "Product Image"}</div><div className="mt-4 text-lg font-black text-slate-900">{productName || "Product Name Preview"}</div><div className="mt-1 text-xs font-semibold text-[#5E7F85]">{brand}</div><div className="mt-3 flex items-center gap-2"><span className="text-xl font-black text-slate-900">৳{previewSalePrice}</span><span className="text-sm text-slate-400 line-through">৳{previewRegularPrice}</span><Badge tone="warn">{discount}% OFF</Badge></div><div className="mt-3 flex flex-wrap gap-2">{trustBadges.map((badge) => <Badge key={badge} tone="brand">{badge}</Badge>)}</div></div></div></div>
             <div className="mt-5 grid gap-4 md:grid-cols-2"><label className="space-y-2"><div className="text-sm font-medium text-slate-600">Short Description</div><textarea value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2"><div className="text-sm font-medium text-slate-600">How to Use</div><textarea value={howToUse} onChange={(e) => setHowToUse(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2 md:col-span-2"><div className="text-sm font-medium text-slate-600">Full Description</div><textarea value={fullDescription} onChange={(e) => setFullDescription(e.target.value)} className="h-32 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2 md:col-span-2"><div className="text-sm font-medium text-slate-600">Ingredients</div><textarea value={ingredients} onChange={(e) => setIngredients(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label></div>
           </div>
 
@@ -344,7 +430,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
         </div>
       </div>
 
-      {publishModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"><div className="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-4"><div><div className="text-sm font-medium text-slate-500">Publish Check</div><h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Ready to Publish?</h3></div><button type="button" onClick={() => setPublishModalOpen(false)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold">✕</button></div><div className="mt-6 grid gap-3">{publishChecks.map((check) => <div key={check.label} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${check.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{check.ok ? "✅" : "⚠"} {check.label}</div>)}</div><div className="mt-6 grid gap-3 sm:grid-cols-2"><button type="button" onClick={() => setPublishModalOpen(false)} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold">Cancel</button><button type="button" disabled={isSavingProduct} onClick={() => { if (publishBlocked) { showActionToast("Fix publish checklist before publishing"); setPublishModalOpen(false); } else { setPublishModalOpen(false); saveProductToBackend("Published"); } }} className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">{isSavingProduct ? "Publishing..." : "Publish"}</button></div></div></div>}
+      {publishModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"><div className="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-4"><div><div className="text-sm font-medium text-slate-500">Publish Check</div><h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Ready to Publish?</h3></div><button type="button" onClick={() => setPublishModalOpen(false)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold">✕</button></div><div className="mt-6 grid gap-3">{publishChecks.map((check) => <div key={check.label} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${check.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{check.ok ? "✅" : "⚠"} {check.label}</div>)}</div><div className="mt-6 grid gap-3 sm:grid-cols-2"><button type="button" onClick={() => setPublishModalOpen(false)} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold">Cancel</button><button type="button" disabled={isSavingProduct || isUploadingImage} onClick={() => { if (isUploadingImage) { showActionToast("Wait for image upload to finish"); return; } if (publishBlocked) { showActionToast("Fix publish checklist before publishing"); setPublishModalOpen(false); } else { setPublishModalOpen(false); saveProductToBackend("Published"); } }} className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">{isSavingProduct ? "Publishing..." : isUploadingImage ? "Uploading image..." : "Publish"}</button></div></div></div>}
       </div>
     </AdminShell>
   );
