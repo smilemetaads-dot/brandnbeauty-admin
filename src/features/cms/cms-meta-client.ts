@@ -1,3 +1,27 @@
+import { bnbApiUrl } from "@/lib/bnb-api";
+
+export type HomepageHeroBanner = {
+  cta_text: string;
+  id: string;
+  image_url: string | null;
+  link: string;
+  sort_order: number;
+  status: string;
+  subtitle: string;
+  title: string;
+};
+
+export type HomepageOfferCard = {
+  discount: string;
+  id: string;
+  image_url: string | null;
+  link: string;
+  sort_order: number;
+  status: string;
+  subtitle: string;
+  title: string;
+};
+
 export type CmsBanner = {
   id: string;
   image_url: string | null;
@@ -30,8 +54,19 @@ type CmsMetaResponse = Partial<CmsMeta> & {
   success?: boolean;
 };
 
-export const CMS_META_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_cms_meta.php";
+export type HomepageCmsData = {
+  editor_pick_product_ids: string;
+  hero_banners: HomepageHeroBanner[];
+  offer_cards: HomepageOfferCard[];
+};
+
+type HomepageCmsResponse = Partial<HomepageCmsData> & {
+  success?: boolean;
+};
+
+export const CMS_META_ENDPOINT = bnbApiUrl("get_cms_meta.php");
+export const HOMEPAGE_CMS_ENDPOINT = bnbApiUrl("get_homepage_cms.php");
+export const UPDATE_HOMEPAGE_CMS_ENDPOINT = bnbApiUrl("update_homepage_cms.php");
 
 export const defaultCmsMeta: CmsMeta = {
   analytics_summary: {
@@ -41,6 +76,12 @@ export const defaultCmsMeta: CmsMeta = {
   },
   banners: [],
   reviews: [],
+};
+
+export const defaultHomepageCmsData: HomepageCmsData = {
+  editor_pick_product_ids: "",
+  hero_banners: [],
+  offer_cards: [],
 };
 
 export async function fetchCmsMeta(signal?: AbortSignal): Promise<CmsMeta> {
@@ -61,5 +102,28 @@ export async function fetchCmsMeta(signal?: AbortSignal): Promise<CmsMeta> {
     },
     banners: Array.isArray(payload.banners) ? payload.banners : [],
     reviews: Array.isArray(payload.reviews) ? payload.reviews : [],
+  };
+}
+
+export async function fetchHomepageCms(signal?: AbortSignal): Promise<HomepageCmsData> {
+  const response = await fetch(HOMEPAGE_CMS_ENDPOINT, {
+    cache: "no-store",
+    signal,
+  });
+  const payload = (await response.json()) as HomepageCmsResponse;
+
+  if (!response.ok || payload.success === false) {
+    throw new Error("Homepage CMS request failed.");
+  }
+
+  return {
+    editor_pick_product_ids:
+      typeof payload.editor_pick_product_ids === "string"
+        ? payload.editor_pick_product_ids
+        : "",
+    hero_banners: Array.isArray(payload.hero_banners)
+      ? payload.hero_banners
+      : [],
+    offer_cards: Array.isArray(payload.offer_cards) ? payload.offer_cards : [],
   };
 }

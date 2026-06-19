@@ -5,9 +5,16 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import {
   defaultCmsMeta,
+  defaultHomepageCmsData,
   fetchCmsMeta,
+  fetchHomepageCms,
+  UPDATE_HOMEPAGE_CMS_ENDPOINT,
   type CmsMeta,
+  type HomepageCmsData,
+  type HomepageHeroBanner,
+  type HomepageOfferCard,
 } from "@/features/cms/cms-meta-client";
+import { adminAuthHeaders } from "@/lib/admin-auth";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
@@ -82,10 +89,32 @@ const previewProducts = [
 ];
 
 const safetyItems = [
-  "No homepage CMS save action exists on this route yet.",
-  "No CMS write action, localStorage or storefront sync was added.",
-  "Save, publish, reorder and preview controls stay disabled until real actions exist.",
+  "Homepage hero, offer and editor pick saves now use the local PHP/MySQL CMS endpoint.",
+  "If CMS data is missing, the storefront keeps the original static fallback content.",
+  "Category, concern, brand and product-feed layouts are unchanged.",
 ];
+
+const defaultHeroDraft: HomepageHeroBanner = {
+  cta_text: "Shop Now",
+  id: "1",
+  image_url: "",
+  link: "/products",
+  sort_order: 1,
+  status: "active",
+  subtitle: "Curated skincare picks for healthy everyday routines.",
+  title: "Glow Essentials",
+};
+
+const defaultOfferDraft: HomepageOfferCard = {
+  discount: "Limited Offer",
+  id: "1",
+  image_url: "",
+  link: "/products?offer=special-offer",
+  sort_order: 1,
+  status: "active",
+  subtitle: "Fresh deals for your everyday routine.",
+  title: "Special Offer",
+};
 
 function Badge({
   children,
@@ -187,12 +216,44 @@ function SectionStatusRow({
 
 export function RealHomepageCmsPage() {
   const [cmsMeta, setCmsMeta] = useState<CmsMeta>(defaultCmsMeta);
+  const [homepageCms, setHomepageCms] = useState<HomepageCmsData>(
+    defaultHomepageCmsData,
+  );
+  const [heroDraft, setHeroDraft] =
+    useState<HomepageHeroBanner>(defaultHeroDraft);
+  const [offerDraft, setOfferDraft] =
+    useState<HomepageOfferCard>(defaultOfferDraft);
+  const [editorPickIds, setEditorPickIds] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [cmsMessage, setCmsMessage] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
 
-    fetchCmsMeta(controller.signal)
-      .then(setCmsMeta)
+    Promise.all([
+      fetchCmsMeta(controller.signal),
+      fetchHomepageCms(controller.signal),
+    ])
+      .then(([meta, homepage]) => {
+        setCmsMeta(meta);
+        setHomepageCms(homepage);
+
+        if (homepage.hero_banners[0]) {
+          setHeroDraft({
+            ...defaultHeroDraft,
+            ...homepage.hero_banners[0],
+            image_url: homepage.hero_banners[0].image_url ?? "",
+          });
+        }
+        if (homepage.offer_cards[0]) {
+          setOfferDraft({
+            ...defaultOfferDraft,
+            ...homepage.offer_cards[0],
+            image_url: homepage.offer_cards[0].image_url ?? "",
+          });
+        }
+        setEditorPickIds(homepage.editor_pick_product_ids);
+      })
       .catch((error) => {
         if (!controller.signal.aborted) {
           console.error("Homepage CMS metadata could not be loaded.", error);
@@ -201,6 +262,45 @@ export function RealHomepageCmsPage() {
 
     return () => controller.abort();
   }, []);
+
+  const saveHomepageCms = async () => {
+    setIsSaving(true);
+    setCmsMessage("");
+
+    try {
+      const response = await fetch(UPDATE_HOMEPAGE_CMS_ENDPOINT, {
+        body: JSON.stringify({
+          editor_pick_product_ids: editorPickIds,
+          hero_banner: heroDraft,
+          offer_card: offerDraft,
+        }),
+        headers: adminAuthHeaders({
+          "Content-Type": "application/json",
+        }),
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        message?: string;
+        success?: boolean;
+      };
+
+      if (!response.ok || payload.success === false) {
+        throw new Error(payload.message || "Homepage CMS save failed.");
+      }
+
+      const freshCms = await fetchHomepageCms();
+      setHomepageCms(freshCms);
+      setCmsMessage(payload.message || "Homepage CMS saved.");
+    } catch (error) {
+      setCmsMessage(
+        error instanceof Error
+          ? error.message
+          : "Homepage CMS could not be saved.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const liveStats = useMemo(
     () =>
@@ -226,6 +326,17 @@ export function RealHomepageCmsPage() {
     "Homepage Banner",
     "Live",
   ]);
+  const liveHomepageSections = homepageCms.hero_banners.map((banner, index) => ({
+    description: banner.subtitle,
+    label: banner.title,
+    placement: index === 0 ? "Hero" : "Campaign",
+    status: banner.status === "active" ? "Live" : "Inactive",
+  }));
+  const homepageProductRows = editorPickIds
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .map((id) => ["Product ID " + id, "CMS", "Selected", "Editor Picks", "Live"]);
 
   return (
     <AdminShell>
@@ -248,7 +359,7 @@ export function RealHomepageCmsPage() {
               <div className="mt-6 flex flex-wrap gap-2">
                 <Badge tone="default">Live metadata</Badge>
                 <Badge tone="default">Admin shell preserved</Badge>
-                <Badge tone="default">No storefront writes</Badge>
+                <Badge tone="default">Storefront CMS active</Badge>
               </div>
             </div>
 
@@ -269,13 +380,25 @@ export function RealHomepageCmsPage() {
                   Current route previously rendered the shared placeholder.
                 </div>
                 <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
-                  Production save/publish controls remain disabled.
+                  Hero, offer and editor pick saves are live.
                 </div>
               </div>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <DisabledButton primary>Save Homepage</DisabledButton>
+                <button
+                  className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                  disabled={isSaving}
+                  onClick={saveHomepageCms}
+                  type="button"
+                >
+                  {isSaving ? "Saving..." : "Save Homepage"}
+                </button>
                 <DisabledButton>Preview Storefront</DisabledButton>
               </div>
+              {cmsMessage ? (
+                <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm">
+                  {cmsMessage}
+                </div>
+              ) : null}
             </div>
           </div>
         </section>
@@ -308,7 +431,12 @@ export function RealHomepageCmsPage() {
                 </div>
               </div>
               <div>
-                {(liveSectionBlocks.length ? liveSectionBlocks : sectionBlocks).map((item) => (
+                {(liveHomepageSections.length
+                  ? liveHomepageSections
+                  : liveSectionBlocks.length
+                    ? liveSectionBlocks
+                    : sectionBlocks
+                ).map((item) => (
                   <SectionStatusRow key={item.label} {...item} />
                 ))}
               </div>
@@ -344,7 +472,12 @@ export function RealHomepageCmsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(liveProductRows.length ? liveProductRows : productRows).map((row) => (
+                    {(homepageProductRows.length
+                      ? homepageProductRows
+                      : liveProductRows.length
+                        ? liveProductRows
+                        : productRows
+                    ).map((row) => (
                       <tr
                         className="border-t border-slate-100 bg-white transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85]"
                         key={row[0]}
@@ -375,6 +508,215 @@ export function RealHomepageCmsPage() {
           </div>
 
           <aside className="space-y-6">
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="text-sm font-medium text-slate-500">
+                Homepage CMS Editor
+              </div>
+              <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
+                Live Campaign Controls
+              </h3>
+              <div className="mt-5 space-y-4">
+                <label className="block text-sm font-semibold text-slate-700">
+                  Hero Title
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                    onChange={(event) =>
+                      setHeroDraft((current) => ({
+                        ...current,
+                        title: event.target.value,
+                      }))
+                    }
+                    value={heroDraft.title}
+                  />
+                </label>
+                <label className="block text-sm font-semibold text-slate-700">
+                  Hero Subtitle
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                    onChange={(event) =>
+                      setHeroDraft((current) => ({
+                        ...current,
+                        subtitle: event.target.value,
+                      }))
+                    }
+                    value={heroDraft.subtitle}
+                  />
+                </label>
+                <label className="block text-sm font-semibold text-slate-700">
+                  Hero CTA / Link / Image
+                  <div className="mt-2 grid gap-2">
+                    <input
+                      className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                      onChange={(event) =>
+                        setHeroDraft((current) => ({
+                          ...current,
+                          cta_text: event.target.value,
+                        }))
+                      }
+                      placeholder="CTA text"
+                      value={heroDraft.cta_text}
+                    />
+                    <input
+                      className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                      onChange={(event) =>
+                        setHeroDraft((current) => ({
+                          ...current,
+                          link: event.target.value,
+                        }))
+                      }
+                      placeholder="/products"
+                      value={heroDraft.link}
+                    />
+                    <input
+                      className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                      onChange={(event) =>
+                        setHeroDraft((current) => ({
+                          ...current,
+                          image_url: event.target.value,
+                        }))
+                      }
+                      placeholder="/hero-slide-1.jpg"
+                      value={heroDraft.image_url ?? ""}
+                    />
+                  </div>
+                </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Hero Status
+                    <select
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                      onChange={(event) =>
+                        setHeroDraft((current) => ({
+                          ...current,
+                          status: event.target.value,
+                        }))
+                      }
+                      value={heroDraft.status}
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="draft">Draft</option>
+                    </select>
+                  </label>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Hero Sort
+                    <input
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                      min={0}
+                      onChange={(event) =>
+                        setHeroDraft((current) => ({
+                          ...current,
+                          sort_order: Number(event.target.value) || 0,
+                        }))
+                      }
+                      type="number"
+                      value={heroDraft.sort_order}
+                    />
+                  </label>
+                </div>
+                <label className="block text-sm font-semibold text-slate-700">
+                  Offer Title
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                    onChange={(event) =>
+                      setOfferDraft((current) => ({
+                        ...current,
+                        title: event.target.value,
+                      }))
+                    }
+                    value={offerDraft.title}
+                  />
+                </label>
+                <label className="block text-sm font-semibold text-slate-700">
+                  Offer Subtitle / Link / Image
+                  <div className="mt-2 grid gap-2">
+                    <input
+                      className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                      onChange={(event) =>
+                        setOfferDraft((current) => ({
+                          ...current,
+                          subtitle: event.target.value,
+                        }))
+                      }
+                      value={offerDraft.subtitle}
+                    />
+                    <input
+                      className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                      onChange={(event) =>
+                        setOfferDraft((current) => ({
+                          ...current,
+                          link: event.target.value,
+                        }))
+                      }
+                      value={offerDraft.link}
+                    />
+                    <input
+                      className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                      onChange={(event) =>
+                        setOfferDraft((current) => ({
+                          ...current,
+                          image_url: event.target.value,
+                        }))
+                      }
+                      placeholder="/offer-bogo.jpg"
+                      value={offerDraft.image_url ?? ""}
+                    />
+                  </div>
+                </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Offer Status
+                    <select
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                      onChange={(event) =>
+                        setOfferDraft((current) => ({
+                          ...current,
+                          status: event.target.value,
+                        }))
+                      }
+                      value={offerDraft.status}
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="draft">Draft</option>
+                    </select>
+                  </label>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Offer Sort
+                    <input
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                      min={0}
+                      onChange={(event) =>
+                        setOfferDraft((current) => ({
+                          ...current,
+                          sort_order: Number(event.target.value) || 0,
+                        }))
+                      }
+                      type="number"
+                      value={offerDraft.sort_order}
+                    />
+                  </label>
+                </div>
+                <label className="block text-sm font-semibold text-slate-700">
+                  Editor Pick Product IDs
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                    onChange={(event) => setEditorPickIds(event.target.value)}
+                    placeholder="2,5,9,12"
+                    value={editorPickIds}
+                  />
+                </label>
+                <button
+                  className="w-full rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                  disabled={isSaving}
+                  onClick={saveHomepageCms}
+                  type="button"
+                >
+                  {isSaving ? "Saving..." : "Save CMS"}
+                </button>
+              </div>
+            </div>
+
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>

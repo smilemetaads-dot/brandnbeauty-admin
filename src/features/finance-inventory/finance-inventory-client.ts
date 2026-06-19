@@ -1,3 +1,5 @@
+import { bnbApiUrl } from "@/lib/bnb-api";
+
 export type FinanceInventoryProduct = {
   created_at: string | null;
   id: string;
@@ -34,8 +36,7 @@ export type FinanceInventoryData = {
   purchases: FinanceInventoryPurchase[];
 };
 
-export const FINANCE_INVENTORY_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_finance_inventory.php";
+export const FINANCE_INVENTORY_ENDPOINT = bnbApiUrl("get_finance_inventory.php");
 
 export async function fetchFinanceInventory(
   signal?: AbortSignal,

@@ -1,3 +1,6 @@
+import { bnbApiUrl } from "@/lib/bnb-api";
+import { adminAuthHeaders } from "@/lib/admin-auth";
+
 export type OrderItemRecord = {
   created_at: string | null;
   id: string;
@@ -88,8 +91,7 @@ type ApiOrderDetailsResponse = {
   success?: boolean;
 };
 
-export const ORDER_DETAILS_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_order_details.php";
+export const ORDER_DETAILS_ENDPOINT = bnbApiUrl("get_order_details.php");
 
 function toNumber(value: number | string | null | undefined) {
   const numericValue = Number(value ?? 0);
@@ -205,6 +207,7 @@ export async function fetchOrderDetails(
     `${ORDER_DETAILS_ENDPOINT}?id=${encodeURIComponent(orderId)}`,
     {
       cache: "no-store",
+      headers: adminAuthHeaders(),
       signal,
     },
   );

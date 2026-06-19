@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import { adminAuthHeaders } from "@/lib/admin-auth";
+import { bnbApiUrl } from "@/lib/bnb-api";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
@@ -16,6 +18,9 @@ const settingsStats = [
 type StoreSettings = {
   admin_email: string;
   currency: string;
+  delivery_charge_dhaka_city: number;
+  delivery_charge_dhaka_sub_area: number;
+  delivery_charge_outside_dhaka: number;
   shipping_fee_inside_dhaka: number;
   shipping_fee_outside_dhaka: number;
   store_name: string;
@@ -25,12 +30,15 @@ type SettingsPayload = Partial<
   Record<keyof StoreSettings, string | number | null>
 >;
 
-const SETTINGS_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_settings.php";
+const SETTINGS_ENDPOINT = bnbApiUrl("get_settings.php");
+const UPDATE_SETTINGS_ENDPOINT = bnbApiUrl("update_settings.php");
 
 const defaultStoreSettings: StoreSettings = {
   admin_email: "admin@brandnbeauty.com",
   currency: "BDT",
+  delivery_charge_dhaka_city: 60,
+  delivery_charge_dhaka_sub_area: 80,
+  delivery_charge_outside_dhaka: 120,
   shipping_fee_inside_dhaka: 60,
   shipping_fee_outside_dhaka: 120,
   store_name: "BRAND & BEAUTY",
@@ -67,9 +75,9 @@ const systemToggles = [
 ] as const;
 
 const safetyItems = [
-  "No settings save, reset, delivery, payment, courier, checkout or stock mutation workflow exists on this route yet.",
-  "No settings writes, localStorage, auth helper changes or route protection changes were added.",
-  "Save, reset, configure and system toggle controls stay disabled until real settings actions exist.",
+  "Delivery charge saves update the local MySQL settings table through admin auth.",
+  "Payment, courier, checkout field visibility and stock automation controls remain preview-only.",
+  "Storefront checkout falls back to local defaults if the settings API is unavailable.",
 ] as const;
 
 function Badge({
@@ -175,6 +183,20 @@ function normalizeSettings(payload: SettingsPayload): StoreSettings {
       payload.shipping_fee_outside_dhaka,
       defaultStoreSettings.shipping_fee_outside_dhaka,
     ),
+    delivery_charge_dhaka_city: toNumber(
+      payload.delivery_charge_dhaka_city ??
+        (payload as Record<string, string | number | null | undefined>).delivery_charge_dhaka ??
+        payload.shipping_fee_inside_dhaka,
+      defaultStoreSettings.delivery_charge_dhaka_city,
+    ),
+    delivery_charge_dhaka_sub_area: toNumber(
+      payload.delivery_charge_dhaka_sub_area,
+      defaultStoreSettings.delivery_charge_dhaka_sub_area,
+    ),
+    delivery_charge_outside_dhaka: toNumber(
+      payload.delivery_charge_outside_dhaka ?? payload.shipping_fee_outside_dhaka,
+      defaultStoreSettings.delivery_charge_outside_dhaka,
+    ),
     store_name:
       String(payload.store_name ?? defaultStoreSettings.store_name).trim() ||
       defaultStoreSettings.store_name,
@@ -183,7 +205,14 @@ function normalizeSettings(payload: SettingsPayload): StoreSettings {
 
 export function RealSettingsPage() {
   const [settings, setSettings] = useState<StoreSettings>(defaultStoreSettings);
+  const [deliveryDraft, setDeliveryDraft] = useState({
+    delivery_charge_dhaka_city: String(defaultStoreSettings.delivery_charge_dhaka_city),
+    delivery_charge_dhaka_sub_area: String(defaultStoreSettings.delivery_charge_dhaka_sub_area),
+    delivery_charge_outside_dhaka: String(defaultStoreSettings.delivery_charge_outside_dhaka),
+  });
   const [isLoading, setIsLoading] = useState(true);
+  const [isSavingDelivery, setIsSavingDelivery] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -202,13 +231,24 @@ export function RealSettingsPage() {
         const payload = (await response.json()) as SettingsPayload;
 
         if (isMounted) {
-          setSettings(normalizeSettings(payload));
+          const nextSettings = normalizeSettings(payload);
+          setSettings(nextSettings);
+          setDeliveryDraft({
+            delivery_charge_dhaka_city: String(nextSettings.delivery_charge_dhaka_city),
+            delivery_charge_dhaka_sub_area: String(nextSettings.delivery_charge_dhaka_sub_area),
+            delivery_charge_outside_dhaka: String(nextSettings.delivery_charge_outside_dhaka),
+          });
         }
       } catch (error) {
         console.error("Failed to load live settings.", error);
 
         if (isMounted) {
           setSettings(defaultStoreSettings);
+          setDeliveryDraft({
+            delivery_charge_dhaka_city: String(defaultStoreSettings.delivery_charge_dhaka_city),
+            delivery_charge_dhaka_sub_area: String(defaultStoreSettings.delivery_charge_dhaka_sub_area),
+            delivery_charge_outside_dhaka: String(defaultStoreSettings.delivery_charge_outside_dhaka),
+          });
         }
       } finally {
         if (isMounted) {
@@ -228,12 +268,55 @@ export function RealSettingsPage() {
     () => [
       ["Store Name", settings.store_name],
       ["Currency", settings.currency],
-      ["Inside Dhaka Shipping", String(settings.shipping_fee_inside_dhaka)],
-      ["Outside Dhaka Shipping", String(settings.shipping_fee_outside_dhaka)],
+      ["Dhaka City Delivery", String(settings.delivery_charge_dhaka_city)],
+      ["Dhaka Sub-Area Delivery", String(settings.delivery_charge_dhaka_sub_area)],
+      ["Outside Dhaka Delivery", String(settings.delivery_charge_outside_dhaka)],
       ["Admin Email", settings.admin_email],
     ],
     [settings],
   );
+
+  const saveDeliverySettings = async () => {
+    setSettingsMessage("");
+    setIsSavingDelivery(true);
+
+    try {
+      const response = await fetch(UPDATE_SETTINGS_ENDPOINT, {
+        body: JSON.stringify({
+          settings: deliveryDraft,
+        }),
+        headers: adminAuthHeaders({
+          "Content-Type": "application/json",
+        }),
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        message?: string;
+        settings?: Partial<Record<keyof typeof deliveryDraft, string | number>>;
+        success?: boolean;
+      } | null;
+
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message ?? "Delivery settings could not be saved.");
+      }
+
+      const nextSettings = normalizeSettings({
+        ...settings,
+        ...payload.settings,
+      });
+      setSettings(nextSettings);
+      setDeliveryDraft({
+        delivery_charge_dhaka_city: String(nextSettings.delivery_charge_dhaka_city),
+        delivery_charge_dhaka_sub_area: String(nextSettings.delivery_charge_dhaka_sub_area),
+        delivery_charge_outside_dhaka: String(nextSettings.delivery_charge_outside_dhaka),
+      });
+      setSettingsMessage(payload.message ?? "Delivery settings saved.");
+    } catch (error) {
+      setSettingsMessage(error instanceof Error ? error.message : "Delivery settings could not be saved.");
+    } finally {
+      setIsSavingDelivery(false);
+    }
+  };
 
   return (
     <AdminShell>
@@ -264,7 +347,14 @@ export function RealSettingsPage() {
             </div>
             <div className="flex flex-wrap gap-3">
               <DisabledButton>Reset Draft</DisabledButton>
-              <DisabledButton primary>Save Changes</DisabledButton>
+              <button
+                className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                disabled={isSavingDelivery}
+                onClick={saveDeliverySettings}
+                type="button"
+              >
+                {isSavingDelivery ? "Saving..." : "Save Delivery Charges"}
+              </button>
             </div>
           </div>
           <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-3">
@@ -362,6 +452,46 @@ export function RealSettingsPage() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="text-sm font-medium text-slate-500">
+                Checkout Delivery
+              </div>
+              <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
+                Delivery Charge Rules
+              </h2>
+              <div className="mt-5 space-y-4">
+                {[
+                  ["delivery_charge_dhaka_city", "Dhaka City"],
+                  ["delivery_charge_dhaka_sub_area", "Dhaka Sub-Area"],
+                  ["delivery_charge_outside_dhaka", "Outside Dhaka"],
+                ].map(([key, label]) => (
+                  <label key={key}>
+                    <div className="text-sm font-semibold text-slate-700">
+                      {label}
+                    </div>
+                    <input
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15"
+                      inputMode="decimal"
+                      min="0"
+                      onChange={(event) =>
+                        setDeliveryDraft((current) => ({
+                          ...current,
+                          [key]: event.target.value,
+                        }))
+                      }
+                      type="number"
+                      value={deliveryDraft[key as keyof typeof deliveryDraft]}
+                    />
+                  </label>
+                ))}
+              </div>
+              {settingsMessage ? (
+                <div className="mt-4 rounded-2xl bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-700">
+                  {settingsMessage}
+                </div>
+              ) : null}
             </div>
 
             <div className="rounded-[2rem] border border-rose-200 bg-rose-50 p-6 shadow-sm">

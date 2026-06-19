@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { bnbApiUrl } from "@/lib/bnb-api";
 
 export type ReportsLatestOrder = {
   courier_status: string | null;
@@ -58,31 +58,18 @@ export type ReportsFinanceSummary = {
   totalProducts: number;
 };
 
-type ReportsOrderRow = {
-  courier_status: string | null;
-  created_at: string | null;
-  customer_name: string | null;
-  due_amount: number | null;
-  id: string;
-  order_number: string | null;
-  order_status: string | null;
-  paid_amount: number | null;
-  payment_status: string | null;
-  total: number | null;
-};
-
 type ReportsProductRow = {
-  stock: number | null;
-};
-
-type ReportsInventoryMovementRow = {
   created_at: string | null;
   id: string;
-  movement_type: string | null;
-  new_stock: number | null;
-  note: string | null;
-  previous_stock: number | null;
-  quantity: number | null;
+  name?: string | null;
+  stock?: number | null;
+  stock_quantity?: number | null;
+};
+
+type FinanceInventoryResponse = {
+  inventory?: ReportsProductRow[];
+  purchases?: unknown[];
+  success?: boolean;
 };
 
 const defaultSummary: ReportsFinanceSummary = {
@@ -124,145 +111,44 @@ function toNumber(value: number | null | undefined) {
   return Number(value ?? 0);
 }
 
-function getRatio(numerator: number, denominator: number) {
-  if (!denominator) {
-    return 0;
-  }
-
-  return (numerator / denominator) * 100;
-}
-
-function countByStatus<T>(
-  rows: T[],
-  field: keyof T,
-  status: string,
-) {
-  return rows.filter((row) => row[field] === status).length;
-}
-
-export async function getReportsFinanceSummaryFromSupabase(): Promise<ReportsFinanceSummary> {
+export async function getReportsFinanceSummary(): Promise<ReportsFinanceSummary> {
   try {
-    const supabase = createAdminSupabaseClient();
-    const [ordersResponse, productsResponse, movementsResponse] =
-      await Promise.all([
-        supabase
-          .from("orders")
-          .select(
-            [
-              "id",
-              "order_number",
-              "customer_name",
-              "total",
-              "paid_amount",
-              "due_amount",
-              "order_status",
-              "payment_status",
-              "courier_status",
-              "created_at",
-            ].join(", "),
-          )
-          .order("created_at", { ascending: false }),
-        supabase.from("products").select("stock"),
-        supabase
-          .from("inventory_movements")
-          .select(
-            "id, movement_type, quantity, previous_stock, new_stock, note, created_at",
-          )
-          .order("created_at", { ascending: false }),
-      ]);
+    const response = await fetch(bnbApiUrl("get_finance_inventory.php"), {
+      cache: "no-store",
+    });
+    const payload = (await response.json()) as FinanceInventoryResponse;
 
-    if (ordersResponse.error || productsResponse.error || movementsResponse.error) {
-      console.error("Failed to load reports and finance summary from Supabase.");
+    if (!response.ok || payload.success !== true) {
+      console.error("Failed to load reports and finance summary from PHP.");
       return defaultSummary;
     }
 
-    const orders = (ordersResponse.data ?? []) as unknown as ReportsOrderRow[];
-    const products = (productsResponse.data ??
-      []) as unknown as ReportsProductRow[];
-    const movements = (movementsResponse.data ??
-      []) as unknown as ReportsInventoryMovementRow[];
-    const grossSales = orders.reduce(
-      (sum, order) => sum + toNumber(order.total),
-      0,
-    );
-    const paidAmount = orders.reduce(
-      (sum, order) => sum + toNumber(order.paid_amount),
-      0,
-    );
-    const totalOrders = orders.length;
-    const deliveredOrders = countByStatus(orders, "order_status", "delivered");
-    const returnedOrders = countByStatus(orders, "order_status", "returned");
+    const products = payload.inventory ?? [];
 
     return {
-      cancelledOrders: countByStatus(orders, "order_status", "cancelled"),
-      cancelledValue: orders
-        .filter((order) => order.order_status === "cancelled")
-        .reduce((sum, order) => sum + toNumber(order.total), 0),
-      codPendingOrders: countByStatus(orders, "payment_status", "cod_pending"),
-      confirmedOrders: countByStatus(orders, "order_status", "confirmed"),
-      courierDelivered: countByStatus(
-        orders,
-        "courier_status",
-        "delivered",
-      ),
-      courierFailed: countByStatus(orders, "courier_status", "failed"),
-      courierReady: countByStatus(orders, "courier_status", "ready"),
-      courierReturned: countByStatus(orders, "courier_status", "returned"),
-      courierSent: countByStatus(orders, "courier_status", "sent"),
-      deliveredOrders,
-      deliveredSales: orders
-        .filter((order) => order.order_status === "delivered")
-        .reduce((sum, order) => sum + toNumber(order.total), 0),
-      deliverySuccessRate: getRatio(deliveredOrders, totalOrders),
-      dueOrders: orders.filter((order) => toNumber(order.due_amount) > 0).length,
-      failedPaymentOrders: countByStatus(orders, "payment_status", "failed"),
-      grossSales,
-      latestInventoryMovements: movements.slice(0, 5).map((movement) => ({
-        created_at: movement.created_at,
-        id: movement.id,
-        movement_type: movement.movement_type,
-        new_stock: toNumber(movement.new_stock),
-        note: movement.note,
-        previous_stock: toNumber(movement.previous_stock),
-        quantity: toNumber(movement.quantity),
-      })),
-      latestOrders: orders.slice(0, 5).map((order) => ({
-        courier_status: order.courier_status,
-        created_at: order.created_at,
-        customer_name: order.customer_name,
-        id: order.id,
-        order_number: order.order_number,
-        order_status: order.order_status,
-        payment_status: order.payment_status,
-        total: toNumber(order.total),
+      ...defaultSummary,
+      latestInventoryMovements: products.slice(0, 5).map((product) => ({
+        created_at: product.created_at,
+        id: product.id,
+        movement_type: "inventory_snapshot",
+        new_stock: toNumber(product.stock_quantity ?? product.stock),
+        note: product.name ?? null,
+        previous_stock: 0,
+        quantity: toNumber(product.stock_quantity ?? product.stock),
       })),
       lowStockProducts: products.filter((product) => {
-        const stock = toNumber(product.stock);
+        const stock = toNumber(product.stock_quantity ?? product.stock);
         return stock > 0 && stock <= 10;
       }).length,
-      newOrders: countByStatus(orders, "order_status", "new"),
-      outOfStockProducts: products.filter((product) => toNumber(product.stock) <= 0)
-        .length,
-      packedOrders: countByStatus(orders, "order_status", "packed"),
-      paidAmount,
-      paidOrders: countByStatus(orders, "payment_status", "paid"),
-      paymentCollectionRate: getRatio(paidAmount, grossSales),
-      recentMovementCount: movements.length,
-      returnRate: getRatio(returnedOrders, totalOrders),
-      returnedOrders,
-      returnedValue: orders
-        .filter((order) => order.order_status === "returned")
-        .reduce((sum, order) => sum + toNumber(order.total), 0),
-      shippedOrders: countByStatus(orders, "order_status", "shipped"),
-      totalDue: orders.reduce(
-        (sum, order) => sum + toNumber(order.due_amount),
-        0,
-      ),
-      totalOrders,
+      outOfStockProducts: products.filter((product) => {
+        const stock = toNumber(product.stock_quantity ?? product.stock);
+        return stock <= 0;
+      }).length,
+      recentMovementCount: payload.purchases?.length ?? 0,
       totalProducts: products.length,
     };
   } catch {
-    console.error("Failed to initialize reports and finance data source.");
+    console.error("Failed to initialize PHP reports and finance data source.");
     return defaultSummary;
   }
 }

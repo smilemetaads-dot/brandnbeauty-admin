@@ -12,6 +12,8 @@ import {
   AdminTableHead,
 } from "@/components/admin/AdminUiPrimitives";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { adminAuthHeaders } from "@/lib/admin-auth";
+import { bnbApiUrl } from "@/lib/bnb-api";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
@@ -94,12 +96,9 @@ const dashboardShortcuts = [
   ["Create Purchase Entry", "/purchases"],
 ];
 
-const DASHBOARD_STATS_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_dashboard_stats.php";
-const DASHBOARD_CHART_STATS_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/dashboard_stats.php";
-const ADMIN_PRODUCTS_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/admin_products.php";
+const DASHBOARD_STATS_ENDPOINT = bnbApiUrl("get_dashboard_stats.php");
+const DASHBOARD_CHART_STATS_ENDPOINT = bnbApiUrl("dashboard_stats.php");
+const ADMIN_PRODUCTS_ENDPOINT = bnbApiUrl("admin_products.php");
 
 const defaultSummary: DashboardSummary = {
   codDue: 0,
@@ -332,14 +331,17 @@ export default function Home() {
         const [statsResponse, chartResponse, productsResponse] = await Promise.all([
           fetch(DASHBOARD_STATS_ENDPOINT, {
             cache: "no-store",
+            headers: adminAuthHeaders(),
             signal: controller.signal,
           }),
           fetch(DASHBOARD_CHART_STATS_ENDPOINT, {
             cache: "no-store",
+            headers: adminAuthHeaders(),
             signal: controller.signal,
           }),
           fetch(ADMIN_PRODUCTS_ENDPOINT, {
             cache: "no-store",
+            headers: adminAuthHeaders(),
             signal: controller.signal,
           }),
         ]);

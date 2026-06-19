@@ -1,9 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
-
-import { getSupabasePublicEnv } from "./env";
-
 export function createBrowserSupabaseClient() {
-  const { url, anonKey } = getSupabasePublicEnv();
-
-  return createClient(url, anonKey);
+  throw new Error(
+    "Legacy data source is disabled. Use the active PHP/MySQL admin endpoints instead.",
+  );
 }

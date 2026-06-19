@@ -1,5 +1,7 @@
 import "server-only";
 
+import { bnbApiUrl } from "@/lib/bnb-api";
+
 export type DashboardInventoryMovement = {
   created_at: string | null;
   id: string;
@@ -57,8 +59,7 @@ const defaultSummary: DashboardSummary = {
   totalRevenue: 0,
 };
 
-const DASHBOARD_DATA_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_dashboard_data.php";
+const DASHBOARD_DATA_ENDPOINT = bnbApiUrl("get_dashboard_data.php");
 
 function toNumber(value: unknown) {
   const numberValue = Number(value);

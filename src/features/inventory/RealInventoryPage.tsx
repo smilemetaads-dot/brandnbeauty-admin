@@ -5,6 +5,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import { adminAuthHeaders } from "@/lib/admin-auth";
+import { bnbApiUrl } from "@/lib/bnb-api";
 
 type InventoryProduct = {
   is_low_stock?: boolean;
@@ -29,8 +31,7 @@ type InventoryResponse = {
   summary?: Partial<InventorySummary>;
 };
 
-const INVENTORY_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_inventory.php";
+const INVENTORY_ENDPOINT = bnbApiUrl("get_inventory.php");
 const LOW_STOCK_THRESHOLD = 5;
 
 function toNumber(value: unknown) {
@@ -157,6 +158,7 @@ export function RealInventoryPage() {
       setIsLoading(true);
       const response = await fetch(INVENTORY_ENDPOINT, {
         cache: "no-store",
+        headers: adminAuthHeaders(),
         signal,
       });
       const payload = (await response.json()) as InventoryResponse;

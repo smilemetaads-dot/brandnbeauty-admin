@@ -1,3 +1,5 @@
+import { bnbApiUrl } from "@/lib/bnb-api";
+
 export type LogisticsOrderItemRecord = {
   id: string;
   product_brand: string | null;
@@ -56,10 +58,8 @@ type ApiLogisticsOrder = {
   updated_at?: string | null;
 };
 
-export const LOGISTICS_META_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_logistics_meta.php";
-export const UPDATE_ORDER_STATUS_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/update_order_status.php";
+export const LOGISTICS_META_ENDPOINT = bnbApiUrl("get_logistics_meta.php");
+export const UPDATE_ORDER_STATUS_ENDPOINT = bnbApiUrl("update_order_status.php");
 
 function toNumber(value: string | number | null | undefined) {
   const numericValue = Number(value ?? 0);

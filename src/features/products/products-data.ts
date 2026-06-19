@@ -1,5 +1,7 @@
 import "server-only";
 
+import { bnbApiAssetUrl, bnbApiUrl } from "@/lib/bnb-api";
+
 type ProductRelation = {
   name: string | null;
   slug: string | null;
@@ -38,8 +40,7 @@ type ProductsListRow = {
   stock_quantity: number;
 };
 
-const PRODUCTS_LIST_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_products_list.php";
+const PRODUCTS_LIST_ENDPOINT = bnbApiUrl("get_products_list.php");
 
 function toNumber(value: unknown) {
   const numberValue = Number(value);
@@ -72,7 +73,7 @@ function normalizeImageUrl(imageUrl: string | null) {
   if (!imageUrl) return null;
   if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
 
-  return `http://localhost/BrandnBeauty/brandnbeauty-backend/php/${imageUrl}`;
+  return bnbApiAssetUrl(imageUrl);
 }
 
 function normalizeProduct(value: unknown): ProductRecord | null {

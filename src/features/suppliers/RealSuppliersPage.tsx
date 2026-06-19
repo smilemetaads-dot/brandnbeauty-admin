@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import { bnbApiUrl } from "@/lib/bnb-api";
 
 import { SupplierForm } from "./SupplierForm";
 
@@ -44,8 +45,7 @@ type ApiSupplierRecord = {
   updated_at?: string | null;
 };
 
-const SUPPLIERS_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_suppliers.php";
+const SUPPLIERS_ENDPOINT = bnbApiUrl("get_suppliers.php");
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 

@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import { adminAuthHeaders } from "@/lib/admin-auth";
+import { bnbApiUrl } from "@/lib/bnb-api";
 
 type RealOrdersPageProps = {
   orders?: OrderRecord[];
@@ -61,8 +63,7 @@ type ManageOrdersResponse = {
   success?: boolean;
 };
 
-const MANAGE_ORDERS_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/manage_orders.php";
+const MANAGE_ORDERS_ENDPOINT = bnbApiUrl("manage_orders.php");
 const ORDER_STATUS_OPTIONS = [
   "pending",
   "approved",
@@ -438,6 +439,7 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
       setIsLoading(true);
       const response = await fetch(MANAGE_ORDERS_ENDPOINT, {
         cache: "no-store",
+        headers: adminAuthHeaders(),
         signal,
       });
 
@@ -577,9 +579,9 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
           order_id: orderId,
           status: nextStatus,
         }),
-        headers: {
+        headers: adminAuthHeaders({
           "Content-Type": "application/json",
-        },
+        }),
         method: "POST",
       });
       const payload = (await response.json().catch(() => null)) as {

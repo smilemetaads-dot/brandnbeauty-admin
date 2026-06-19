@@ -6,6 +6,7 @@ import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import { bnbApiUrl } from "@/lib/bnb-api";
 
 import type { BrandRecord } from "./brands-data";
 
@@ -30,12 +31,9 @@ const inputClassName =
 
 const labelClassName = "text-sm font-semibold text-slate-700";
 
-const BRANDS_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_brands.php";
-const MANAGE_CATALOG_META_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/manage_catalog_meta.php";
-const DELETE_CATALOG_ITEM_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/delete_catalog_item.php";
+const BRANDS_ENDPOINT = bnbApiUrl("get_brands.php");
+const MANAGE_CATALOG_META_ENDPOINT = bnbApiUrl("manage_catalog_meta.php");
+const DELETE_CATALOG_ITEM_ENDPOINT = bnbApiUrl("delete_catalog_item.php");
 
 function toNumber(value: unknown) {
   const numberValue = Number(value);

@@ -15,6 +15,8 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import { adminAuthHeaders } from "@/lib/admin-auth";
+import { bnbApiUrl } from "@/lib/bnb-api";
 
 type RealAddEditProductPageProps = {
   brands?: unknown;
@@ -57,8 +59,8 @@ function TableHead({ children, className = "" }) {
   return <thead className={`sticky top-0 z-10 bg-stone-50 text-slate-500 ${className}`}>{children}</thead>;
 }
 
-const ADD_EDIT_PRODUCT_ENDPOINT = "http://localhost/BrandnBeauty/brandnbeauty-backend/php/add_edit_product.php";
-const UPLOAD_MEDIA_ENDPOINT = "http://localhost/BrandnBeauty/brandnbeauty-backend/php/upload_media.php";
+const ADD_EDIT_PRODUCT_ENDPOINT = bnbApiUrl("add_edit_product.php");
+const UPLOAD_MEDIA_ENDPOINT = bnbApiUrl("upload_media.php");
 const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 function readProductField(product, keys, fallback = "") {
@@ -238,9 +240,9 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
     try {
       const response = await fetch(ADD_EDIT_PRODUCT_ENDPOINT, {
         body: JSON.stringify(payload),
-        headers: {
+        headers: adminAuthHeaders({
           "Content-Type": "application/json",
-        },
+        }),
         method: "POST",
       });
       const result = await response.json();
@@ -302,6 +304,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
     try {
       const response = await fetch(UPLOAD_MEDIA_ENDPOINT, {
         body: formData,
+        headers: adminAuthHeaders(),
         method: "POST",
       });
       const data = await response.json();

@@ -3,10 +3,11 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
+import { bnbApiUrl } from "@/lib/bnb-api";
+
 const LOGIN_TIMEOUT_MS = 15_000;
 const timeoutErrorMessage = "LOGIN_TIMEOUT";
-const AUTH_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/auth.php";
+const AUTH_ENDPOINT = bnbApiUrl("auth.php");
 
 export function LoginForm() {
   const router = useRouter();

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { bnbApiUrl } from "@/lib/bnb-api";
 
 export type SupplierAnalyticsRecentPurchase = {
   created_at: string | null;
@@ -79,6 +79,7 @@ type PurchaseEntryRow = {
   received_at: string | null;
   stock_received: boolean | null;
   supplier_id: string | null;
+  supplier_name?: string | null;
   total_cost: number | null;
 };
 
@@ -99,6 +100,23 @@ type ProductPurchaseSummaryAccumulator = Omit<
   "supplierCount"
 > & {
   supplierIds: Set<string>;
+};
+
+type SuppliersResponse = SupplierRow[] | {
+  suppliers?: SupplierRow[];
+  success?: boolean;
+};
+
+type FinanceInventoryResponse = {
+  purchases?: Array<{
+    created_at?: string | null;
+    id?: string | number | null;
+    purchase_number?: string | null;
+    status?: string | null;
+    supplier_name?: string | null;
+    total_cost?: string | number | null;
+  }>;
+  success?: boolean;
 };
 
 const emptySummary: SupplierAnalyticsSummary = {
@@ -122,6 +140,35 @@ const emptySupplierAnalyticsData: SupplierAnalyticsData = {
 
 function toNumber(value: number | null | undefined) {
   return Number(value ?? 0);
+}
+
+function normalizeSuppliers(payload: SuppliersResponse): SupplierRow[] {
+  const rows = Array.isArray(payload) ? payload : payload.suppliers ?? [];
+
+  return rows.map((supplier) => ({
+    contact_person: supplier.contact_person ?? null,
+    created_at: supplier.created_at ?? null,
+    email: supplier.email ?? null,
+    id: String(supplier.id ?? ""),
+    name: supplier.name || "Unnamed Supplier",
+    payment_terms: supplier.payment_terms ?? null,
+    phone: supplier.phone ?? null,
+    status: supplier.status || "active",
+  }));
+}
+
+function normalizePurchases(payload: FinanceInventoryResponse): PurchaseEntryRow[] {
+  return (payload.purchases ?? []).map((purchase) => ({
+    created_at: purchase.created_at ?? null,
+    id: String(purchase.id ?? ""),
+    purchase_number: purchase.purchase_number || "Recorded purchase",
+    purchase_status: purchase.status ?? "recorded",
+    received_at: null,
+    stock_received: purchase.status === "received",
+    supplier_id: null,
+    supplier_name: purchase.supplier_name ?? null,
+    total_cost: Number(purchase.total_cost ?? 0),
+  }));
 }
 
 function isReceivedPurchase(purchase: PurchaseEntryRow) {
@@ -348,85 +395,48 @@ function buildProductSummaries(
     .slice(0, 12);
 }
 
-export async function getSupplierAnalyticsFromSupabase(): Promise<SupplierAnalyticsData> {
+export async function getSupplierAnalytics(): Promise<SupplierAnalyticsData> {
   try {
-    const supabase = createAdminSupabaseClient();
-    const [suppliersResponse, purchasesResponse, itemsResponse] =
-      await Promise.all([
-        supabase
-          .from("suppliers")
-          .select(
-            [
-              "id",
-              "name",
-              "contact_person",
-              "phone",
-              "email",
-              "status",
-              "payment_terms",
-              "created_at",
-            ].join(", "),
-          )
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("purchase_entries")
-          .select(
-            [
-              "id",
-              "purchase_number",
-              "supplier_id",
-              "purchase_status",
-              "total_cost",
-              "stock_received",
-              "received_at",
-              "created_at",
-            ].join(", "),
-          )
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("purchase_entry_items")
-          .select(
-            [
-              "id",
-              "purchase_entry_id",
-              "product_id",
-              "product_name",
-              "product_sku",
-              "quantity",
-              "received_quantity",
-              "unit_cost",
-              "total_cost",
-            ].join(", "),
-          ),
-      ]);
+    const [suppliersResponse, financeResponse] = await Promise.all([
+      fetch(bnbApiUrl("get_suppliers.php"), { cache: "no-store" }),
+      fetch(bnbApiUrl("get_finance_inventory.php"), { cache: "no-store" }),
+    ]);
+    const [suppliersPayload, financePayload] = await Promise.all([
+      suppliersResponse.json() as Promise<SuppliersResponse>,
+      financeResponse.json() as Promise<FinanceInventoryResponse>,
+    ]);
 
-    if (
-      suppliersResponse.error ||
-      purchasesResponse.error ||
-      itemsResponse.error
-    ) {
-      console.error("Failed to load supplier analytics from Supabase.");
+    if (!suppliersResponse.ok || !financeResponse.ok) {
+      console.error("Failed to load supplier analytics from PHP.");
       return emptySupplierAnalyticsData;
     }
 
-    const suppliers = (suppliersResponse.data ?? []) as unknown as SupplierRow[];
-    const purchases = (
-      purchasesResponse.data ?? []
-    ) as unknown as PurchaseEntryRow[];
-    const items = (
-      itemsResponse.data ?? []
-    ) as unknown as PurchaseEntryItemRow[];
+    const suppliers = normalizeSuppliers(suppliersPayload);
+    const purchases = normalizePurchases(financePayload);
+    const items: PurchaseEntryItemRow[] = [];
     const suppliersById = new Map(
       suppliers.map((supplier) => [supplier.id, supplier]),
     );
+    const suppliersByName = new Map(
+      suppliers.map((supplier) => [supplier.name.toLowerCase(), supplier]),
+    );
+    const purchasesWithSupplierIds = purchases.map((purchase) => {
+      if (purchase.supplier_id || !purchase.supplier_name) return purchase;
+      const supplier = suppliersByName.get(purchase.supplier_name.toLowerCase());
+
+      return {
+        ...purchase,
+        supplier_id: supplier?.id ?? null,
+      };
+    });
     const purchasesById = new Map(
-      purchases.map((purchase) => [purchase.id, purchase]),
+      purchasesWithSupplierIds.map((purchase) => [purchase.id, purchase]),
     );
     const itemsByPurchase = buildItemsByPurchase(items);
 
     return {
       productSummaries: buildProductSummaries(items, purchasesById),
-      recentPurchases: purchases
+      recentPurchases: purchasesWithSupplierIds
         .slice()
         .sort(sortByCreatedAtDesc)
         .slice(0, 8)
@@ -434,14 +444,15 @@ export async function getSupplierAnalyticsFromSupabase(): Promise<SupplierAnalyt
           buildRecentPurchase(
             purchase,
             suppliersById.get(purchase.supplier_id ?? "")?.name ??
+              purchase.supplier_name ??
               "Unknown supplier",
           ),
         ),
-      records: buildSupplierRecords(suppliers, purchases, itemsByPurchase),
-      summary: buildSummary(suppliers, purchases),
+      records: buildSupplierRecords(suppliers, purchasesWithSupplierIds, itemsByPurchase),
+      summary: buildSummary(suppliers, purchasesWithSupplierIds),
     };
   } catch {
-    console.error("Failed to initialize supplier analytics data source.");
+    console.error("Failed to initialize PHP supplier analytics data source.");
     return emptySupplierAnalyticsData;
   }
 }

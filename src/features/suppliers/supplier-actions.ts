@@ -1,9 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-
 export type SupplierActionState = {
   ok: boolean;
   message: string;
@@ -75,30 +71,11 @@ export async function createSupplier(
     };
   }
 
-  try {
-    const supabase = createAdminSupabaseClient();
-    const { error } = await supabase.from("suppliers").insert(values);
-
-    if (error) {
-      console.error("Failed to create supplier.");
-
-      return {
-        ok: false,
-        message: "Supplier could not be created. Check the fields and try again.",
-      };
-    }
-
-    revalidatePath("/suppliers");
-
-    return { ok: true, message: "Supplier created successfully." };
-  } catch {
-    console.error("Failed to initialize supplier create action.");
-
-    return {
-      ok: false,
-      message: "Supplier could not be created right now. Try again shortly.",
-    };
-  }
+  return {
+    ok: false,
+    message:
+      "Supplier save is preview-only until the PHP supplier write endpoint is enabled.",
+  };
 }
 
 export async function updateSupplier(
@@ -119,31 +96,9 @@ export async function updateSupplier(
     };
   }
 
-  try {
-    const supabase = createAdminSupabaseClient();
-    const { error } = await supabase
-      .from("suppliers")
-      .update(values)
-      .eq("id", supplierId);
-
-    if (error) {
-      console.error("Failed to update supplier.");
-
-      return {
-        ok: false,
-        message: "Supplier could not be updated. Check the fields and try again.",
-      };
-    }
-
-    revalidatePath("/suppliers");
-
-    return { ok: true, message: "Supplier updated successfully." };
-  } catch {
-    console.error("Failed to initialize supplier update action.");
-
-    return {
-      ok: false,
-      message: "Supplier could not be updated right now. Try again shortly.",
-    };
-  }
+  return {
+    ok: false,
+    message:
+      "Supplier save is preview-only until the PHP supplier write endpoint is enabled.",
+  };
 }

@@ -14,6 +14,8 @@ import {
   getAdminStatusTone,
 } from "@/components/admin/AdminUiPrimitives";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { adminAuthHeaders } from "@/lib/admin-auth";
+import { bnbApiAssetUrl, bnbApiUrl } from "@/lib/bnb-api";
 
 import type { ProductRecord } from "./products-data";
 
@@ -48,12 +50,9 @@ const PRODUCT_FILTERS = [
   "Notify Me",
 ];
 
-const UPDATE_PRODUCT_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/update_product.php";
-const ADMIN_PRODUCTS_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/admin_products.php";
-const DELETE_CATALOG_ITEM_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/delete_catalog_item.php";
+const UPDATE_PRODUCT_ENDPOINT = bnbApiUrl("update_product.php");
+const ADMIN_PRODUCTS_ENDPOINT = bnbApiUrl("admin_products.php");
+const DELETE_CATALOG_ITEM_ENDPOINT = bnbApiUrl("delete_catalog_item.php");
 
 function toNumber(value: unknown) {
   const numberValue = Number(value);
@@ -88,7 +87,7 @@ function normalizeImageUrl(imageUrl: string | null) {
   if (!imageUrl) return null;
   if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
 
-  return `http://localhost/BrandnBeauty/brandnbeauty-backend/php/${imageUrl}`;
+  return bnbApiAssetUrl(imageUrl);
 }
 
 function normalizeAdminProduct(value: unknown): ProductRecord | null {
@@ -191,9 +190,9 @@ function StatusControl({
           status,
           stock_quantity: product.stock,
         }),
-        headers: {
+        headers: adminAuthHeaders({
           "Content-Type": "application/json",
-        },
+        }),
         method: "POST",
       });
       const result = await response.json();
@@ -262,9 +261,9 @@ function DraftArchiveButton({
           status: "draft",
           stock_quantity: product.stock,
         }),
-        headers: {
+        headers: adminAuthHeaders({
           "Content-Type": "application/json",
-        },
+        }),
         method: "POST",
       });
       const result = await response.json();
@@ -355,6 +354,7 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
     try {
       const response = await fetch(ADMIN_PRODUCTS_ENDPOINT, {
         cache: "no-store",
+        headers: adminAuthHeaders(),
         signal,
       });
 
@@ -415,9 +415,9 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
           id: productId,
           type: "product",
         }),
-        headers: {
+        headers: adminAuthHeaders({
           "Content-Type": "application/json",
-        },
+        }),
         method: "POST",
       });
       const result = (await response.json().catch(() => null)) as {

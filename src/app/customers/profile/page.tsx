@@ -5,6 +5,8 @@ import { Suspense, useEffect, useState } from "react";
 
 import { RealCustomerProfilePage } from "@/features/customers/RealCustomerProfilePage";
 import type { CustomerProfileRecord } from "@/features/customers/customers-data";
+import { adminAuthHeaders } from "@/lib/admin-auth";
+import { bnbApiUrl } from "@/lib/bnb-api";
 
 type CustomerProfileResponse = {
   message?: string;
@@ -12,8 +14,7 @@ type CustomerProfileResponse = {
   success?: boolean;
 };
 
-const CUSTOMER_PROFILE_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_customers.php";
+const CUSTOMER_PROFILE_ENDPOINT = bnbApiUrl("get_customers.php");
 
 function CustomerProfileContent() {
   const searchParams = useSearchParams();
@@ -35,6 +36,7 @@ function CustomerProfileContent() {
           `${CUSTOMER_PROFILE_ENDPOINT}?phone=${encodeURIComponent(phone)}`,
           {
             cache: "no-store",
+            headers: adminAuthHeaders(),
             signal: controller.signal,
           },
         );

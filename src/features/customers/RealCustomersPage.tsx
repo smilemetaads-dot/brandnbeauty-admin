@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import { adminAuthHeaders } from "@/lib/admin-auth";
+import { bnbApiUrl } from "@/lib/bnb-api";
 
 import type { CustomerSummaryRecord } from "./customers-data";
 
@@ -34,8 +36,7 @@ type CustomersApiResponse = {
   success?: boolean;
 };
 
-const CUSTOMERS_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_customers.php";
+const CUSTOMERS_ENDPOINT = bnbApiUrl("get_customers.php");
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
@@ -364,6 +365,7 @@ export function RealCustomersPage({
 
         const response = await fetch(CUSTOMERS_ENDPOINT, {
           cache: "no-store",
+          headers: adminAuthHeaders(),
         });
 
         if (!response.ok) {
