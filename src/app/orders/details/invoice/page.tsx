@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import { PrintPageButton } from "@/features/orders/PrintPageButton";
 import {
@@ -258,7 +258,7 @@ function InvoicePrintDocument({ order }: { order: OrderDetailsRecord }) {
   );
 }
 
-export default function InvoicePrintPage() {
+function InvoicePrintPageContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id") ?? undefined;
   const [order, setOrder] = useState<OrderDetailsRecord | null>(null);
@@ -269,12 +269,13 @@ export default function InvoicePrintPage() {
       return;
     }
 
+    const orderId = id;
     const controller = new AbortController();
 
     async function loadOrder() {
       try {
         setIsLoading(true);
-        const nextOrder = await fetchOrderDetails(id, controller.signal);
+        const nextOrder = await fetchOrderDetails(orderId, controller.signal);
         setOrder(nextOrder);
       } catch (error) {
         if (!controller.signal.aborted) {
@@ -308,4 +309,12 @@ export default function InvoicePrintPage() {
   }
 
   return <InvoicePrintDocument order={order} />;
+}
+
+export default function InvoicePrintPage() {
+  return (
+    <Suspense fallback={<LoadingOrderState />}>
+      <InvoicePrintPageContent />
+    </Suspense>
+  );
 }

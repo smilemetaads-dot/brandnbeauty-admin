@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import { RealOrderDetailsPage } from "@/features/orders/RealOrderDetailsPage";
 import {
@@ -9,7 +9,7 @@ import {
   type OrderDetailsRecord,
 } from "@/features/orders/order-details-client";
 
-export default function OrderDetailsPage() {
+function OrderDetailsPageContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
   const [order, setOrder] = useState<OrderDetailsRecord | null>(null);
@@ -20,12 +20,13 @@ export default function OrderDetailsPage() {
       return;
     }
 
+    const orderId = id;
     const controller = new AbortController();
 
     async function loadOrder() {
       try {
         setIsLoading(true);
-        const nextOrder = await fetchOrderDetails(id, controller.signal);
+        const nextOrder = await fetchOrderDetails(orderId, controller.signal);
         setOrder(nextOrder);
       } catch (error) {
         if (!controller.signal.aborted) {
@@ -55,4 +56,12 @@ export default function OrderDetailsPage() {
   }
 
   return <RealOrderDetailsPage order={order} />;
+}
+
+export default function OrderDetailsPage() {
+  return (
+    <Suspense fallback={<RealOrderDetailsPage order={null} />}>
+      <OrderDetailsPageContent />
+    </Suspense>
+  );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import { PrintPageButton } from "@/features/orders/PrintPageButton";
 import {
@@ -248,7 +248,7 @@ function PackingSlipPrintDocument({ order }: { order: OrderDetailsRecord }) {
   );
 }
 
-export default function PackingSlipPrintPage() {
+function PackingSlipPrintPageContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id") ?? undefined;
   const [order, setOrder] = useState<OrderDetailsRecord | null>(null);
@@ -259,12 +259,13 @@ export default function PackingSlipPrintPage() {
       return;
     }
 
+    const orderId = id;
     const controller = new AbortController();
 
     async function loadOrder() {
       try {
         setIsLoading(true);
-        const nextOrder = await fetchOrderDetails(id, controller.signal);
+        const nextOrder = await fetchOrderDetails(orderId, controller.signal);
         setOrder(nextOrder);
       } catch (error) {
         if (!controller.signal.aborted) {
@@ -298,4 +299,12 @@ export default function PackingSlipPrintPage() {
   }
 
   return <PackingSlipPrintDocument order={order} />;
+}
+
+export default function PackingSlipPrintPage() {
+  return (
+    <Suspense fallback={<LoadingOrderState />}>
+      <PackingSlipPrintPageContent />
+    </Suspense>
+  );
 }

@@ -43,6 +43,7 @@ type MysqlOrderRow = {
   city?: unknown;
   created_at?: unknown;
   customer_name?: unknown;
+  delivery_address?: unknown;
   delivery_charge?: unknown;
   email?: unknown;
   id?: unknown;
@@ -55,12 +56,16 @@ type MysqlOrderRow = {
   updated_at?: unknown;
 };
 
-const ALL_ORDERS_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_all_orders.php";
-const UPDATE_ORDER_STATUS_ENDPOINT =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/update_order_status.php";
+type ManageOrdersResponse = {
+  orders?: unknown;
+  success?: boolean;
+};
+
+const MANAGE_ORDERS_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/manage_orders.php";
 const ORDER_STATUS_OPTIONS = [
   "pending",
+  "approved",
   "confirmed",
   "processing",
   "packing",
@@ -118,7 +123,7 @@ function normalizeMysqlOrder(row: MysqlOrderRow): OrderRecord {
   );
 
   return {
-    area: toStringOrNull(row.address),
+    area: toStringOrNull(row.address ?? row.delivery_address),
     courier_name: null,
     courier_status: status === "delivered" ? "delivered" : "not_sent",
     courier_tracking_id: null,
@@ -145,8 +150,15 @@ function normalizeMysqlOrder(row: MysqlOrderRow): OrderRecord {
 }
 
 function normalizeMysqlOrders(payload: unknown) {
-  return Array.isArray(payload)
-    ? payload.map((row) => normalizeMysqlOrder(row as MysqlOrderRow))
+  const rows =
+    Array.isArray(payload)
+      ? payload
+      : Array.isArray((payload as ManageOrdersResponse | null)?.orders)
+        ? ((payload as ManageOrdersResponse).orders as unknown[])
+        : [];
+
+  return rows
+    ? rows.map((row) => normalizeMysqlOrder(row as MysqlOrderRow))
     : [];
 }
 
@@ -424,7 +436,7 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
   const loadOrders = useCallback(async (signal?: AbortSignal) => {
     try {
       setIsLoading(true);
-      const response = await fetch(ALL_ORDERS_ENDPOINT, {
+      const response = await fetch(MANAGE_ORDERS_ENDPOINT, {
         cache: "no-store",
         signal,
       });
@@ -560,7 +572,7 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
     setUpdatingOrderIds((current) => Array.from(new Set([...current, orderId])));
 
     try {
-      const response = await fetch(UPDATE_ORDER_STATUS_ENDPOINT, {
+      const response = await fetch(MANAGE_ORDERS_ENDPOINT, {
         body: JSON.stringify({
           order_id: orderId,
           status: nextStatus,
@@ -735,7 +747,7 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
                       "Source",
                       "Amount",
                       "Payment",
-                      "Zone",
+                      "Delivery Address",
                       "Risk",
                       "Status",
                       "Courier",
@@ -812,9 +824,11 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
                         </Badge>
                       </td>
                       <td className="px-5 py-4 text-slate-600">
-                        {order.district ?? "No district"}
+                        <div className="max-w-[260px] font-semibold text-slate-700">
+                          {order.area ?? "No address"}
+                        </div>
                         <div className="mt-1 text-xs text-slate-500">
-                          {order.delivery_zone ?? "No zone"}
+                          {order.district ?? order.delivery_zone ?? "No zone"}
                         </div>
                       </td>
                       <td className="px-5 py-4">
@@ -879,11 +893,18 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
                             Open
                           </Link>
                           <button
-                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-400"
-                            disabled
+                            className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={
+                              updatingOrderIds.includes(order.id) ||
+                              !["pending", "new"].includes(order.order_status)
+                            }
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleStatusChange(order.id, "approved");
+                            }}
                             type="button"
                           >
-                            Update
+                            Approve
                           </button>
                         </div>
                       </td>

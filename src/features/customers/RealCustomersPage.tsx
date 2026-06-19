@@ -13,13 +13,25 @@ type RealCustomersPageProps = {
 
 type ApiCustomerRecord = {
   created_at?: string | null;
+  customer_name?: string | null;
   email?: string | null;
   id?: string | number | null;
+  last_city?: string | null;
+  last_delivery_address?: string | null;
+  last_known_address?: string | null;
+  latest_order_at?: string | null;
+  lifetime_value?: string | number | null;
   name?: string | null;
   phone?: string | null;
+  phone_number?: string | null;
   status?: string | null;
   total_orders?: string | number | null;
   total_spend?: string | number | null;
+};
+
+type CustomersApiResponse = {
+  customers?: unknown;
+  success?: boolean;
 };
 
 const CUSTOMERS_ENDPOINT =
@@ -171,27 +183,28 @@ function formatLocation(customer: CustomerSummaryRecord) {
 
 function normalizeCustomer(customer: ApiCustomerRecord): CustomerSummaryRecord {
   const totalOrders = Number(customer.total_orders ?? 0);
-  const totalSpend = Number(customer.total_spend ?? 0);
+  const totalSpend = Number(customer.lifetime_value ?? customer.total_spend ?? 0);
   const orderCount = Number.isFinite(totalOrders) ? totalOrders : 0;
   const status = customer.status?.trim() || (orderCount >= 2 ? "repeat" : "new");
   const totalSpent = Number.isFinite(totalSpend) ? totalSpend : 0;
-  const createdAt = customer.created_at ?? null;
+  const createdAt = customer.latest_order_at ?? customer.created_at ?? null;
+  const phone = customer.phone_number?.trim() || customer.phone?.trim() || "Not available";
 
   return {
-    address: null,
+    address: customer.last_delivery_address ?? customer.last_known_address ?? null,
     area: null,
     cancelledCount: 0,
     deliveredCount: status.toLowerCase() === "active" ? orderCount : 0,
-    delivery_zone: null,
-    district: null,
+    delivery_zone: customer.last_city ?? null,
+    district: customer.last_city ?? null,
     email: customer.email ?? null,
     lastOrderAt: createdAt,
     lastOrderId: String(customer.id ?? ""),
     lastOrderNumber: null,
     lastOrderStatus: status,
-    name: customer.name?.trim() || "Unknown Customer",
+    name: customer.customer_name?.trim() || customer.name?.trim() || "Unknown Customer",
     orderCount,
-    phone: customer.phone?.trim() || "Not available",
+    phone,
     recentOrders: [],
     returnedCount: 0,
     riskLabel: orderCount >= 2 ? "Repeat Customer" : "New Customer",
@@ -357,8 +370,15 @@ export function RealCustomersPage({
           throw new Error("Customers request failed.");
         }
 
-        const data = (await response.json()) as ApiCustomerRecord[];
-        const liveCustomers = Array.isArray(data) ? data.map(normalizeCustomer) : [];
+        const data = (await response.json()) as unknown;
+        const rows = Array.isArray(data)
+          ? data
+          : Array.isArray((data as CustomersApiResponse | null)?.customers)
+            ? ((data as CustomersApiResponse).customers as unknown[])
+            : [];
+        const liveCustomers = rows.map((customer) =>
+          normalizeCustomer(customer as ApiCustomerRecord),
+        );
 
         if (isMounted) {
           setCustomers(liveCustomers);
@@ -393,6 +413,7 @@ export function RealCustomersPage({
           customer.name,
           customer.email,
           customer.phone,
+          customer.address,
           customer.district,
           customer.area,
           customer.lastOrderStatus,
@@ -488,7 +509,7 @@ export function RealCustomersPage({
                 <input
                   className="w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm font-medium text-slate-500 outline-none"
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search customer / email / phone"
+                  placeholder="Search customer name or phone number"
                   value={query}
                 />
                 <div className="flex flex-wrap gap-2">
@@ -527,13 +548,12 @@ export function RealCustomersPage({
                   <thead className="bg-stone-50 text-slate-500">
                     <tr>
                       {[
-                        "Name",
-                        "Email",
+                        "Customer Name",
+                        "Phone",
                         "Total Orders",
-                        "Total Spend (LTV)",
-                        "Status",
-                        "Join Date",
-                        "Recent",
+                        "Lifetime Value (LTV)",
+                        "Last Known Address",
+                        "Last Purchase",
                         "Action",
                       ].map((heading) => (
                         <th className="px-5 py-4 font-medium" key={heading}>
@@ -557,11 +577,11 @@ export function RealCustomersPage({
                             {customer.name}
                           </div>
                           <div className="mt-1 text-xs font-semibold text-slate-500">
-                            {customer.phone}
+                            {formatText(customer.email)}
                           </div>
                         </td>
-                        <td className="px-5 py-4 text-xs font-semibold text-slate-500">
-                          {formatText(customer.email)}
+                        <td className="px-5 py-4 font-semibold text-slate-700">
+                          {customer.phone}
                         </td>
                         <td className="px-5 py-4 font-black text-slate-950">
                           {customer.orderCount}
@@ -569,40 +589,21 @@ export function RealCustomersPage({
                         <td className="px-5 py-4 font-bold text-slate-800">
                           {formatMoney(customer.totalSpent)}
                         </td>
-                        <td className="px-5 py-4">
-                          <Badge tone={getRiskTone(customer.riskLabel)}>
-                            {formatStatus(customer.lastOrderStatus)}
-                          </Badge>
+                        <td className="max-w-[360px] px-5 py-4">
+                          <div className="text-sm font-semibold leading-6 text-slate-700">
+                            {formatText(customer.address)}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            {formatLocation(customer)}
+                          </div>
                         </td>
                         <td className="px-5 py-4">
                           <div className="text-xs font-semibold text-slate-500">
                             {formatDate(customer.lastOrderAt)}
                           </div>
-                        </td>
-                        <td className="max-w-[240px] px-5 py-4">
-                          <div className="space-y-2">
-                            {customer.recentOrders.length ? (
-                              customer.recentOrders.map((order) => (
-                                <div
-                                  className="rounded-xl bg-stone-50 px-3 py-2 text-xs"
-                                  key={order.id}
-                                >
-                                  <div className="font-bold text-slate-800">
-                                    {order.order_number ?? "No order number"} /{" "}
-                                    {formatMoney(order.total)}
-                                  </div>
-                                  <div className="mt-1 text-slate-500">
-                                    {formatStatus(order.order_status)} / Due{" "}
-                                    {formatMoney(order.due_amount)}
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="rounded-xl bg-stone-50 px-3 py-2 text-xs font-semibold text-slate-500">
-                                {formatStatus(customer.lastOrderStatus)}
-                              </div>
-                            )}
-                          </div>
+                          <Badge tone={getRiskTone(customer.riskLabel)}>
+                            {formatStatus(customer.lastOrderStatus)}
+                          </Badge>
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex flex-col gap-2">

@@ -1,33 +1,84 @@
-import {
-  getCustomerProfileFromOrdersSupabase,
-  getCustomersFromOrdersSupabase,
-} from "@/features/customers/customers-data";
+"use client";
+
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+
 import { RealCustomerProfilePage } from "@/features/customers/RealCustomerProfilePage";
+import type { CustomerProfileRecord } from "@/features/customers/customers-data";
 
-export const dynamic = "force-dynamic";
-
-type CustomerProfilePageProps = {
-  searchParams?: Promise<{
-    phone?: string;
-  }>;
+type CustomerProfileResponse = {
+  message?: string;
+  profile?: CustomerProfileRecord | null;
+  success?: boolean;
 };
 
-export default async function CustomerProfilePage({
-  searchParams,
-}: CustomerProfilePageProps) {
-  const params = await searchParams;
-  let phone = params?.phone;
+const CUSTOMER_PROFILE_ENDPOINT =
+  "http://localhost/BrandnBeauty/brandnbeauty-backend/php/get_customers.php";
 
-  if (!phone) {
-    const customers = await getCustomersFromOrdersSupabase();
-    phone = customers[0]?.phone;
-  }
+function CustomerProfileContent() {
+  const searchParams = useSearchParams();
+  const phone = searchParams.get("phone")?.trim() ?? "";
+  const [profile, setProfile] = useState<CustomerProfileRecord | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!phone) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function loadCustomerProfile() {
+      try {
+        setIsLoading(true);
+        const response = await fetch(
+          `${CUSTOMER_PROFILE_ENDPOINT}?phone=${encodeURIComponent(phone)}`,
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
+        const payload = (await response.json()) as CustomerProfileResponse;
+
+        if (!response.ok || !payload.success || !payload.profile) {
+          throw new Error(payload.message ?? "Customer profile request failed.");
+        }
+
+        setProfile(payload.profile);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Customer profile could not be loaded.", error);
+          setProfile(null);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void Promise.resolve().then(loadCustomerProfile);
+
+    return () => {
+      controller.abort();
+    };
+  }, [phone]);
 
   if (!phone) {
     return <RealCustomerProfilePage profile={null} />;
   }
 
-  const profile = await getCustomerProfileFromOrdersSupabase(phone);
+  if (isLoading) {
+    return <RealCustomerProfilePage profile={null} />;
+  }
 
   return <RealCustomerProfilePage profile={profile} />;
+}
+
+export default function CustomerProfilePage() {
+  return (
+    <Suspense fallback={<RealCustomerProfilePage profile={null} />}>
+      <CustomerProfileContent />
+    </Suspense>
+  );
 }
