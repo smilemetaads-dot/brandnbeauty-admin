@@ -33,8 +33,14 @@ export type CmsBanner = {
 export type CmsReview = {
   comment: string;
   customer_name: string;
+  featured?: boolean;
   id: string;
+  image_url?: string | null;
+  product_id?: number | null;
   rating: number;
+  result_image_url?: string | null;
+  sort_order?: number;
+  status?: string;
   verified: boolean;
 };
 
@@ -65,6 +71,7 @@ type HomepageCmsResponse = Partial<HomepageCmsData> & {
 };
 
 export const CMS_META_ENDPOINT = bnbApiUrl("get_cms_meta.php");
+export const MANAGE_REVIEWS_ENDPOINT = bnbApiUrl("manage_reviews.php");
 export const HOMEPAGE_CMS_ENDPOINT = bnbApiUrl("get_homepage_cms.php");
 export const UPDATE_HOMEPAGE_CMS_ENDPOINT = bnbApiUrl("update_homepage_cms.php");
 

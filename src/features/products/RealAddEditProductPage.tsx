@@ -11,7 +11,7 @@ Source component: ProductMasterPage
 Use this as reference for live injection. Do not import from _reference into production src.
 */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -60,6 +60,7 @@ function TableHead({ children, className = "" }) {
 }
 
 const ADD_EDIT_PRODUCT_ENDPOINT = bnbApiUrl("add_edit_product.php");
+const PRODUCT_DETAILS_ENDPOINT = bnbApiUrl("get_product_details.php");
 const UPLOAD_MEDIA_ENDPOINT = bnbApiUrl("upload_media.php");
 const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024;
 
@@ -79,9 +80,79 @@ function readProductField(product, keys, fallback = "") {
   return fallback;
 }
 
+function parseProductAttributes(product) {
+  const raw = product?.attributes;
+  if (!raw) return {};
+  if (typeof raw === "object") return raw;
+
+  try {
+    const parsed = JSON.parse(String(raw));
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function readAttribute(product, keys, fallback = "") {
+  const attributes = parseProductAttributes(product);
+
+  for (const key of keys) {
+    const value = attributes[key];
+    if (Array.isArray(value)) {
+      const text = value
+        .map((item) => typeof item === "string" ? item : "")
+        .filter(Boolean)
+        .join("\n");
+      if (text) return text;
+    }
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      return String(value);
+    }
+  }
+
+  return fallback;
+}
+
+function readFaqText(product) {
+  const faq = parseProductAttributes(product).faq;
+
+  if (!Array.isArray(faq)) return "";
+
+  return faq
+    .map((item) => {
+      const question = String(item?.question || "").trim();
+      const answer = String(item?.answer || "").trim();
+      return question && answer ? `${question} | ${answer}` : "";
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function splitLines(value) {
+  return String(value || "")
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseFaqText(value) {
+  return String(value || "")
+    .split(/\r?\n/)
+    .map((line) => {
+      const [question, ...answerParts] = line.split("|");
+      return {
+        answer: answerParts.join("|").trim(),
+        question: String(question || "").trim(),
+      };
+    })
+    .filter((item) => item.question && item.answer);
+}
+
 export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   const router = useRouter();
-  const editingProduct = _props.product && typeof _props.product === "object" ? _props.product : null;
+  const initialEditingProduct = _props.product && typeof _props.product === "object" ? _props.product : null;
+  const [loadedProduct, setLoadedProduct] = useState(null);
+  const editingProduct = loadedProduct || initialEditingProduct;
   const editingProductId = readProductField(editingProduct, ["id", "product_id"], "");
   const [trackStock, setTrackStock] = useState(true);
   const [featured, setFeatured] = useState(true);
@@ -119,16 +190,20 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   const [variantDraft, setVariantDraft] = useState({ option: "", cost: "", regular: "", sale: "", stock: "", lowStock: "", status: "Active" });
   const [mainImageReady, setMainImageReady] = useState(false);
   const [mainImageFile, setMainImageFile] = useState(null);
-  const [galleryImages, setGalleryImages] = useState(["Angle 1", "Texture", "Box", "Routine"]);
+  const [galleryImages, setGalleryImages] = useState(splitLines(readAttribute(editingProduct, ["gallery_images", "gallery", "images"], "Angle 1\nTexture\nBox\nRoutine")));
   const [imageUrl, setImageUrl] = useState(readProductField(editingProduct, ["image_url", "image"], ""));
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [productLabel, setProductLabel] = useState("Bestseller");
   const [productBadge, setProductBadge] = useState("Authentic Product");
   const [shortDescription, setShortDescription] = useState(readProductField(editingProduct, ["short_description"], ""));
   const [fullDescription, setFullDescription] = useState(readProductField(editingProduct, ["description"], ""));
-  const [howToUse, setHowToUse] = useState("");
-  const [ingredients, setIngredients] = useState("");
-  const [productDetails, setProductDetails] = useState("");
+  const [howToUse, setHowToUse] = useState(readAttribute(editingProduct, ["how_to_use", "howToUse", "usage"], ""));
+  const [ingredients, setIngredients] = useState(readAttribute(editingProduct, ["ingredients", "ingredient_list"], ""));
+  const [productDetails, setProductDetails] = useState(readAttribute(editingProduct, ["benefits", "product_details"], ""));
+  const [suitableFor, setSuitableFor] = useState(readAttribute(editingProduct, ["suitable_for"], "Oily / Acne Prone"));
+  const [warnings, setWarnings] = useState(readAttribute(editingProduct, ["warnings"], ""));
+  const [keyIngredients, setKeyIngredients] = useState(readAttribute(editingProduct, ["key_ingredients"], ""));
+  const [faqText, setFaqText] = useState(readFaqText(editingProduct));
   const [visibleResultTitle, setVisibleResultTitle] = useState("Visible Results");
   const [visibleResultBullets, setVisibleResultBullets] = useState(`Skin feels less oily within first few uses\nHelps reduce clogged pores\nSupports a cleaner daily routine`);
   const [trustBadges, setTrustBadges] = useState(["100% Authentic", "Verified Seller", "COD Available", "Fast Delivery"]);
@@ -193,6 +268,62 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
     setTimeout(() => setActionToast(""), 2200);
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get("id");
+
+    if (!productId || loadedProduct) return;
+
+    let isMounted = true;
+
+    async function loadProductForEdit() {
+      try {
+        const response = await fetch(`${PRODUCT_DETAILS_ENDPOINT}?id=${encodeURIComponent(productId)}`, {
+          cache: "no-store",
+        });
+        const payload = await response.json();
+
+        if (!isMounted || !response.ok || !payload?.success || !payload.product) {
+          return;
+        }
+
+        const product = payload.product;
+        setLoadedProduct(product);
+        setProductName(readProductField(product, ["product_name", "name"], ""));
+        setCostPrice(readProductField(product, ["purchase_cost", "cost_price", "cost"], costPrice));
+        setRegularPrice(readProductField(product, ["price", "regular_price"], regularPrice));
+        setSalePrice(readProductField(product, ["sale_price", "price"], salePrice));
+        setStockQty(readProductField(product, ["stock_quantity", "stock", "quantity"], stockQty));
+        setLowStockAlert(readProductField(product, ["low_stock_threshold", "low_stock_limit", "reorder_level"], lowStockAlert));
+        setImageUrl(readProductField(product, ["image_url", "image"], ""));
+        setMainImageReady(Boolean(readProductField(product, ["image_url", "image"], "")));
+        setShortDescription(readProductField(product, ["short_description"], ""));
+        setFullDescription(readProductField(product, ["description"], ""));
+        setHowToUse(readAttribute(product, ["how_to_use", "howToUse", "usage"], ""));
+        setIngredients(readAttribute(product, ["ingredients", "ingredient_list"], ""));
+        setProductDetails(readAttribute(product, ["benefits", "product_details"], ""));
+        setSuitableFor(readAttribute(product, ["suitable_for"], "Oily / Acne Prone"));
+        setWarnings(readAttribute(product, ["warnings"], ""));
+        setKeyIngredients(readAttribute(product, ["key_ingredients"], ""));
+        setFaqText(readFaqText(product));
+        const loadedGallery = splitLines(readAttribute(product, ["gallery_images", "gallery", "images"], ""));
+        if (loadedGallery.length) {
+          setGalleryImages(loadedGallery);
+        }
+        setStatus(readProductField(product, ["status"], "draft") === "active" ? "Published" : "Draft");
+        setSaveStatus("Loaded from catalog");
+      } catch {
+        showActionToast("Product details could not be loaded for editing");
+      }
+    }
+
+    loadProductForEdit();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [loadedProduct]);
+
   const saveProductToBackend = async (nextStatus = "Draft") => {
     if (isSavingProduct) {
       return;
@@ -225,7 +356,13 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
       ...(editingProductId ? { id: editingProductId } : {}),
       category,
       description: [shortDescription, fullDescription].filter(Boolean).join("\n\n"),
+      benefits: splitLines(productDetails),
+      faq: parseFaqText(faqText || productFaqs.map((faq) => `${faq.question} | ${faq.answer}`).join("\n")),
+      gallery_images: splitLines(galleryImages.join("\n")),
+      how_to_use: howToUse,
       image_url: imageUrl,
+      ingredients,
+      key_ingredients: splitLines(keyIngredients),
       low_stock_threshold: String(lowStockAlert || "0"),
       name: productName.trim(),
       product_name: productName.trim(),
@@ -235,6 +372,8 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
       status: nextStatus === "Published" ? "active" : "draft",
       stock: String(previewStockQty),
       stock_quantity: String(previewStockQty),
+      suitable_for: suitableFor,
+      warnings,
     };
 
     try {
@@ -332,6 +471,9 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
     setShortDescription(`${cleanName} is a ${routineStep.toLowerCase()} step product for ${concern.toLowerCase()} focused daily skincare routines.`);
     setFullDescription(`${cleanName} helps customers build a simple, consistent routine for ${concern.toLowerCase()} concern. It is positioned for ${aiTargetCustomer.toLowerCase()} with clear usage guidance, trust-focused product information and conversion-friendly PDP content.`);
     setProductDetails(`Best for: ${skinType}. Routine step: ${routineStep}. Use time: ${routineTime}. Frequency: ${routineFrequency}. Designed to support a clean, practical and easy-to-follow skincare routine.`);
+    setSuitableFor(skinType);
+    setWarnings("Patch test before first use. Stop use if irritation occurs. Avoid direct contact with eyes.");
+    setKeyIngredients(ingredients || "Niacinamide\nGlycerin\nSkin-supporting actives");
     setHowToUse(`Use as the ${routineStep.toLowerCase()} step in your routine. Apply as directed, then follow with the next routine step. Use ${routineTime.toLowerCase()} • ${routineFrequency.toLowerCase()}. Patch test before first use.`);
     setIngredients(ingredients || "Add INCI ingredient list here. Keep ingredient names clean, comma-separated and packaging-safe.");
     setVisibleResultBullets(`Skin feels cleaner and more comfortable\nSupports ${concern.toLowerCase()} focused routine\nHelps maintain a more consistent skincare habit`);
@@ -340,6 +482,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
       { id: 2, question: `Is ${cleanName} suitable for ${skinType.toLowerCase()}?`, answer: `It is positioned for ${skinType.toLowerCase()} users, but sensitive skin users should patch test first.` },
       { id: 3, question: "When should I use it?", answer: `Recommended use time: ${routineTime}. Frequency: ${routineFrequency}.` },
     ]);
+    setFaqText(`How do I use ${cleanName}? | Use it as the ${routineStep.toLowerCase()} step. Follow the usage direction and patch test before first use.\nIs ${cleanName} suitable for ${skinType.toLowerCase()}? | It is positioned for ${skinType.toLowerCase()} users, but sensitive skin users should patch test first.\nWhen should I use it? | Recommended use time: ${routineTime}. Frequency: ${routineFrequency}.`);
     setSeoTitle(`${cleanName} Price in Bangladesh | BrandnBeauty`);
     setMetaDescription(`Buy authentic ${cleanName} in Bangladesh from BrandnBeauty. Suitable for ${concern.toLowerCase()} focused skincare routines with COD and fast delivery.`);
     setFocusKeyword(`${cleanName.toLowerCase()} ${category.toLowerCase()} bangladesh`);
@@ -420,7 +563,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div><h2 className="text-xl font-bold tracking-tight">Content & Media</h2></div><div className="flex items-center gap-3 rounded-2xl bg-stone-50 px-4 py-3"><div className="h-2.5 w-28 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-[#5E7F85]" style={{ width: `${contentScore}%` }} /></div><b className="text-sm text-[#5E7F85]">{contentScore}%</b></div></div>
             <div className="mt-5 rounded-[1.7rem] border border-[#5E7F85]/15 bg-gradient-to-br from-[#5E7F85]/10 via-white to-stone-50 p-5 shadow-sm"><div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between"><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-lg font-black text-slate-900">AI Content Studio</h3><Badge tone="brand">Automation Ready</Badge></div><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Generate product content, SEO, FAQ, routine copy and visible result text from the product master data. Human review required before publish.</p></div><button type="button" onClick={generateAutomationContent} className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white shadow-sm">Generate All Content</button></div><div className="mt-5 grid gap-3 md:grid-cols-3"><label className="space-y-2"><div className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">Generation Mode</div><select value={aiContentMode} onChange={(event) => setAiContentMode(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none"><option>Conversion + SEO</option><option>SEO Only</option><option>PDP Content Only</option><option>FAQ + Routine Only</option></select></label><label className="space-y-2"><div className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">Language Style</div><select value={aiContentLanguage} onChange={(event) => setAiContentLanguage(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none"><option>English + Bangla Friendly</option><option>English Only</option><option>Bangla + English Mix</option></select></label><label className="space-y-2"><div className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">Target Customer</div><input value={aiTargetCustomer} onChange={(event) => setAiTargetCustomer(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none" /></label></div></div>
             <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_340px]"><div className="space-y-5"><div className={`overflow-hidden rounded-[1.7rem] border bg-white shadow-sm ${mainImageReady ? "border-emerald-200 ring-2 ring-emerald-100" : "border-slate-200"}`}><div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><div><div className="text-sm font-bold text-slate-900">Main Image</div><div className="mt-1 text-xs text-slate-500">Large square product preview for storefront and PDP hero.</div></div><Badge tone={mainImageReady ? "good" : "warn"}>{isUploadingImage ? "Uploading" : mainImageReady ? "Ready" : "Missing"}</Badge></div><div className="p-5"><div className={`group relative flex aspect-square w-full flex-col items-center justify-center overflow-hidden rounded-[1.5rem] border border-dashed text-center transition ${mainImageReady ? "border-emerald-300 bg-emerald-50" : "border-slate-300 bg-stone-50 hover:border-[#5E7F85]/40 hover:bg-[#5E7F85]/5"}`}><div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold text-slate-600 shadow-sm">1:1 Preview</div><div className="flex h-20 w-20 items-center justify-center rounded-[1.4rem] bg-white text-3xl text-[#5E7F85] shadow-sm">▧</div><div className="mt-5 text-base font-bold text-slate-900">{mainImageFile ? mainImageFile.name : "Drop main product image here"}</div>{imageUrl && <div className="mt-2 max-w-xs truncate rounded-full bg-white px-3 py-1 text-[11px] font-bold text-emerald-700">{imageUrl}</div>}<div className="mt-2 max-w-xs text-xs leading-5 text-slate-500">Use JPG, PNG, or WEBP. Max upload size is 5MB.</div><label className={`mt-5 rounded-2xl px-5 py-3 text-sm font-semibold text-white ${isUploadingImage ? "cursor-not-allowed bg-slate-300" : "cursor-pointer bg-[#5E7F85]"}`}><input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageUpload} disabled={isUploadingImage} className="sr-only" />{isUploadingImage ? "Uploading..." : mainImageFile ? "Replace Image" : "Upload Image"}</label>{mainImageFile && <button type="button" disabled={isUploadingImage} onClick={() => { setMainImageFile(null); setMainImageReady(false); setImageUrl(""); showActionToast("Main image removed"); }} className="mt-3 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60">Remove</button>}</div></div></div><div className="overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white shadow-sm"><div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-sm font-bold text-slate-900">Gallery Images</div><div className="mt-1 text-xs text-slate-500">Equal square cards with drag, replace and remove controls.</div></div><button type="button" onClick={() => setGalleryImages((current) => [...current, `Gallery ${current.length + 1}`])} className="rounded-2xl bg-[#5E7F85]/10 px-4 py-2.5 text-xs font-bold text-[#5E7F85]">+ Add Gallery Image</button></div><div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-3">{galleryImages.map((item, index) => <div key={`${item}-${index}`} className="rounded-[1.25rem] border bg-white p-3 transition hover:-translate-y-0.5 hover:shadow-md"><div className="flex aspect-square items-center justify-center rounded-2xl bg-stone-50 text-xs font-bold text-slate-400">{item}</div><div className="mt-3 flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">Image {index + 1}</span><button type="button" onClick={() => setGalleryImages((current) => current.filter((_, i) => i !== index))} className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700">Remove</button></div></div>)}</div></div></div><div className="rounded-[1.7rem] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-sm font-bold text-slate-900">Live PDP Preview</div><div className="mt-4 rounded-3xl bg-stone-50 p-4"><div className="flex h-44 items-center justify-center overflow-hidden rounded-3xl bg-white text-xs font-bold text-slate-400">{imageUrl ? <img src={imageUrl} alt="" className="h-full w-full object-cover" /> : mainImageFile ? mainImageFile.name : "Product Image"}</div><div className="mt-4 text-lg font-black text-slate-900">{productName || "Product Name Preview"}</div><div className="mt-1 text-xs font-semibold text-[#5E7F85]">{brand}</div><div className="mt-3 flex items-center gap-2"><span className="text-xl font-black text-slate-900">৳{previewSalePrice}</span><span className="text-sm text-slate-400 line-through">৳{previewRegularPrice}</span><Badge tone="warn">{discount}% OFF</Badge></div><div className="mt-3 flex flex-wrap gap-2">{trustBadges.map((badge) => <Badge key={badge} tone="brand">{badge}</Badge>)}</div></div></div></div>
-            <div className="mt-5 grid gap-4 md:grid-cols-2"><label className="space-y-2"><div className="text-sm font-medium text-slate-600">Short Description</div><textarea value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2"><div className="text-sm font-medium text-slate-600">How to Use</div><textarea value={howToUse} onChange={(e) => setHowToUse(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2 md:col-span-2"><div className="text-sm font-medium text-slate-600">Full Description</div><textarea value={fullDescription} onChange={(e) => setFullDescription(e.target.value)} className="h-32 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2 md:col-span-2"><div className="text-sm font-medium text-slate-600">Ingredients</div><textarea value={ingredients} onChange={(e) => setIngredients(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label></div>
+            <div className="mt-5 grid gap-4 md:grid-cols-2"><label className="space-y-2"><div className="text-sm font-medium text-slate-600">Short Description</div><textarea value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2"><div className="text-sm font-medium text-slate-600">How to Use</div><textarea value={howToUse} onChange={(e) => setHowToUse(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2 md:col-span-2"><div className="text-sm font-medium text-slate-600">Full Description</div><textarea value={fullDescription} onChange={(e) => setFullDescription(e.target.value)} className="h-32 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2 md:col-span-2"><div className="text-sm font-medium text-slate-600">Benefits / Best For</div><textarea value={productDetails} onChange={(e) => setProductDetails(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" placeholder="One benefit per line" /></label><label className="space-y-2 md:col-span-2"><div className="text-sm font-medium text-slate-600">Ingredients</div><textarea value={ingredients} onChange={(e) => setIngredients(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2"><div className="text-sm font-medium text-slate-600">Key Ingredients</div><textarea value={keyIngredients} onChange={(e) => setKeyIngredients(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" placeholder="One key ingredient per line" /></label><label className="space-y-2"><div className="text-sm font-medium text-slate-600">Suitable For</div><textarea value={suitableFor} onChange={(e) => setSuitableFor(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2 md:col-span-2"><div className="text-sm font-medium text-slate-600">Warnings</div><textarea value={warnings} onChange={(e) => setWarnings(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2 md:col-span-2"><div className="text-sm font-medium text-slate-600">Gallery Image URLs</div><textarea value={galleryImages.join("\n")} onChange={(e) => setGalleryImages(splitLines(e.target.value))} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" placeholder="One image URL or path per line" /></label></div>
           </div>
 
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-xl font-bold tracking-tight">SEO & PDP Controls</h2><div className="mt-5 grid gap-4 md:grid-cols-2"><label className="space-y-2"><div className="text-sm font-medium text-slate-600">SEO Title</div><input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" placeholder={seoTitleText} /></label><label className="space-y-2"><div className="text-sm font-medium text-slate-600">Focus Keyword</div><input value={focusKeyword} onChange={(e) => setFocusKeyword(e.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2 md:col-span-2"><div className="text-sm font-medium text-slate-600">Meta Description</div><textarea value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} className="h-24 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" placeholder={metaDescriptionText} /></label><label className="space-y-2"><div className="text-sm font-medium text-slate-600">Visible Result Title</div><input value={visibleResultTitle} onChange={(e) => setVisibleResultTitle(e.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label><label className="space-y-2"><div className="text-sm font-medium text-slate-600">Routine Step</div><select value={routineStep} onChange={(e) => setRoutineStep(e.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none"><option>Cleanser</option><option>Serum</option><option>Moisturizer</option><option>Sunscreen</option></select></label><label className="space-y-2 md:col-span-2"><div className="text-sm font-medium text-slate-600">Visible Result Bullets</div><textarea value={visibleResultBullets} onChange={(e) => setVisibleResultBullets(e.target.value)} className="h-28 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" /></label></div></div>
@@ -429,7 +572,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
         <div className="space-y-6">
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><h2 className="text-xl font-bold tracking-tight">Smart Checks</h2><Badge tone={publishBlocked ? "warn" : "good"}>{publishBlocked ? "Needs work" : "Ready"}</Badge></div><div className="mt-5 space-y-3">{publishChecks.map((check) => <div key={check.label} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${check.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{check.ok ? "✅" : "⚠"} {check.label}</div>)}</div></div>
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-xl font-bold tracking-tight">Storefront Controls</h2><div className="mt-5 space-y-3">{[["Track Stock", trackStock, setTrackStock], ["Featured", featured, setFeatured], ["Free Delivery", freeDelivery, setFreeDelivery], ["Website Visible", websiteVisible, setWebsiteVisible], ["Messenger Order", messengerOrder, setMessengerOrder]].map(([label, value, setter]) => <button key={label} onClick={() => setter(!value)} className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold ${value ? "bg-[#5E7F85]/10 text-[#5E7F85]" : "bg-stone-50 text-slate-600"}`}><span>{label}</span><span>{value ? "ON" : "OFF"}</span></button>)}</div><div className="mt-5 grid gap-3"><label className="space-y-2"><div className="text-sm font-medium text-slate-600">Status</div><select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none"><option>Draft</option><option>Published</option><option>Private</option></select></label><label className="space-y-2"><div className="text-sm font-medium text-slate-600">Stock Rule</div><select value={stockRule} onChange={(e) => setStockRule(e.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none"><option>Sellable</option><option>Notify Me</option><option>Disabled</option></select></label><label className="space-y-2"><div className="text-sm font-medium text-slate-600">Out of Stock Behavior</div><select value={outOfStockBehavior} onChange={(e) => setOutOfStockBehavior(e.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none"><option>Show with Notify Me</option><option>Hide Product</option><option>Show Messenger Order</option></select></label></div></div>
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-xl font-bold tracking-tight">Product FAQs</h2><div className="mt-5 space-y-3">{productFaqs.map((faq) => <div key={faq.id} className="rounded-2xl bg-stone-50 p-4"><div className="font-bold text-slate-900">{faq.question}</div><div className="mt-1 text-sm text-slate-600">{faq.answer}</div></div>)}</div></div>
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-xl font-bold tracking-tight">Product FAQs</h2><textarea value={faqText || productFaqs.map((faq) => `${faq.question} | ${faq.answer}`).join("\n")} onChange={(e) => setFaqText(e.target.value)} className="mt-5 h-40 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" placeholder="Question | Answer" /><div className="mt-5 space-y-3">{(parseFaqText(faqText).length ? parseFaqText(faqText) : productFaqs).map((faq, index) => <div key={`${faq.question}-${index}`} className="rounded-2xl bg-stone-50 p-4"><div className="font-bold text-slate-900">{faq.question}</div><div className="mt-1 text-sm text-slate-600">{faq.answer}</div></div>)}</div></div>
         </div>
       </div>
 

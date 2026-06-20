@@ -6,8 +6,11 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import {
   defaultCmsMeta,
   fetchCmsMeta,
+  MANAGE_REVIEWS_ENDPOINT,
   type CmsMeta,
+  type CmsReview,
 } from "@/features/cms/cms-meta-client";
+import { adminAuthHeaders } from "@/lib/admin-auth";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
@@ -64,9 +67,9 @@ const galleryCards = [
 ] as const;
 
 const safetyItems = [
-  "No review/result save, approve, delete or publish workflow exists on this route yet.",
-  "No CMS write action, localStorage or storefront sync was added.",
-  "Add, save, review and edit controls stay disabled until real actions exist.",
+  "Review/result saves now use the local PHP/MySQL reviews endpoint.",
+  "Only approved/active reviews appear on the storefront.",
+  "If no live reviews exist, homepage and PDP keep their original fallback content.",
 ] as const;
 
 function Badge({
@@ -156,20 +159,72 @@ function statusTone(status: string): BadgeTone {
 
 export function RealReviewsRealResultsPage() {
   const [cmsMeta, setCmsMeta] = useState<CmsMeta>(defaultCmsMeta);
+  const [reviewDraft, setReviewDraft] = useState({
+    customer_name: "BrandnBeauty Customer",
+    featured: true,
+    image_url: "",
+    product_id: "",
+    rating: "5",
+    result_image_url: "",
+    review_text: "Fast delivery and helpful skincare guidance.",
+    sort_order: "1",
+    status: "approved",
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const loadReviews = (signal?: AbortSignal) => {
+    return fetchCmsMeta(signal)
+      .then(setCmsMeta)
+      .catch((error) => {
+        if (!signal?.aborted) {
+          console.error("Reviews CMS metadata could not be loaded.", error);
+        }
+      });
+  };
 
   useEffect(() => {
     const controller = new AbortController();
 
-    fetchCmsMeta(controller.signal)
-      .then(setCmsMeta)
-      .catch((error) => {
-        if (!controller.signal.aborted) {
-          console.error("Reviews CMS metadata could not be loaded.", error);
-        }
-      });
+    loadReviews(controller.signal);
 
     return () => controller.abort();
   }, []);
+
+  const saveReview = async (overrides: Partial<CmsReview & { review_text: string }> = {}) => {
+    setIsSaving(true);
+    setMessage("");
+
+    try {
+      const body = {
+        ...reviewDraft,
+        ...overrides,
+        featured: overrides.featured ?? reviewDraft.featured,
+        product_id: overrides.product_id ?? (reviewDraft.product_id ? Number(reviewDraft.product_id) : null),
+        rating: Number(overrides.rating ?? reviewDraft.rating),
+        sort_order: Number(overrides.sort_order ?? reviewDraft.sort_order),
+      };
+      const response = await fetch(MANAGE_REVIEWS_ENDPOINT, {
+        body: JSON.stringify(body),
+        headers: adminAuthHeaders({
+          "Content-Type": "application/json",
+        }),
+        method: "POST",
+      });
+      const payload = (await response.json()) as { message?: string; success?: boolean };
+
+      if (!response.ok || payload.success === false) {
+        throw new Error(payload.message || "Review could not be saved.");
+      }
+
+      setMessage(payload.message || "Review saved.");
+      await loadReviews();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Review could not be saved.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const liveStats = useMemo(() => {
     const approved = cmsMeta.reviews.filter((review) => review.verified).length;
@@ -185,7 +240,9 @@ export function RealReviewsRealResultsPage() {
 
   const liveResults = cmsMeta.reviews.map((review) => ({
     comment: review.comment,
-    product: "Customer Review",
+    id: review.id,
+    product: review.product_id ? `Product #${review.product_id}` : "Homepage Review",
+    raw: review,
     status: review.verified ? "Approved" : "Pending",
     title: review.customer_name,
     type: `${review.rating}/5 Rating`,
@@ -230,7 +287,14 @@ export function RealReviewsRealResultsPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <DisabledButton>Export</DisabledButton>
-                  <DisabledButton primary>Add Result</DisabledButton>
+                  <button
+                    className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                    disabled={isSaving}
+                    onClick={() => saveReview()}
+                    type="button"
+                  >
+                    {isSaving ? "Saving..." : "Add Result"}
+                  </button>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -272,18 +336,20 @@ export function RealReviewsRealResultsPage() {
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
                             <button
-                              className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-400"
-                              disabled
+                              className="rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-semibold text-[#5E7F85] disabled:text-slate-400"
+                              disabled={!("raw" in row) || isSaving}
+                              onClick={() => "raw" in row ? saveReview({ ...row.raw, id: row.id, review_text: row.comment, status: "approved" }) : undefined}
                               type="button"
                             >
-                              Review
+                              Approve
                             </button>
                             <button
-                              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400"
-                              disabled
+                              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 disabled:text-slate-400"
+                              disabled={!("raw" in row) || isSaving}
+                              onClick={() => "raw" in row ? saveReview({ ...row.raw, id: row.id, review_text: row.comment, status: "inactive" }) : undefined}
                               type="button"
                             >
-                              Edit
+                              Hide
                             </button>
                           </div>
                         </td>
@@ -331,16 +397,29 @@ export function RealReviewsRealResultsPage() {
                 Quick Add
               </h2>
               <div className="mt-5 space-y-3">
-                <div className="w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm text-slate-400">
-                  Result title
+                <input className="w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none" value={reviewDraft.customer_name} onChange={(event) => setReviewDraft((current) => ({ ...current, customer_name: event.target.value }))} placeholder="Customer name" />
+                <textarea className="h-28 w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none" value={reviewDraft.review_text} onChange={(event) => setReviewDraft((current) => ({ ...current, review_text: event.target.value }))} placeholder="Review text" />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input className="rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none" value={reviewDraft.rating} onChange={(event) => setReviewDraft((current) => ({ ...current, rating: event.target.value }))} placeholder="Rating" type="number" min={1} max={5} />
+                  <input className="rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none" value={reviewDraft.product_id} onChange={(event) => setReviewDraft((current) => ({ ...current, product_id: event.target.value }))} placeholder="Product ID optional" />
                 </div>
-                <div className="w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-600">
-                  Before / After
+                <input className="w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none" value={reviewDraft.image_url} onChange={(event) => setReviewDraft((current) => ({ ...current, image_url: event.target.value }))} placeholder="Review image URL" />
+                <input className="w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none" value={reviewDraft.result_image_url} onChange={(event) => setReviewDraft((current) => ({ ...current, result_image_url: event.target.value }))} placeholder="Result image URL" />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <select className="rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none" value={reviewDraft.status} onChange={(event) => setReviewDraft((current) => ({ ...current, status: event.target.value }))}>
+                    <option value="approved">Approved</option>
+                    <option value="pending">Pending</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                  <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-700">
+                    Featured
+                    <input checked={reviewDraft.featured} onChange={(event) => setReviewDraft((current) => ({ ...current, featured: event.target.checked }))} type="checkbox" />
+                  </label>
                 </div>
-                <div className="w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-600">
-                  Map to Product
-                </div>
-                <DisabledButton primary>Save Result</DisabledButton>
+                <button className="w-full rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300" disabled={isSaving} onClick={() => saveReview()} type="button">
+                  {isSaving ? "Saving..." : "Save Result"}
+                </button>
+                {message ? <div className="rounded-2xl bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-600">{message}</div> : null}
               </div>
             </div>
 
