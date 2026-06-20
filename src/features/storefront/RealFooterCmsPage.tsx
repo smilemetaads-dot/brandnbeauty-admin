@@ -3,33 +3,90 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
-import {
-  defaultCmsMeta,
-  fetchCmsMeta,
-  type CmsMeta,
-} from "@/features/cms/cms-meta-client";
+import { adminAuthHeaders } from "@/lib/admin-auth";
+import { bnbApiUrl } from "@/lib/bnb-api";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
-const groups = [
+type FooterLink = {
+  href: string;
+  label: string;
+  sort_order: number;
+  status: "active" | "inactive";
+};
+
+type FooterSocialLink = FooterLink & {
+  aria_label: string;
+};
+
+type FooterGroup = {
+  links: FooterLink[];
+  sort_order: number;
+  status: "active" | "inactive";
+  title: string;
+};
+
+type FooterContent = {
+  brand: {
+    copyright: string;
+    name: string;
+  };
+  groups: FooterGroup[];
+  social_links: FooterSocialLink[];
+};
+
+const GET_FOOTER_ENDPOINT = bnbApiUrl("get_footer.php");
+const UPDATE_FOOTER_ENDPOINT = bnbApiUrl("update_footer.php");
+
+const fallbackFooterContent: FooterContent = {
+  brand: {
+    copyright: "Copyright © 2026 BrandnBeauty. All Right Reserved",
+    name: "BrandnBeauty",
+  },
+  groups: [
   {
-    links: ["Categories", "Concerns", "Brands", "Best Sellers", "Offers"],
+    links: [
+      { label: "Categories", href: "/category/skincare", sort_order: 1, status: "active" },
+      { label: "Concerns", href: "/concern/acne", sort_order: 2, status: "active" },
+      { label: "Brands", href: "/brand/the-derma-plus", sort_order: 3, status: "active" },
+      { label: "Best Sellers", href: "/products", sort_order: 4, status: "active" },
+      { label: "Offers", href: "/products", sort_order: 5, status: "active" },
+    ],
+    sort_order: 1,
+    status: "active",
     title: "Explore",
   },
   {
-    links: ["Messenger Support", "Track Order", "FAQ", "Call Support"],
+    links: [
+      { label: "Messenger Support", href: "https://m.me/yourpage", sort_order: 1, status: "active" },
+      { label: "Track Order", href: "/thank-you", sort_order: 2, status: "active" },
+      { label: "FAQ", href: "#", sort_order: 3, status: "active" },
+      { label: "Call Support", href: "tel:+8800000000000", sort_order: 4, status: "active" },
+      { label: "hello@brandnbeauty.com", href: "mailto:hello@brandnbeauty.com", sort_order: 5, status: "active" },
+    ],
+    sort_order: 2,
+    status: "active",
     title: "Support",
   },
   {
     links: [
-      "Privacy Policy",
-      "Terms & Conditions",
-      "Refund Policy",
-      "Shipping Policy",
+      { label: "Privacy Policy", href: "#", sort_order: 1, status: "active" },
+      { label: "Terms & Conditions", href: "#", sort_order: 2, status: "active" },
+      { label: "Refund Policy", href: "#", sort_order: 3, status: "active" },
+      { label: "Shipping Policy", href: "#", sort_order: 4, status: "active" },
     ],
+    sort_order: 3,
+    status: "active",
     title: "Policies",
   },
-] as const;
+  ],
+  social_links: [
+    { label: "f", href: "https://www.facebook.com/brandnbeauty", aria_label: "Facebook", sort_order: 1, status: "active" },
+    { label: "ig", href: "https://www.instagram.com/brandnbeauty", aria_label: "Instagram", sort_order: 2, status: "active" },
+    { label: "tt", href: "https://www.tiktok.com/@brandnbeauty", aria_label: "TikTok", sort_order: 3, status: "active" },
+    { label: "yt", href: "https://www.youtube.com/@brandnbeauty", aria_label: "YouTube", sort_order: 4, status: "active" },
+  ],
+};
 
 const trust = [
   "100% Authentic Products",
@@ -40,7 +97,7 @@ const trust = [
 
 const stats = [
   ["Footer Groups", "3", "Explore, support, policies"],
-  ["Footer Links", "13", "Preview links"],
+  ["Footer Links", "13", "Saved links"],
   ["Trust Items", "4", "Bottom trust strip"],
   ["Social Icons", "4", "Facebook, IG, TikTok, YouTube"],
 ] as const;
@@ -49,24 +106,24 @@ const detailPanels = [
   {
     description: "Brand summary, support promise, copyright copy and social handles.",
     label: "Brand Block",
-    status: "Preview only",
+    status: "Live footer",
   },
   {
     description: "Customer service phone, Messenger support and order tracking links.",
     label: "Contact & Support",
-    status: "Preview only",
+    status: "Live footer",
   },
   {
     description: "Privacy, terms, refund and shipping links for legal navigation.",
     label: "Legal Links",
-    status: "Preview only",
+    status: "Live footer",
   },
 ] as const;
 
 const safetyItems = [
-  "No footer save, publish, reorder or delete workflow exists on this route yet.",
-  "No CMS write action, localStorage or storefront sync was added.",
-  "Save, preview, link edit and social link controls stay disabled until real actions exist.",
+  "Footer links and social icons save through the local PHP/MySQL settings table.",
+  "Storefront footer keeps its static fallback if footer data is empty or unavailable.",
+  "Newsletter block, trust strip and advanced visibility rules remain preview-only.",
 ] as const;
 
 function Badge({
@@ -115,6 +172,135 @@ function DisabledButton({
   );
 }
 
+function normalizeFooterLink(link: unknown): FooterLink | null {
+  if (!link || typeof link !== "object") return null;
+
+  const record = link as Partial<FooterLink>;
+  const label = typeof record.label === "string" ? record.label.trim() : "";
+  const href = typeof record.href === "string" && record.href.trim() ? record.href.trim() : "#";
+
+  if (!label) return null;
+
+  return {
+    href,
+    label,
+    sort_order: Number(record.sort_order) || 0,
+    status: record.status === "inactive" ? "inactive" : "active",
+  };
+}
+
+function normalizeFooterSocial(link: unknown): FooterSocialLink | null {
+  const normalized = normalizeFooterLink(link);
+  if (!normalized || !link || typeof link !== "object") return null;
+
+  const record = link as Partial<FooterSocialLink>;
+
+  return {
+    ...normalized,
+    aria_label: typeof record.aria_label === "string" && record.aria_label.trim()
+      ? record.aria_label.trim()
+      : normalized.label,
+  };
+}
+
+function normalizeFooterGroup(group: unknown): FooterGroup | null {
+  if (!group || typeof group !== "object") return null;
+
+  const record = group as Partial<FooterGroup>;
+  const title = typeof record.title === "string" ? record.title.trim() : "";
+  const links = Array.isArray(record.links)
+    ? record.links
+        .map(normalizeFooterLink)
+        .filter((link): link is FooterLink => Boolean(link))
+    : [];
+
+  if (!title || !links.length) return null;
+
+  return {
+    links,
+    sort_order: Number(record.sort_order) || 0,
+    status: record.status === "inactive" ? "inactive" : "active",
+    title,
+  };
+}
+
+function normalizeFooterContent(payload: unknown): FooterContent {
+  if (!payload || typeof payload !== "object") {
+    return fallbackFooterContent;
+  }
+
+  const record = payload as Partial<FooterContent>;
+  const brand = record.brand && typeof record.brand === "object" ? record.brand : fallbackFooterContent.brand;
+  const groups = Array.isArray(record.groups)
+    ? record.groups
+        .map(normalizeFooterGroup)
+        .filter((group): group is FooterGroup => Boolean(group))
+    : [];
+  const socialLinks = Array.isArray(record.social_links)
+    ? record.social_links
+        .map(normalizeFooterSocial)
+        .filter((link): link is FooterSocialLink => Boolean(link))
+    : [];
+
+  return {
+    brand: {
+      copyright: typeof brand.copyright === "string" && brand.copyright.trim()
+        ? brand.copyright.trim()
+        : fallbackFooterContent.brand.copyright,
+      name: typeof brand.name === "string" && brand.name.trim()
+        ? brand.name.trim()
+        : fallbackFooterContent.brand.name,
+    },
+    groups: groups.length ? groups : fallbackFooterContent.groups,
+    social_links: socialLinks.length ? socialLinks : fallbackFooterContent.social_links,
+  };
+}
+
+function formatLinkLines(links: FooterLink[]) {
+  return links
+    .map((link) => `${link.label} | ${link.href} | ${link.status}`)
+    .join("\n");
+}
+
+function parseLinkLines(value: string): FooterLink[] {
+  return value.split("\n").reduce<FooterLink[]>((links, line, index) => {
+    const [rawLabel, rawHref, rawStatus] = line.split("|").map((part) => part?.trim() ?? "");
+    if (!rawLabel) return links;
+
+    links.push({
+      href: rawHref || "#",
+      label: rawLabel,
+      sort_order: index + 1,
+      status: rawStatus === "inactive" ? "inactive" : "active",
+    });
+
+    return links;
+  }, []);
+}
+
+function formatSocialLines(links: FooterSocialLink[]) {
+  return links
+    .map((link) => `${link.label} | ${link.href} | ${link.aria_label} | ${link.status}`)
+    .join("\n");
+}
+
+function parseSocialLines(value: string): FooterSocialLink[] {
+  return value.split("\n").reduce<FooterSocialLink[]>((links, line, index) => {
+    const [rawLabel, rawHref, rawAriaLabel, rawStatus] = line.split("|").map((part) => part?.trim() ?? "");
+    if (!rawLabel) return links;
+
+    links.push({
+      aria_label: rawAriaLabel || rawLabel,
+      href: rawHref || "#",
+      label: rawLabel,
+      sort_order: index + 1,
+      status: rawStatus === "inactive" ? "inactive" : "active",
+    });
+
+    return links;
+  }, []);
+}
+
 function StatCard({
   helper,
   label,
@@ -143,37 +329,106 @@ function StatCard({
 }
 
 export function RealFooterCmsPage() {
-  const [cmsMeta, setCmsMeta] = useState<CmsMeta>(defaultCmsMeta);
+  const [footerContent, setFooterContent] = useState<FooterContent>(fallbackFooterContent);
+  const [message, setMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
 
-    fetchCmsMeta(controller.signal)
-      .then(setCmsMeta)
+    fetch(GET_FOOTER_ENDPOINT, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          footer?: unknown;
+          success?: boolean;
+        };
+
+        if (!response.ok || payload.success === false || !payload.footer) {
+          return fallbackFooterContent;
+        }
+
+        return normalizeFooterContent(payload.footer);
+      })
+      .then(setFooterContent)
       .catch((error) => {
         if (!controller.signal.aborted) {
-          console.error("Footer CMS metadata could not be loaded.", error);
+          console.error("Footer CMS data could not be loaded.", error);
         }
       });
 
     return () => controller.abort();
   }, []);
 
+  const saveFooter = async () => {
+    setIsSaving(true);
+    setMessage("");
+
+    try {
+      const response = await fetch(UPDATE_FOOTER_ENDPOINT, {
+        body: JSON.stringify({ footer: footerContent }),
+        headers: adminAuthHeaders({
+          "Content-Type": "application/json",
+        }),
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        footer?: unknown;
+        message?: string;
+        success?: boolean;
+      };
+
+      if (!response.ok || payload.success === false) {
+        throw new Error(payload.message || "Footer could not be saved.");
+      }
+
+      if (payload.footer) {
+        setFooterContent(normalizeFooterContent(payload.footer));
+      }
+
+      setMessage(payload.message || "Footer saved successfully.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Footer could not be saved.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateGroup = (index: number, patch: Partial<FooterGroup>) => {
+    setFooterContent((current) => ({
+      ...current,
+      groups: current.groups.map((group, groupIndex) =>
+        groupIndex === index
+          ? {
+              ...group,
+              ...patch,
+            }
+          : group,
+      ),
+    }));
+  };
+
   const liveStats = useMemo(
     () =>
       stats.map(([label, value, helper]) =>
         label === "Trust Items"
-          ? [label, String(cmsMeta.reviews.length), "Verified reviews"]
+          ? [label, "Preview", "Bottom trust strip"]
           : label === "Footer Links"
-            ? [label, String(13 + cmsMeta.banners.length), "Static + CMS links"]
+            ? [label, String(footerContent.groups.reduce((total, group) => total + group.links.length, 0)), "Saved links"]
+          : label === "Footer Groups"
+            ? [label, String(footerContent.groups.length), "Saved columns"]
+          : label === "Social Icons"
+            ? [label, String(footerContent.social_links.length), "Saved social links"]
             : [label, value, helper],
       ),
-    [cmsMeta.banners.length, cmsMeta.reviews.length],
+    [footerContent.groups, footerContent.social_links.length],
   );
-  const liveDetailPanels = cmsMeta.banners.slice(0, 3).map((banner) => ({
-    description: banner.text,
-    label: banner.title,
-    status: "Live metadata",
+  const liveDetailPanels = footerContent.groups.slice(0, 3).map((group) => ({
+    description: `${group.links.length} links saved in this footer column.`,
+    label: group.title,
+    status: group.status === "active" ? "Live footer" : "Inactive",
   }));
 
   return (
@@ -203,15 +458,27 @@ export function RealFooterCmsPage() {
                   </h1>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                     Control footer brand block, social links, policy links and
-                    trust strip with local CMS metadata available for live
-                    campaign and review previews. Save actions remain disabled.
+                    customer support links through local PHP/MySQL settings.
+                    Trust strip controls remain preview-only.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <DisabledButton>Preview</DisabledButton>
-                  <DisabledButton primary>Save Footer</DisabledButton>
+                  <button
+                    className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                    disabled={isSaving}
+                    onClick={saveFooter}
+                    type="button"
+                  >
+                    {isSaving ? "Saving..." : "Save Footer"}
+                  </button>
                 </div>
               </div>
+              {message ? (
+                <div className="mt-5 rounded-2xl bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-600">
+                  {message}
+                </div>
+              ) : null}
 
               <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-[#5E7F85] text-white shadow-sm">
                 <div className="grid gap-5 border-b border-white/10 bg-white/10 p-4 md:grid-cols-4">
@@ -226,28 +493,28 @@ export function RealFooterCmsPage() {
                 </div>
                 <div className="grid gap-6 p-6 md:grid-cols-[1.2fr_1fr_1fr_1fr]">
                   <div>
-                    <div className="text-2xl font-black">BrandnBeauty</div>
+                    <div className="text-2xl font-black">{footerContent.brand.name}</div>
                     <p className="mt-3 text-sm leading-6 text-white/80">
                       Authentic beauty products, practical routines and support
                       for Bangladeshi customers.
                     </p>
                     <div className="mt-4 flex gap-2">
-                      {["f", "ig", "tt", "yt"].map((item) => (
+                      {footerContent.social_links.map((item) => (
                         <span
                           className="rounded-full bg-white/15 px-3 py-2 text-xs"
-                          key={item}
+                          key={`${item.label}-${item.href}`}
                         >
-                          {item}
+                          {item.label}
                         </span>
                       ))}
                     </div>
                   </div>
-                  {groups.map((group) => (
+                  {footerContent.groups.map((group) => (
                     <div key={group.title}>
                       <div className="font-bold">{group.title}</div>
                       <div className="mt-3 space-y-2 text-sm text-white/80">
                         {group.links.slice(0, 4).map((link) => (
-                          <div key={link}>{link}</div>
+                          <div key={`${link.label}-${link.href}`}>{link.label}</div>
                         ))}
                       </div>
                     </div>
@@ -287,23 +554,36 @@ export function RealFooterCmsPage() {
                 Editable Sections
               </h2>
               <div className="mt-5 space-y-3">
-                {groups.map((group) => (
+                {footerContent.groups.map((group, index) => (
                   <div className="rounded-2xl bg-stone-50 p-4" key={group.title}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="font-bold text-slate-900">
-                        {group.title}
-                      </div>
-                      <Badge tone="warn">Preview</Badge>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {group.links.map((link) => (
-                        <span
-                          className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600"
-                          key={link}
+                    <div className="grid gap-3">
+                      <input
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-[#5E7F85]"
+                        onChange={(event) => updateGroup(index, { title: event.target.value })}
+                        value={group.title}
+                      />
+                      <textarea
+                        className="h-28 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-[#5E7F85]"
+                        onChange={(event) => updateGroup(index, { links: parseLinkLines(event.target.value) })}
+                        placeholder="Label | /href | active"
+                        value={formatLinkLines(group.links)}
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#5E7F85]"
+                          onChange={(event) => updateGroup(index, { sort_order: Number(event.target.value) || 0 })}
+                          type="number"
+                          value={group.sort_order}
+                        />
+                        <select
+                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#5E7F85]"
+                          onChange={(event) => updateGroup(index, { status: event.target.value === "inactive" ? "inactive" : "active" })}
+                          value={group.status}
                         >
-                          {link}
-                        </span>
-                      ))}
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -312,10 +592,66 @@ export function RealFooterCmsPage() {
 
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
               <div className="text-sm font-medium text-slate-500">
+                Brand & Social
+              </div>
+              <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
+                Footer Identity
+              </h3>
+              <div className="mt-5 space-y-3">
+                <input
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                  onChange={(event) =>
+                    setFooterContent((current) => ({
+                      ...current,
+                      brand: {
+                        ...current.brand,
+                        name: event.target.value,
+                      },
+                    }))
+                  }
+                  value={footerContent.brand.name}
+                />
+                <input
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                  onChange={(event) =>
+                    setFooterContent((current) => ({
+                      ...current,
+                      brand: {
+                        ...current.brand,
+                        copyright: event.target.value,
+                      },
+                    }))
+                  }
+                  value={footerContent.brand.copyright}
+                />
+                <textarea
+                  className="h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-xs outline-none focus:border-[#5E7F85]"
+                  onChange={(event) =>
+                    setFooterContent((current) => ({
+                      ...current,
+                      social_links: parseSocialLines(event.target.value),
+                    }))
+                  }
+                  placeholder="f | https://example.com | Facebook | active"
+                  value={formatSocialLines(footerContent.social_links)}
+                />
+                <button
+                  className="w-full rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                  disabled={isSaving}
+                  onClick={saveFooter}
+                  type="button"
+                >
+                  {isSaving ? "Saving..." : "Save Footer"}
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="text-sm font-medium text-slate-500">
                 Footer Controls
               </div>
               <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                Disabled Until Connected
+                Preview Controls
               </h3>
               <div className="mt-5 space-y-3">
                 {[

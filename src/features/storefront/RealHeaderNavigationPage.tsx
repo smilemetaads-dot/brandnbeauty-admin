@@ -3,24 +3,40 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
-import {
-  defaultCmsMeta,
-  fetchCmsMeta,
-  type CmsMeta,
-} from "@/features/cms/cms-meta-client";
+import { adminAuthHeaders } from "@/lib/admin-auth";
+import { bnbApiUrl } from "@/lib/bnb-api";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
-const navItems = [
-  "Skincare",
-  "Hair Care",
-  "Body Care",
-  "Makeup",
-  "Tools",
-  "Fragrance",
-  "Men's Care",
-  "Mom & Baby",
+type NavigationItem = {
+  children: NavigationItem[];
+  href: string;
+  label: string;
+  sort_order: number;
+  status: "active" | "inactive";
+};
+
+const GET_NAVIGATION_ENDPOINT = bnbApiUrl("get_navigation.php");
+const UPDATE_NAVIGATION_ENDPOINT = bnbApiUrl("update_navigation.php");
+
+const fallbackNavItems: NavigationItem[] = [
+  { label: "Skincare", href: "/category/skincare", sort_order: 1, status: "active", children: [] },
+  { label: "Hair Care", href: "/category/hair-care", sort_order: 2, status: "active", children: [] },
+  { label: "Body Care", href: "/category/body-care", sort_order: 3, status: "active", children: [] },
+  { label: "Makeup", href: "/category/makeup", sort_order: 4, status: "active", children: [] },
+  { label: "Tools", href: "/category/tools", sort_order: 5, status: "active", children: [] },
+  { label: "Fragrance", href: "/category/fragrance", sort_order: 6, status: "active", children: [] },
+  { label: "Men's Care", href: "/category/mens-care", sort_order: 7, status: "active", children: [] },
+  { label: "Mom & Baby", href: "/category/mom-baby", sort_order: 8, status: "active", children: [] },
 ];
+
+const defaultNewItem: NavigationItem = {
+  children: [],
+  href: "/category/new",
+  label: "",
+  sort_order: fallbackNavItems.length + 1,
+  status: "active",
+};
 
 const stats = [
   ["Menu Items", "8", "Top navigation"],
@@ -38,28 +54,10 @@ const controls = [
   ["Sticky Header", "Enabled", "Keep header visible while scrolling"],
 ] as const;
 
-const megaMenuBlocks = [
-  {
-    description: "Primary storefront discovery links for category browsing.",
-    label: "Category Navigation",
-    links: ["Skincare", "Hair Care", "Body Care", "Makeup"],
-  },
-  {
-    description: "Concern-led shortcuts for problem-based shopping.",
-    label: "Concern Links",
-    links: ["Acne", "Dark Spots", "Dry Skin", "Hair Fall"],
-  },
-  {
-    description: "Merchandising links for best sellers and offers.",
-    label: "Campaign Links",
-    links: ["Best Sellers", "New Arrivals", "Offers", "Routine Kits"],
-  },
-];
-
 const safetyItems = [
-  "No header/navigation save, publish, reorder or delete workflow exists on this route yet.",
-  "No CMS write action, localStorage or storefront sync was added.",
-  "Save, preview, menu edit and mobile navigation controls stay disabled until real actions exist.",
+  "Header menu saves now use the local PHP/MySQL settings table.",
+  "Storefront header keeps its static fallback if navigation data is empty or unavailable.",
+  "Logo upload, search behavior, wishlist/login visibility and mobile drawer settings remain preview-only.",
 ];
 
 function Badge({
@@ -108,6 +106,50 @@ function DisabledButton({
   );
 }
 
+function normalizeNavigationItem(item: unknown): NavigationItem | null {
+  if (!item || typeof item !== "object") return null;
+
+  const record = item as Partial<NavigationItem>;
+  const label = typeof record.label === "string" ? record.label.trim() : "";
+  const href = typeof record.href === "string" && record.href.trim() ? record.href.trim() : "#";
+  const status = record.status === "inactive" ? "inactive" : "active";
+
+  if (!label) return null;
+
+  return {
+    children: Array.isArray(record.children)
+      ? record.children
+          .map(normalizeNavigationItem)
+          .filter((child): child is NavigationItem => Boolean(child))
+      : [],
+    href,
+    label,
+    sort_order: Number(record.sort_order) || 0,
+    status,
+  };
+}
+
+function parseChildLines(value: string): NavigationItem[] {
+  return value.split("\n").reduce<NavigationItem[]>((items, line, index) => {
+      const [rawLabel, rawHref] = line.split("|").map((part) => part?.trim() ?? "");
+      if (!rawLabel) return items;
+
+      items.push({
+        children: [],
+        href: rawHref || "#",
+        label: rawLabel,
+        sort_order: index + 1,
+        status: "active" as const,
+      });
+
+      return items;
+    }, []);
+}
+
+function formatChildLines(children: NavigationItem[]) {
+  return children.map((child) => `${child.label} | ${child.href}`).join("\n");
+}
+
 function StatCard({
   helper,
   label,
@@ -136,37 +178,149 @@ function StatCard({
 }
 
 export function RealHeaderNavigationPage() {
-  const [cmsMeta, setCmsMeta] = useState<CmsMeta>(defaultCmsMeta);
+  const [navItems, setNavItems] = useState<NavigationItem[]>(fallbackNavItems);
+  const [newItem, setNewItem] = useState<NavigationItem>(defaultNewItem);
+  const [message, setMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
 
-    fetchCmsMeta(controller.signal)
-      .then(setCmsMeta)
+    fetch(GET_NAVIGATION_ENDPOINT, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          navigation?: unknown[];
+          success?: boolean;
+        };
+
+        if (!response.ok || payload.success === false || !Array.isArray(payload.navigation)) {
+          return fallbackNavItems;
+        }
+
+        const items = payload.navigation
+          .map(normalizeNavigationItem)
+          .filter((item): item is NavigationItem => Boolean(item));
+
+        return items.length ? items : fallbackNavItems;
+      })
+      .catch(() => fallbackNavItems)
+      .then((navigation) => {
+        setNavItems(navigation);
+        setNewItem((current) => ({
+          ...current,
+          sort_order: navigation.length + 1,
+        }));
+      })
       .catch((error) => {
         if (!controller.signal.aborted) {
-          console.error("Navigation CMS metadata could not be loaded.", error);
+          console.error("Navigation data could not be loaded.", error);
         }
       });
 
     return () => controller.abort();
   }, []);
 
+  const saveNavigation = async () => {
+    setIsSaving(true);
+    setMessage("");
+
+    try {
+      const response = await fetch(UPDATE_NAVIGATION_ENDPOINT, {
+        body: JSON.stringify({ navigation: navItems }),
+        headers: adminAuthHeaders({
+          "Content-Type": "application/json",
+        }),
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        message?: string;
+        navigation?: unknown[];
+        success?: boolean;
+      };
+
+      if (!response.ok || payload.success === false) {
+        throw new Error(payload.message || "Navigation could not be saved.");
+      }
+
+      if (Array.isArray(payload.navigation)) {
+        const normalized = payload.navigation
+          .map(normalizeNavigationItem)
+          .filter((item): item is NavigationItem => Boolean(item));
+        if (normalized.length) {
+          setNavItems(normalized);
+        }
+      }
+
+      setMessage(payload.message || "Navigation saved successfully.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Navigation could not be saved.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateNavItem = (index: number, patch: Partial<NavigationItem>) => {
+    setNavItems((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              ...patch,
+            }
+          : item,
+      ),
+    );
+  };
+
+  const addNavigationItem = () => {
+    const label = newItem.label.trim();
+    if (!label) {
+      setMessage("Menu label is required before adding an item.");
+      return;
+    }
+
+    setNavItems((current) => [
+      ...current,
+      {
+        ...newItem,
+        href: newItem.href.trim() || "#",
+        label,
+        sort_order: newItem.sort_order || current.length + 1,
+      },
+    ]);
+    setNewItem({
+      ...defaultNewItem,
+      sort_order: navItems.length + 2,
+    });
+    setMessage("Menu item added to draft. Save navigation to publish it.");
+  };
+
+  const removeNavigationItem = (index: number) => {
+    setNavItems((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  };
+
   const liveStats = useMemo(
     () =>
       stats.map(([label, value, helper]) =>
         label === "Menu Items"
-          ? [label, String(Math.max(navItems.length, cmsMeta.banners.length)), "Live CMS meta"]
+          ? [label, String(navItems.length), "Saved navigation"]
+          : label === "Header Controls"
+            ? [label, "Live", "Menu save enabled"]
           : label === "Search Status"
-            ? [label, "Connected", "Local endpoint"]
+            ? [label, "Preview", "Product search"]
             : [label, value, helper],
       ),
-    [cmsMeta.banners.length],
+    [navItems.length],
   );
-  const liveMegaMenuBlocks = cmsMeta.banners.slice(0, 3).map((banner) => ({
-    description: banner.text,
-    label: banner.title,
-    links: [banner.link, "Homepage", "Campaign"],
+  const liveMegaMenuBlocks = navItems.slice(0, 3).map((item) => ({
+    description: item.children.length
+      ? `${item.children.length} submenu links saved for this item.`
+      : "Top-level navigation item.",
+    label: item.label,
+    links: item.children.length ? item.children.map((child) => child.label) : [item.href],
   }));
 
   return (
@@ -196,15 +350,28 @@ export function RealHeaderNavigationPage() {
                   </h1>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                     Manage logo, search, top menu, bag button and storefront
-                    navigation order with local CMS metadata available for
-                    campaign links. Save actions remain disabled.
+                    navigation order with local PHP/MySQL-backed menu data.
+                    Logo, search, wishlist, login and mobile drawer settings
+                    remain preview-only.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <DisabledButton>Preview</DisabledButton>
-                  <DisabledButton primary>Save Navigation</DisabledButton>
+                  <button
+                    className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                    disabled={isSaving}
+                    onClick={saveNavigation}
+                    type="button"
+                  >
+                    {isSaving ? "Saving..." : "Save Navigation"}
+                  </button>
                 </div>
               </div>
+              {message ? (
+                <div className="mt-5 rounded-2xl bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-600">
+                  {message}
+                </div>
+              ) : null}
 
               <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-stone-50 p-4">
                 <div className="flex items-center justify-between gap-4 rounded-2xl bg-white px-4 py-4 shadow-sm">
@@ -225,10 +392,10 @@ export function RealHeaderNavigationPage() {
                     <button
                       className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600"
                       disabled
-                      key={item}
+                      key={item.label}
                       type="button"
                     >
-                      {item}
+                      {item.label}
                     </button>
                   ))}
                 </div>
@@ -245,14 +412,21 @@ export function RealHeaderNavigationPage() {
                     Navigation Builder
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                    Menu groups display live campaign metadata when available
-                    while the header/navigation write workflow stays disabled.
+                    Edit top-level menu rows and optional dropdown children.
+                    Save publishes the header menu to the storefront.
                   </p>
                 </div>
-                <DisabledButton>Reorder Menu</DisabledButton>
+                <button
+                  className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                  disabled={isSaving}
+                  onClick={saveNavigation}
+                  type="button"
+                >
+                  {isSaving ? "Saving..." : "Save Menu"}
+                </button>
               </div>
               <div className="grid gap-4 p-5 lg:grid-cols-3">
-                {(liveMegaMenuBlocks.length ? liveMegaMenuBlocks : megaMenuBlocks).map((block) => (
+                {liveMegaMenuBlocks.map((block) => (
                   <div
                     className="rounded-[1.5rem] border border-slate-200 bg-stone-50 p-5"
                     key={block.label}
@@ -266,7 +440,7 @@ export function RealHeaderNavigationPage() {
                           {block.description}
                         </p>
                       </div>
-                      <Badge tone="warn">Preview</Badge>
+                      <Badge tone="good">Live</Badge>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
                       {block.links.map((link) => (
@@ -281,10 +455,157 @@ export function RealHeaderNavigationPage() {
                   </div>
                 ))}
               </div>
+              <div className="border-t border-slate-100 p-5">
+                <div className="overflow-x-auto">
+                  <table className="min-w-[900px] text-left text-sm">
+                    <thead className="bg-stone-50 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+                      <tr>
+                        {["Label", "Href", "Children", "Sort", "Status", "Action"].map((heading) => (
+                          <th className="px-4 py-3" key={heading}>
+                            {heading}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {navItems.map((item, index) => (
+                        <tr className="border-t border-slate-100" key={`${item.label}-${index}`}>
+                          <td className="px-4 py-3">
+                            <input
+                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#5E7F85]"
+                              onChange={(event) => updateNavItem(index, { label: event.target.value })}
+                              value={item.label}
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#5E7F85]"
+                              onChange={(event) => updateNavItem(index, { href: event.target.value })}
+                              value={item.href}
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <textarea
+                              className="h-20 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-[#5E7F85]"
+                              onChange={(event) => updateNavItem(index, { children: parseChildLines(event.target.value) })}
+                              placeholder="Cleanser | /category/skincare?subcategory=cleanser"
+                              value={formatChildLines(item.children)}
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              className="w-20 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#5E7F85]"
+                              onChange={(event) => updateNavItem(index, { sort_order: Number(event.target.value) || 0 })}
+                              type="number"
+                              value={item.sort_order}
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <select
+                              className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#5E7F85]"
+                              onChange={(event) => updateNavItem(index, { status: event.target.value === "inactive" ? "inactive" : "active" })}
+                              value={item.status}
+                            >
+                              <option value="active">Active</option>
+                              <option value="inactive">Inactive</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700"
+                              onClick={() => removeNavigationItem(index)}
+                              type="button"
+                            >
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
 
           <aside className="space-y-6">
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="text-sm font-medium text-slate-500">
+                Add Menu Item
+              </div>
+              <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
+                New Link
+              </h3>
+              <div className="mt-5 space-y-3">
+                <input
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                  onChange={(event) =>
+                    setNewItem((current) => ({
+                      ...current,
+                      label: event.target.value,
+                    }))
+                  }
+                  placeholder="Menu label"
+                  value={newItem.label}
+                />
+                <input
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                  onChange={(event) =>
+                    setNewItem((current) => ({
+                      ...current,
+                      href: event.target.value,
+                    }))
+                  }
+                  placeholder="/category/skincare"
+                  value={newItem.href}
+                />
+                <textarea
+                  className="h-24 w-full rounded-2xl border border-slate-200 px-4 py-3 text-xs outline-none focus:border-[#5E7F85]"
+                  onChange={(event) =>
+                    setNewItem((current) => ({
+                      ...current,
+                      children: parseChildLines(event.target.value),
+                    }))
+                  }
+                  placeholder="Cleanser | /category/skincare?subcategory=cleanser"
+                  value={formatChildLines(newItem.children)}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                    onChange={(event) =>
+                      setNewItem((current) => ({
+                        ...current,
+                        sort_order: Number(event.target.value) || 0,
+                      }))
+                    }
+                    type="number"
+                    value={newItem.sort_order}
+                  />
+                  <select
+                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                    onChange={(event) =>
+                      setNewItem((current) => ({
+                        ...current,
+                        status: event.target.value === "inactive" ? "inactive" : "active",
+                      }))
+                    }
+                    value={newItem.status}
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <button
+                  className="w-full rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white"
+                  onClick={addNavigationItem}
+                  type="button"
+                >
+                  Add To Draft
+                </button>
+              </div>
+            </div>
+
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
               <div className="text-sm font-medium text-slate-500">
                 Header Settings
@@ -331,9 +652,9 @@ export function RealHeaderNavigationPage() {
                     {navItems.slice(0, 5).map((item) => (
                       <div
                         className="rounded-xl bg-stone-50 px-3 py-2 text-xs font-semibold text-slate-600"
-                        key={item}
+                        key={item.label}
                       >
-                        {item}
+                        {item.label}
                       </div>
                     ))}
                   </div>

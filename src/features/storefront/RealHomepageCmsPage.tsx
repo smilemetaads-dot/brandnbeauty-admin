@@ -20,7 +20,7 @@ type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
 const stats = [
   {
-    helper: "Preview surface",
+    helper: "Live CMS surface",
     label: "Homepage module",
     value: "Not connected",
   },
@@ -35,9 +35,9 @@ const stats = [
     value: "4",
   },
   {
-    helper: "No live write action",
+    helper: "Hero, offer and editor saves",
     label: "Publish safety",
-    value: "Preview",
+    value: "Live save",
   },
 ];
 
@@ -353,8 +353,9 @@ export function RealHomepageCmsPage() {
               <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-white/80">
                 Canvas-style control room for homepage hero, discovery blocks,
                 featured products, routine sections and promotional slots. This
-                route reads live homepage/banner metadata from the local PHP
-                backend. Save and publish actions remain disabled.
+                route reads and saves homepage/banner metadata through the
+                local PHP backend. Section reorder and full publish controls
+                remain disabled.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
                 <Badge tone="default">Live metadata</Badge>
@@ -373,7 +374,7 @@ export function RealHomepageCmsPage() {
                     Connected to CMS meta
                   </h2>
                 </div>
-                <Badge tone="warn">Safe preview</Badge>
+                <Badge tone="good">Live save</Badge>
               </div>
               <div className="mt-5 space-y-3 text-sm font-semibold text-slate-600">
                 <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
@@ -764,15 +765,15 @@ export function RealHomepageCmsPage() {
                 Homepage Controls
               </div>
               <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                Disabled Until Connected
+                Remaining Preview Controls
               </h3>
               <div className="mt-5 space-y-3">
                 {[
-                  "Hero editor",
-                  "Featured product picker",
+                  "Section reorder",
+                  "Featured product picker UI",
                   "Category block mapping",
                   "Banner schedule",
-                  "Homepage publish",
+                  "Full homepage publish",
                 ].map((item) => (
                   <div
                     className="flex items-center justify-between rounded-2xl bg-stone-50 px-4 py-3 text-sm font-semibold"

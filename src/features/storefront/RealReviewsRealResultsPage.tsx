@@ -282,7 +282,9 @@ export function RealReviewsRealResultsPage() {
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                     Manage PDP visible results, homepage real results and
                     customer review approval from the local CMS metadata
-                    endpoint. Moderation write actions remain disabled.
+                    endpoint. Add, approve and hide actions save through the
+                    local PHP/MySQL reviews endpoint; export and media upload
+                    workflows remain preview-only.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
