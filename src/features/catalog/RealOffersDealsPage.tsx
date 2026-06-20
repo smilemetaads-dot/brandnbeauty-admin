@@ -1,10 +1,15 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import { adminAuthHeaders } from "@/lib/admin-auth";
+import { bnbApiUrl } from "@/lib/bnb-api";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
 type OfferPreview = {
+  apiStatus: "active" | "inactive" | "draft" | "expired";
   badge: string;
   channel: string;
   conflict: "Safe" | "Watch" | "Conflict";
@@ -26,8 +31,25 @@ type OfferPreview = {
   visibility: string;
 };
 
-const offers: OfferPreview[] = [
+type OfferDraft = {
+  discount_label: string;
+  ends_at: string;
+  id: string;
+  image_url: string;
+  link_url: string;
+  sort_order: number;
+  starts_at: string;
+  status: "active" | "inactive" | "draft" | "expired";
+  subtitle: string;
+  title: string;
+};
+
+const GET_OFFERS_ENDPOINT = bnbApiUrl("get_offers.php?include_inactive=1");
+const MANAGE_OFFERS_ENDPOINT = bnbApiUrl("manage_offers.php");
+
+const fallbackOffers: OfferPreview[] = [
   {
+    apiStatus: "active",
     badge: "BOGO",
     channel: "Website",
     conflict: "Watch",
@@ -49,6 +71,7 @@ const offers: OfferPreview[] = [
     visibility: "Homepage",
   },
   {
+    apiStatus: "active",
     badge: "Combo",
     channel: "Website + Messenger",
     conflict: "Conflict",
@@ -70,6 +93,7 @@ const offers: OfferPreview[] = [
     visibility: "PDP + Cart",
   },
   {
+    apiStatus: "draft",
     badge: "Free Delivery",
     channel: "Website",
     conflict: "Safe",
@@ -91,6 +115,7 @@ const offers: OfferPreview[] = [
     visibility: "Checkout",
   },
   {
+    apiStatus: "active",
     badge: "Clearance",
     channel: "Website",
     conflict: "Watch",
@@ -112,6 +137,7 @@ const offers: OfferPreview[] = [
     visibility: "Offers Page",
   },
   {
+    apiStatus: "draft",
     badge: "Inbox Deal",
     channel: "Messenger",
     conflict: "Safe",
@@ -134,8 +160,18 @@ const offers: OfferPreview[] = [
   },
 ];
 
-const selectedOffer = offers[0];
-const topOffers = [offers[2], offers[1], offers[0]];
+const emptyDraft: OfferDraft = {
+  discount_label: "Limited Offer",
+  ends_at: "",
+  id: "",
+  image_url: "",
+  link_url: "/products",
+  sort_order: 1,
+  starts_at: "",
+  status: "active",
+  subtitle: "",
+  title: "",
+};
 
 const safetyRows = [
   ["Stock", true],
@@ -233,7 +269,207 @@ function TableHead({ children }: { children: ReactNode }) {
   );
 }
 
+function statusToDisplay(status: OfferDraft["status"]): OfferPreview["status"] {
+  if (status === "active") return "Live";
+  if (status === "expired") return "Ending Soon";
+  if (status === "draft") return "Draft";
+  return "Draft";
+}
+
+function formatDateLabel(value: string | null | undefined, fallback: string) {
+  if (!value) return fallback;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+
+  return date.toLocaleDateString("en-US", {
+    day: "2-digit",
+    month: "short",
+  });
+}
+
+function normalizeOfferDraft(raw: unknown, index = 0): OfferDraft | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  const record = raw as Partial<OfferDraft> & {
+    discount?: string;
+    discount_label?: string;
+    link?: string;
+  };
+  const title = typeof record.title === "string" ? record.title.trim() : "";
+
+  if (!title) return null;
+
+  return {
+    discount_label:
+      typeof record.discount_label === "string" && record.discount_label.trim()
+        ? record.discount_label.trim()
+        : typeof record.discount === "string"
+          ? record.discount.trim()
+          : "",
+    ends_at: typeof record.ends_at === "string" ? record.ends_at : "",
+    id: typeof record.id === "string" || typeof record.id === "number" ? String(record.id) : "",
+    image_url: typeof record.image_url === "string" ? record.image_url : "",
+    link_url:
+      typeof record.link_url === "string" && record.link_url.trim()
+        ? record.link_url.trim()
+        : typeof record.link === "string" && record.link.trim()
+          ? record.link.trim()
+          : "/products",
+    sort_order: Number(record.sort_order) || index + 1,
+    starts_at: typeof record.starts_at === "string" ? record.starts_at : "",
+    status:
+      record.status === "inactive" ||
+      record.status === "draft" ||
+      record.status === "expired"
+        ? record.status
+        : "active",
+    subtitle: typeof record.subtitle === "string" ? record.subtitle : "",
+    title,
+  };
+}
+
+function offerPreviewFromDraft(draft: OfferDraft, index = 0): OfferPreview {
+  return {
+    apiStatus: draft.status,
+    badge: draft.discount_label || "Offer",
+    channel: "Website",
+    conflict: "Safe",
+    conversion: "Preview",
+    discount: draft.discount_label || "Special Deal",
+    discountCost: "Preview",
+    end: formatDateLabel(draft.ends_at, "Open"),
+    id: draft.id || `offer-${index + 1}`,
+    margin: "Preview",
+    netProfit: "Preview",
+    orders: "Preview",
+    products: [draft.subtitle || "Homepage offer card"],
+    revenue: "Preview",
+    start: formatDateLabel(draft.starts_at, "Now"),
+    status: statusToDisplay(draft.status),
+    stock: "Safe",
+    title: draft.title,
+    type: draft.discount_label || "Offer",
+    visibility: draft.status === "active" ? "Homepage" : "Hidden",
+  };
+}
+
+function draftFromPreview(offer: OfferPreview): OfferDraft {
+  return {
+    discount_label: offer.discount,
+    ends_at: offer.end === "Open" ? "" : offer.end,
+    id: offer.id,
+    image_url: "",
+    link_url: "/products",
+    sort_order: 1,
+    starts_at: offer.start === "Now" ? "" : offer.start,
+    status: offer.apiStatus,
+    subtitle: offer.products[0] || "",
+    title: offer.title,
+  };
+}
+
 export function RealOffersDealsPage() {
+  const [offers, setOffers] = useState<OfferPreview[]>(fallbackOffers);
+  const [selectedOfferId, setSelectedOfferId] = useState(fallbackOffers[0]?.id || "");
+  const [draft, setDraft] = useState<OfferDraft>(emptyDraft);
+  const [message, setMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch(GET_OFFERS_ENDPOINT, {
+      cache: "no-store",
+      headers: adminAuthHeaders(),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          offers?: unknown[];
+          success?: boolean;
+        };
+
+        if (!response.ok || payload.success === false || !Array.isArray(payload.offers)) {
+          return fallbackOffers;
+        }
+
+        const liveOffers = payload.offers
+          .map(normalizeOfferDraft)
+          .filter((item): item is OfferDraft => Boolean(item))
+          .map(offerPreviewFromDraft);
+
+        return liveOffers.length ? liveOffers : fallbackOffers;
+      })
+      .then((items) => {
+        setOffers(items);
+        setSelectedOfferId((current) => current || items[0]?.id || "");
+        setDraft((current) =>
+          current.title
+            ? current
+            : {
+                ...emptyDraft,
+                sort_order: items.length + 1,
+              },
+        );
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          console.error("Offers could not be loaded.", error);
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const selectedOffer =
+    offers.find((offer) => offer.id === selectedOfferId) || offers[0] || fallbackOffers[0];
+  const topOffers = offers.slice(0, 3);
+  const activeOfferCount = offers.filter((offer) => offer.apiStatus === "active").length;
+
+  const saveOffer = async () => {
+    setIsSaving(true);
+    setMessage("");
+
+    try {
+      const response = await fetch(MANAGE_OFFERS_ENDPOINT, {
+        body: JSON.stringify({ offer: draft }),
+        headers: adminAuthHeaders({
+          "Content-Type": "application/json",
+        }),
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        message?: string;
+        offer?: unknown;
+        success?: boolean;
+      };
+
+      if (!response.ok || payload.success === false) {
+        throw new Error(payload.message || "Offer could not be saved.");
+      }
+
+      const savedDraft = normalizeOfferDraft(payload.offer);
+      if (savedDraft) {
+        const preview = offerPreviewFromDraft(savedDraft);
+        setOffers((current) => {
+          const exists = current.some((offer) => offer.id === preview.id);
+          return exists
+            ? current.map((offer) => (offer.id === preview.id ? preview : offer))
+            : [preview, ...current];
+        });
+        setSelectedOfferId(preview.id);
+        setDraft(savedDraft);
+      }
+
+      setMessage(payload.message || "Offer saved successfully.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Offer could not be saved.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <AdminShell>
       <div className="space-y-6">
@@ -259,9 +495,14 @@ export function RealOffersDealsPage() {
                 <DisabledButton className="rounded-2xl bg-white/15 px-5 py-3 text-sm font-semibold text-white ring-1 ring-white/20 backdrop-blur">
                   Preview Page
                 </DisabledButton>
-                <DisabledButton className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-900 shadow-sm">
+                <button
+                  className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-900 shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={isSaving}
+                  onClick={saveOffer}
+                  type="button"
+                >
                   Create Offer
-                </DisabledButton>
+                </button>
               </div>
             </div>
           </div>
@@ -326,10 +567,10 @@ export function RealOffersDealsPage() {
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard active item={["Active Offers", "2", "Live on storefront"]} />
-          <StatCard item={["Offer Revenue", "Tk 253,100", "Free Delivery Over Tk 999"]} />
+          <StatCard active item={["Active Offers", String(activeOfferCount), "Live on storefront"]} />
+          <StatCard item={["Offer Revenue", "Preview", "Analytics pending"]} />
           <StatCard item={["Conversion Rate", "21%", "Clicks to order"]} />
-          <StatCard active item={["Ending / Conflict", "1/1", "Need decision"]} />
+          <StatCard active item={["Total Offers", String(offers.length), "Database rows"]} />
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
@@ -352,11 +593,21 @@ export function RealOffersDealsPage() {
                   <DisabledButton className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
                     Bulk Schedule
                   </DisabledButton>
-                  <DisabledButton className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white">
+                  <button
+                    className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                    disabled={isSaving}
+                    onClick={saveOffer}
+                    type="button"
+                  >
                     Create Offer
-                  </DisabledButton>
+                  </button>
                 </div>
               </div>
+              {message ? (
+                <div className="mt-4 rounded-2xl bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-600">
+                  {message}
+                </div>
+              ) : null}
               <div className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
                 <div className="relative max-w-xl">
                   <input
@@ -431,6 +682,7 @@ export function RealOffersDealsPage() {
                               : "bg-white"
                       }`}
                       key={offer.id}
+                      onClick={() => setSelectedOfferId(offer.id)}
                     >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
@@ -495,11 +747,19 @@ export function RealOffersDealsPage() {
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
                           <DisabledButton className="rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-semibold text-[#5E7F85]">
-                            Edit
-                          </DisabledButton>
-                          <DisabledButton className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
                             Open
                           </DisabledButton>
+                          <button
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setSelectedOfferId(offer.id);
+                              setDraft(draftFromPreview(offer));
+                            }}
+                            type="button"
+                          >
+                            Edit
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -680,30 +940,101 @@ export function RealOffersDealsPage() {
                 Create / Edit Offer Preview
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                This builder mirrors the Canvas controls but is preview-only
-                until a real Offers schema and action workflow are connected.
+                Save homepage offer cards and deal rows directly to the local
+                PHP/MySQL offers table. Analytics and automation controls remain
+                preview-only.
               </p>
             </div>
-            <Badge tone="warn">Not Connected</Badge>
+            <Badge tone="good">Live Save</Badge>
           </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {[
-              "Offer storefront preview",
-              "Product mapping",
-              "Discount safety check",
-              "Date schedule",
-              "Messenger offer sync",
-              "Margin protection",
-              "Conflict checker",
-              "Auto pause rules",
-            ].map((item) => (
-              <div
-                className="rounded-2xl bg-stone-50 p-4 text-sm font-semibold text-slate-700"
-                key={item}
+          <div className="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+            <input
+              className="rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+              onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
+              placeholder="Offer title"
+              value={draft.title}
+            />
+            <input
+              className="rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+              onChange={(event) => setDraft((current) => ({ ...current, subtitle: event.target.value }))}
+              placeholder="Subtitle"
+              value={draft.subtitle}
+            />
+            <input
+              className="rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+              onChange={(event) => setDraft((current) => ({ ...current, discount_label: event.target.value }))}
+              placeholder="Discount label"
+              value={draft.discount_label}
+            />
+            <input
+              className="rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+              onChange={(event) => setDraft((current) => ({ ...current, link_url: event.target.value }))}
+              placeholder="/products"
+              value={draft.link_url}
+            />
+            <input
+              className="rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+              onChange={(event) => setDraft((current) => ({ ...current, image_url: event.target.value }))}
+              placeholder="/offer-bogo.jpg"
+              value={draft.image_url}
+            />
+            <input
+              className="rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+              onChange={(event) => setDraft((current) => ({ ...current, starts_at: event.target.value }))}
+              type="date"
+              value={draft.starts_at ? draft.starts_at.slice(0, 10) : ""}
+            />
+            <input
+              className="rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+              onChange={(event) => setDraft((current) => ({ ...current, ends_at: event.target.value }))}
+              type="date"
+              value={draft.ends_at ? draft.ends_at.slice(0, 10) : ""}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                className="rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                onChange={(event) => setDraft((current) => ({ ...current, sort_order: Number(event.target.value) || 0 }))}
+                type="number"
+                value={draft.sort_order}
+              />
+              <select
+                className="rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    status: event.target.value as OfferDraft["status"],
+                  }))
+                }
+                value={draft.status}
               >
-                {item}
-              </div>
-            ))}
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="draft">Draft</option>
+                <option value="expired">Expired</option>
+              </select>
+            </div>
+          </div>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+              disabled={isSaving}
+              onClick={saveOffer}
+              type="button"
+            >
+              {isSaving ? "Saving..." : "Save Offer"}
+            </button>
+            <button
+              className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700"
+              onClick={() =>
+                setDraft({
+                  ...emptyDraft,
+                  sort_order: offers.length + 1,
+                })
+              }
+              type="button"
+            >
+              New Draft
+            </button>
           </div>
         </section>
       </div>
