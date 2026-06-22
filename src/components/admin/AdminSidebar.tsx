@@ -2,8 +2,32 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo, useState } from "react";
 
 import { adminNavGroups } from "@/config/adminNav";
+
+const storefrontUrl =
+  process.env.NEXT_PUBLIC_BNB_STOREFRONT_URL?.trim() || "/";
+
+type StoredAdminUser = {
+  email?: string;
+  full_name?: string;
+  name?: string;
+  role?: string;
+};
+
+function getStoredAdminUser(): StoredAdminUser | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const rawUser = window.localStorage.getItem("brandnbeauty_admin_user");
+    if (!rawUser) return null;
+
+    return JSON.parse(rawUser) as StoredAdminUser;
+  } catch {
+    return null;
+  }
+}
 
 const navHrefs = adminNavGroups
   .flatMap((group) => group.items.map((item) => item.href))
@@ -103,8 +127,25 @@ function GroupIcon({ label }: { label: string }) {
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const [adminUser] = useState<StoredAdminUser | null>(() =>
+    getStoredAdminUser(),
+  );
   const activeHref = getActiveHref(pathname);
   const activeGroupLabel = getActiveGroupLabel(activeHref);
+  const adminName =
+    adminUser?.full_name?.trim() ||
+    adminUser?.name?.trim() ||
+    adminUser?.email?.trim() ||
+    "Admin User";
+  const adminRole = adminUser?.role?.trim() || "Admin";
+  const initials = useMemo(() => {
+    const cleanName = adminName.trim();
+    const parts = cleanName.split(/\s+/).filter(Boolean);
+    const first = parts[0]?.[0] || "A";
+    const second = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
+
+    return `${first}${second}`.toUpperCase();
+  }, [adminName]);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-[20rem] bg-[#f7f5f1] px-5 py-6 lg:block">
@@ -195,24 +236,25 @@ export function AdminSidebar() {
         <div className="rounded-[2rem] border border-slate-200/80 bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85] text-sm font-black text-white shadow-sm">
-              IC
+              {initials}
             </div>
             <div className="min-w-0">
               <div className="truncate text-sm font-black text-slate-900">
-                Ismail Chowdhury
+                {adminName}
               </div>
               <div className="mt-0.5 text-xs font-bold text-slate-400">
-                Super Admin
+                {adminRole}
               </div>
             </div>
           </div>
-          <button
-            className="mt-4 w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm font-black text-slate-500"
-            disabled
-            type="button"
+          <a
+            className="mt-4 block w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-center text-sm font-black text-slate-600 transition hover:border-[#5E7F85]/30 hover:bg-[#5E7F85]/5 hover:text-[#41696f]"
+            href={storefrontUrl}
+            rel="noopener noreferrer"
+            target={storefrontUrl === "/" ? undefined : "_blank"}
           >
             View Storefront
-          </button>
+          </a>
         </div>
       </div>
     </aside>

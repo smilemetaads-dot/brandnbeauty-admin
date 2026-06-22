@@ -74,8 +74,9 @@ export function AdminTopbar() {
           <div className="relative hidden min-w-[18rem] md:block">
             <input
               aria-label="Search admin data"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pl-10 text-sm font-medium text-slate-700 shadow-sm outline-none placeholder:text-slate-400 focus:border-[#5E7F85] focus:ring-4 focus:ring-[#5E7F85]/10"
-              placeholder="Search admin data..."
+              className="w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-white px-4 py-3 pl-10 text-sm font-medium text-slate-500 shadow-sm outline-none placeholder:text-slate-400"
+              disabled
+              placeholder="Search coming later"
               type="search"
             />
             <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">
