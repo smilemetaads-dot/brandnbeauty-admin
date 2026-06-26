@@ -40,16 +40,16 @@ const defaultNewItem: NavigationItem = {
 
 const stats = [
   ["Menu Items", "8", "Top navigation"],
-  ["Header Controls", "6", "Preview settings"],
-  ["Search Status", "Preview", "Product search"],
+  ["Header Controls", "Live", "Menu save enabled"],
+  ["Search Status", "Coming later", "Hidden on storefront"],
   ["Mobile Header", "Ready", "Responsive layout"],
 ] as const;
 
 const controls = [
-  ["Logo", "BrandnBeauty", "Upload / replace storefront logo"],
-  ["Search Bar", "Enabled", "Control search placeholder and visibility"],
-  ["Wishlist Button", "Enabled", "Show or hide wishlist from header"],
-  ["Login Button", "Enabled", "Show customer login button"],
+  ["Logo", "BrandnBeauty", "Static launch logo"],
+  ["Search Bar", "Coming later", "Hidden on storefront for launch"],
+  ["Wishlist Button", "Coming later", "Customer wishlist is not part of launch"],
+  ["Login Button", "Coming later", "Customer accounts are not part of launch"],
   ["Bag Counter", "Enabled", "Show cart quantity in header"],
   ["Sticky Header", "Enabled", "Keep header visible while scrolling"],
 ] as const;
@@ -57,7 +57,7 @@ const controls = [
 const safetyItems = [
   "Header menu saves now use the local PHP/MySQL settings table.",
   "Storefront header keeps its static fallback if navigation data is empty or unavailable.",
-  "Logo upload, search behavior, wishlist/login visibility and mobile drawer settings remain preview-only.",
+  "Logo upload, search behavior, wishlist/login visibility and mobile drawer settings are coming later.",
 ];
 
 function Badge({
@@ -310,7 +310,7 @@ export function RealHeaderNavigationPage() {
           : label === "Header Controls"
             ? [label, "Live", "Menu save enabled"]
           : label === "Search Status"
-            ? [label, "Preview", "Product search"]
+            ? [label, "Coming later", "Hidden on storefront"]
             : [label, value, helper],
       ),
     [navItems.length],
@@ -349,14 +349,13 @@ export function RealHeaderNavigationPage() {
                     Header & Navigation Control
                   </h1>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                    Manage logo, search, top menu, bag button and storefront
-                    navigation order with local PHP/MySQL-backed menu data.
-                    Logo, search, wishlist, login and mobile drawer settings
-                    remain preview-only.
+                    Manage top menu and storefront navigation order with local
+                    PHP/MySQL-backed menu data. Logo upload, search, wishlist,
+                    login and mobile drawer settings are coming later.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <DisabledButton>Preview</DisabledButton>
+                  <DisabledButton>Preview coming later</DisabledButton>
                   <button
                     className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
                     disabled={isSaving}
@@ -380,7 +379,7 @@ export function RealHeaderNavigationPage() {
                   </div>
                   <div className="hidden flex-1 justify-center md:flex">
                     <div className="w-full max-w-md rounded-full border border-slate-200 bg-stone-50 px-4 py-2 text-sm text-slate-400">
-                      Search products...
+                      Search hidden for launch
                     </div>
                   </div>
                   <div className="rounded-full bg-[#5E7F85] px-4 py-2 text-sm font-bold text-white">
@@ -635,10 +634,10 @@ export function RealHeaderNavigationPage() {
                     Mobile Header
                   </div>
                   <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                    Drawer Preview
+                    Drawer Coming Later
                   </h3>
                 </div>
-                <Badge tone="warn">Preview</Badge>
+                <Badge tone="warn">Coming later</Badge>
               </div>
               <div className="mt-5 rounded-[1.5rem] border border-slate-200 bg-stone-50 p-4">
                 <div className="rounded-2xl bg-white p-4 shadow-sm">

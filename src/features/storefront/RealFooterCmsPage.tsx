@@ -40,7 +40,7 @@ const UPDATE_FOOTER_ENDPOINT = bnbApiUrl("update_footer.php");
 
 const fallbackFooterContent: FooterContent = {
   brand: {
-    copyright: "Copyright © 2026 BrandnBeauty. All Right Reserved",
+    copyright: "Copyright © 2026 BrandnBeauty. All rights reserved.",
     name: "BrandnBeauty",
   },
   groups: [
@@ -58,11 +58,9 @@ const fallbackFooterContent: FooterContent = {
   },
   {
     links: [
-      { label: "Messenger Support", href: "https://m.me/yourpage", sort_order: 1, status: "active" },
-      { label: "Track Order", href: "/thank-you", sort_order: 2, status: "active" },
-      { label: "FAQ", href: "#", sort_order: 3, status: "active" },
-      { label: "Call Support", href: "tel:+8800000000000", sort_order: 4, status: "active" },
-      { label: "hello@brandnbeauty.com", href: "mailto:hello@brandnbeauty.com", sort_order: 5, status: "active" },
+      { label: "Order confirmation after checkout", href: "", sort_order: 1, status: "active" },
+      { label: "Customer care details are shared with confirmed orders", href: "", sort_order: 2, status: "active" },
+      { label: "FAQ coming later", href: "", sort_order: 3, status: "active" },
     ],
     sort_order: 2,
     status: "active",
@@ -70,22 +68,17 @@ const fallbackFooterContent: FooterContent = {
   },
   {
     links: [
-      { label: "Privacy Policy", href: "#", sort_order: 1, status: "active" },
-      { label: "Terms & Conditions", href: "#", sort_order: 2, status: "active" },
-      { label: "Refund Policy", href: "#", sort_order: 3, status: "active" },
-      { label: "Shipping Policy", href: "#", sort_order: 4, status: "active" },
+      { label: "Privacy Policy coming later", href: "", sort_order: 1, status: "active" },
+      { label: "Terms & Conditions coming later", href: "", sort_order: 2, status: "active" },
+      { label: "Refund Policy coming later", href: "", sort_order: 3, status: "active" },
+      { label: "Shipping Policy coming later", href: "", sort_order: 4, status: "active" },
     ],
     sort_order: 3,
     status: "active",
     title: "Policies",
   },
   ],
-  social_links: [
-    { label: "f", href: "https://www.facebook.com/brandnbeauty", aria_label: "Facebook", sort_order: 1, status: "active" },
-    { label: "ig", href: "https://www.instagram.com/brandnbeauty", aria_label: "Instagram", sort_order: 2, status: "active" },
-    { label: "tt", href: "https://www.tiktok.com/@brandnbeauty", aria_label: "TikTok", sort_order: 3, status: "active" },
-    { label: "yt", href: "https://www.youtube.com/@brandnbeauty", aria_label: "YouTube", sort_order: 4, status: "active" },
-  ],
+  social_links: [],
 };
 
 const trust = [
@@ -109,12 +102,12 @@ const detailPanels = [
     status: "Live footer",
   },
   {
-    description: "Customer service phone, Messenger support and order tracking links.",
+    description: "Neutral support labels are shown until real support routes are configured.",
     label: "Contact & Support",
     status: "Live footer",
   },
   {
-    description: "Privacy, terms, refund and shipping links for legal navigation.",
+    description: "Policy labels are visible without fake links until policy routes exist.",
     label: "Legal Links",
     status: "Live footer",
   },
@@ -123,7 +116,7 @@ const detailPanels = [
 const safetyItems = [
   "Footer links and social icons save through the local PHP/MySQL settings table.",
   "Storefront footer keeps its static fallback if footer data is empty or unavailable.",
-  "Newsletter block, trust strip and advanced visibility rules remain preview-only.",
+  "Newsletter block, trust strip and advanced visibility rules are coming later.",
 ] as const;
 
 function Badge({
@@ -414,7 +407,7 @@ export function RealFooterCmsPage() {
     () =>
       stats.map(([label, value, helper]) =>
         label === "Trust Items"
-          ? [label, "Preview", "Bottom trust strip"]
+          ? [label, "Coming later", "Bottom trust strip"]
           : label === "Footer Links"
             ? [label, String(footerContent.groups.reduce((total, group) => total + group.links.length, 0)), "Saved links"]
           : label === "Footer Groups"
@@ -459,11 +452,11 @@ export function RealFooterCmsPage() {
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                     Control footer brand block, social links, policy links and
                     customer support links through local PHP/MySQL settings.
-                    Trust strip controls remain preview-only.
+                    Trust strip controls are coming later.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <DisabledButton>Preview</DisabledButton>
+                  <DisabledButton>Preview coming later</DisabledButton>
                   <button
                     className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
                     disabled={isSaving}
@@ -651,7 +644,7 @@ export function RealFooterCmsPage() {
                 Footer Controls
               </div>
               <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                Preview Controls
+                Controls Coming Later
               </h3>
               <div className="mt-5 space-y-3">
                 {[

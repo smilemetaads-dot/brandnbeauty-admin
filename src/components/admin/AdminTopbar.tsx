@@ -15,12 +15,12 @@ const pageTitles: Record<string, string> = {
   "/customers/profile": "Customer Profile",
   "/dashboard": "Dashboard",
   "/finance/reconciliation": "Finance Reconciliation",
-  "/footer": "Footer CMS",
+  "/footer": "Footer",
   "/homepage-cms": "Homepage CMS",
   "/inventory": "Inventory",
   "/invoice-settings": "Invoice & Thank You Settings",
-  "/navigation": "Header & Navigation",
-  "/offers": "Offers & Deals",
+  "/navigation": "Navigation",
+  "/offers": "Offers",
   "/orders": "Orders",
   "/orders/details": "Order Details",
   "/packing": "Packing Desk",
@@ -29,7 +29,7 @@ const pageTitles: Record<string, string> = {
   "/purchases": "Purchase Stock Entry",
   "/recommendations": "Product Recommendations",
   "/reports": "Reports & Insights",
-  "/reviews": "Reviews & Real Results",
+  "/reviews": "Reviews",
   "/roles": "Roles & Permissions",
   "/settings": "Settings",
   "/suppliers": "Suppliers",
@@ -85,7 +85,7 @@ export function AdminTopbar() {
           </div>
 
           <div className="hidden rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm sm:block">
-            <div className="text-sm font-bold text-slate-800">Setup Mode</div>
+            <div className="text-sm font-bold text-slate-800">Live Workspace</div>
             <div className="text-xs font-medium text-slate-500">
               Live actions preserved
             </div>

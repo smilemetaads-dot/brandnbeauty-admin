@@ -22,11 +22,10 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Catalog",
     items: [
       { label: "Products", href: "/products" },
-      { label: "Add/Edit Product", href: "/products/edit" },
       { label: "Categories", href: "/categories" },
       { label: "Concerns", href: "/concerns" },
       { label: "Brands", href: "/brands" },
-      { label: "Offers & Deals", href: "/offers" },
+      { label: "Offers", href: "/offers" },
       { label: "Inventory", href: "/inventory" },
     ],
   },
@@ -35,7 +34,6 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Orders",
     items: [
       { label: "Orders", href: "/orders" },
-      { label: "Order Details", href: "/orders/details" },
     ],
   },
   {
@@ -43,7 +41,6 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Customers",
     items: [
       { label: "Customers", href: "/customers" },
-      { label: "Customer Profile", href: "/customers/profile" },
     ],
   },
   {
@@ -51,9 +48,9 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Storefront",
     items: [
       { label: "Homepage CMS", href: "/homepage-cms" },
-      { label: "Header & Navigation", href: "/navigation" },
-      { label: "Footer CMS", href: "/footer" },
-      { label: "Reviews & Real Results", href: "/reviews" },
+      { label: "Navigation", href: "/navigation" },
+      { label: "Footer", href: "/footer" },
+      { label: "Reviews", href: "/reviews" },
     ],
   },
   {

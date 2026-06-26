@@ -73,7 +73,7 @@ const fallbackOffers: OfferPreview[] = [
   {
     apiStatus: "active",
     badge: "Combo",
-    channel: "Website + Messenger",
+    channel: "Website",
     conflict: "Conflict",
     conversion: "21%",
     discount: "Tk 150 Off",
@@ -138,14 +138,14 @@ const fallbackOffers: OfferPreview[] = [
   },
   {
     apiStatus: "draft",
-    badge: "Inbox Deal",
-    channel: "Messenger",
+    badge: "Draft Deal",
+    channel: "Website",
     conflict: "Safe",
     conversion: "21%",
     discount: "Tk 100 Off",
     discountCost: "Tk 3,300",
     end: "May 12",
-    id: "messenger",
+    id: "draft-offer",
     margin: "48%",
     netProfit: "Tk 14,600",
     orders: "33",
@@ -154,8 +154,8 @@ const fallbackOffers: OfferPreview[] = [
     start: "May 02",
     status: "Draft",
     stock: "Safe",
-    title: "Messenger Exclusive Combo",
-    type: "Messenger Deal",
+    title: "Draft Exclusive Combo",
+    type: "Draft Deal",
     visibility: "Hidden",
   },
 ];
@@ -179,7 +179,7 @@ const safetyRows = [
   ["Conflict", false],
   ["Dates", true],
   ["Visibility", true],
-  ["Messenger", true],
+  ["Messenger", false],
 ] as const;
 
 function Badge({
@@ -209,7 +209,7 @@ function Badge({
 function DisabledButton({
   children,
   className = "",
-  title = "Offers workflow is not connected yet",
+  title = "This control is coming later",
 }: {
   children: ReactNode;
   className?: string;
@@ -486,14 +486,14 @@ export function RealOffersDealsPage() {
                   Offers & Deals Control Room
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-white/85">
-                  Create BOGO, combo, clearance, free delivery and Messenger-only
-                  offers with stock, margin, conflict and automation safety
-                  control.
+                  Create and edit homepage offer cards through the live local
+                  offers table. Messenger sync, analytics and automation safety
+                  controls are coming later.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
                 <DisabledButton className="rounded-2xl bg-white/15 px-5 py-3 text-sm font-semibold text-white ring-1 ring-white/20 backdrop-blur">
-                  Preview Page
+                  Preview coming later
                 </DisabledButton>
                 <button
                   className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-900 shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
@@ -514,7 +514,7 @@ export function RealOffersDealsPage() {
               Net profit: <b className="text-emerald-700">Tk 105,600</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Discount cost: <b className="text-amber-700">Preview</b>
+              Discount cost: <b className="text-amber-700">Coming later</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Date view: <b className="text-slate-900">30D</b>
@@ -532,7 +532,7 @@ export function RealOffersDealsPage() {
                 Campaign Period Filter
               </div>
               <div className="mt-1 text-sm font-semibold text-slate-600">
-                Performance numbers are preview-only until offer analytics are
+                Performance numbers are coming later until offer analytics are
                 connected.
               </div>
             </div>
@@ -559,7 +559,7 @@ export function RealOffersDealsPage() {
                   May 31, 2026
                 </DisabledButton>
                 <DisabledButton className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white">
-                  Apply
+                  Apply coming later
                 </DisabledButton>
               </div>
             </div>
@@ -568,8 +568,8 @@ export function RealOffersDealsPage() {
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard active item={["Active Offers", String(activeOfferCount), "Live on storefront"]} />
-          <StatCard item={["Offer Revenue", "Preview", "Analytics pending"]} />
-          <StatCard item={["Conversion Rate", "21%", "Clicks to order"]} />
+          <StatCard item={["Offer Revenue", "Coming later", "Analytics pending"]} />
+          <StatCard item={["Conversion Rate", "Coming later", "Analytics pending"]} />
           <StatCard active item={["Total Offers", String(offers.length), "Database rows"]} />
         </section>
 
@@ -591,7 +591,7 @@ export function RealOffersDealsPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <DisabledButton className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
-                    Bulk Schedule
+                    Bulk schedule coming later
                   </DisabledButton>
                   <button
                     className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
@@ -747,7 +747,7 @@ export function RealOffersDealsPage() {
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
                           <DisabledButton className="rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-semibold text-[#5E7F85]">
-                            Open
+                            Open coming later
                           </DisabledButton>
                           <button
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
@@ -800,7 +800,7 @@ export function RealOffersDealsPage() {
                       {selectedOffer.end}
                     </div>
                     <DisabledButton className="mt-5 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-900">
-                      Shop Offer
+                      Shop offer coming later
                     </DisabledButton>
                   </div>
                 </div>
@@ -820,13 +820,13 @@ export function RealOffersDealsPage() {
               </div>
               <div className="mt-5 grid gap-3">
                 <DisabledButton className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white">
-                  Edit Offer
+                  Edit in form below
                 </DisabledButton>
                 <DisabledButton className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
-                  Duplicate Offer
+                  Duplicate coming later
                 </DisabledButton>
                 <DisabledButton className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
-                  Pause Offer
+                  Pause coming later
                 </DisabledButton>
               </div>
             </div>
@@ -894,10 +894,10 @@ export function RealOffersDealsPage() {
               </div>
               <div className="mt-4 space-y-3 text-xs font-semibold leading-5 text-slate-700">
                 {[
-                  "Stock low হলে offer auto pause হবে",
-                  "Offer expired হলে auto disable হবে",
-                  "Double discount conflict হলে publish block হবে",
-                  "Messenger sync ON থাকলে inbox offer reply তে যাবে",
+                  "Low-stock auto pause is coming later.",
+                  "Expired-offer auto disable is coming later.",
+                  "Double-discount conflict blocking is coming later.",
+                  "Messenger offer replies are not connected for launch.",
                 ].map((item) => (
                   <div className="rounded-2xl bg-white px-4 py-3" key={item}>
                     {item}
@@ -937,12 +937,12 @@ export function RealOffersDealsPage() {
                 Offer Builder
               </div>
               <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                Create / Edit Offer Preview
+                Create / Edit Offer
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                 Save homepage offer cards and deal rows directly to the local
                 PHP/MySQL offers table. Analytics and automation controls remain
-                preview-only.
+                coming later.
               </p>
             </div>
             <Badge tone="good">Live Save</Badge>

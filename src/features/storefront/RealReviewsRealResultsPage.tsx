@@ -284,11 +284,11 @@ export function RealReviewsRealResultsPage() {
                     customer review approval from the local CMS metadata
                     endpoint. Add, approve and hide actions save through the
                     local PHP/MySQL reviews endpoint; export and media upload
-                    workflows remain preview-only.
+                    workflows are coming later.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <DisabledButton>Export</DisabledButton>
+                  <DisabledButton>Export coming later</DisabledButton>
                   <button
                     className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
                     disabled={isSaving}
@@ -369,7 +369,7 @@ export function RealReviewsRealResultsPage() {
                   key={card.label}
                 >
                   <div className="flex aspect-[4/3] items-center justify-center rounded-[1.25rem] bg-stone-100 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-                    Result Preview
+                    Static Result Preview
                   </div>
                   <div className="mt-4 flex items-start justify-between gap-3">
                     <div>
@@ -380,7 +380,7 @@ export function RealReviewsRealResultsPage() {
                         {card.product}
                       </div>
                     </div>
-                    <Badge tone="warn">Preview</Badge>
+                    <Badge tone="warn">Static preview</Badge>
                   </div>
                   <p className="mt-3 text-sm leading-6 text-slate-500">
                     {card.note}

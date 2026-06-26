@@ -657,7 +657,8 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
                 <p className="max-w-3xl text-sm leading-6 text-slate-500">
                   Live MySQL order board with source-style filters, risk
                   badges, customer blocks, status updates, and safe detail links.
-                  Bulk actions remain disabled until a dedicated workflow is wired.
+                  Bulk actions, invoice printing and courier upload are coming
+                  later. Row detail links and status updates remain live.
                 </p>
               </div>
               <Badge tone="brand">Live Orders</Badge>
@@ -677,11 +678,11 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
                 </span>
               </div>
               <div className="flex flex-wrap justify-start gap-2 xl:justify-end">
-                <DisabledButton>Add Order</DisabledButton>
-                <DisabledButton>Export</DisabledButton>
-                <DisabledButton>Bulk Confirm</DisabledButton>
-                <DisabledButton>Print Invoice</DisabledButton>
-                <DisabledButton primary>Send Courier</DisabledButton>
+                <DisabledButton>Add order coming later</DisabledButton>
+                <DisabledButton>Export coming later</DisabledButton>
+                <DisabledButton>Bulk confirm coming later</DisabledButton>
+                <DisabledButton>Print invoice coming later</DisabledButton>
+                <DisabledButton primary>Courier upload coming later</DisabledButton>
               </div>
             </div>
 
@@ -721,8 +722,8 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
 
           {selectedOrderIds.length > 0 ? (
             <div className="border-b border-slate-100 bg-[#5E7F85]/5 px-6 py-4 text-sm font-semibold text-[#5E7F85]">
-              {selectedOrderIds.length} order selected - Bulk confirm / print /
-              courier controls are preview-only.
+              {selectedOrderIds.length} order selected - bulk confirm, print
+              and courier controls are coming later.
             </div>
           ) : null}
 
@@ -1051,7 +1052,7 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
               Selected: {selectedOrderIds.length} - Visible: {filteredOrders.length}
             </div>
             <div className="mt-5 space-y-3">
-              {["Bulk Confirm", "Mark Packed", "Print Invoices", "Send to Courier"].map(
+              {["Bulk confirm coming later", "Mark packed coming later", "Print invoices coming later", "Courier upload coming later"].map(
                 (item) => (
                   <QuickActionButton key={item}>{item}</QuickActionButton>
                 ),

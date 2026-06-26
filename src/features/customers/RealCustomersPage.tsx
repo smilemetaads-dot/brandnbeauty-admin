@@ -317,8 +317,8 @@ function CustomerProfilePanel({
         >
           Last Order Details
         </Link>
-        <DisabledButton tone="good">WhatsApp Offer - Not Connected</DisabledButton>
-        <DisabledButton>Call Customer - Not Connected</DisabledButton>
+        <DisabledButton tone="good">WhatsApp offer coming later</DisabledButton>
+        <DisabledButton>Call customer coming later</DisabledButton>
       </div>
 
       <div className="mt-5 rounded-2xl bg-stone-50 p-4">
@@ -496,13 +496,14 @@ export function RealCustomersPage({
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
                     Live customer summaries are grouped from existing order
-                    records. Editing, outreach, and segmentation are preview-only.
+                    records. Editing, outreach, manual orders and segmentation
+                    are coming later.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <DisabledButton>Export - Not Connected</DisabledButton>
+                  <DisabledButton>Export coming later</DisabledButton>
                   <DisabledButton tone="brand">
-                    Create Segment - Not Connected
+                    Create segment coming later
                   </DisabledButton>
                 </div>
               </div>
@@ -646,8 +647,8 @@ export function RealCustomersPage({
               </div>
               <p className="mt-2 text-sm leading-6 text-amber-700">
                 {featuredCustomer
-                  ? `${featuredCustomer.name} is shown from live order history. Outreach suggestions, offers, and manual order creation are preview-only.`
-                  : "Customer suggestions will appear after live order history is available. Outreach and manual order creation are preview-only."}
+                  ? `${featuredCustomer.name} is shown from live order history. Outreach suggestions, offers, and manual order creation are coming later.`
+                  : "Customer suggestions will appear after live order history is available. Outreach and manual order creation are coming later."}
               </p>
             </section>
           </div>

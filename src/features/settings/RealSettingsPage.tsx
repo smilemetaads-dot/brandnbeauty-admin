@@ -9,9 +9,9 @@ import { bnbApiUrl } from "@/lib/bnb-api";
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
 const settingsStats = [
-  ["Active Admins", "7", "Team members"],
-  ["Live Integrations", "5", "Courier, payment, analytics"],
-  ["Security Alerts", "2", "Need review"],
+  ["Active Admins", "Coming later", "Team controls"],
+  ["Live Settings", "Delivery", "Charges save live"],
+  ["Security Review", "Coming later", "Access controls"],
   ["System Status", "Healthy", "Core modules online"],
 ] as const;
 
@@ -46,23 +46,23 @@ const defaultStoreSettings: StoreSettings = {
 
 const systemControls = [
   {
-    desc: "Brand name, currency, timezone and storefront controls",
-    status: "Configured",
+    desc: "Brand name and currency are read-only here; delivery charges save live.",
+    status: "Live",
     title: "Store Settings",
   },
   {
-    desc: "Status flow, stock deduction and packing triggers",
-    status: "Review",
+    desc: "Status flow, stock deduction and packing triggers are coming later.",
+    status: "Coming later",
     title: "Order Automation",
   },
   {
-    desc: "Steadfast, Pathao and delivery charge mapping",
-    status: "Connected",
+    desc: "Courier API upload is not connected; delivery charge values save live.",
+    status: "Coming later",
     title: "Courier Integration",
   },
   {
-    desc: "COD rules, settlement matching and mismatch handling",
-    status: "Active",
+    desc: "COD rules and settlement matching are coming later.",
+    status: "Coming later",
     title: "Payment & COD",
   },
 ] as const;
@@ -76,7 +76,7 @@ const systemToggles = [
 
 const safetyItems = [
   "Delivery charge saves update the local MySQL settings table through admin auth.",
-  "Payment, courier, checkout field visibility and stock automation controls remain preview-only.",
+  "Payment, courier, checkout field visibility and stock automation controls are coming later.",
   "Storefront checkout falls back to local defaults if the settings API is unavailable.",
 ] as const;
 
@@ -324,7 +324,7 @@ export function RealSettingsPage() {
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {settingsStats.map(([label, value, helper]) => (
             <StatCard
-              active={label === "Security Alerts"}
+              active={label === "Security Review"}
               helper={helper}
               key={label}
               label={label}
@@ -340,9 +340,9 @@ export function RealSettingsPage() {
                 Settings Control Room
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Manage store rules, automation, integrations and admin system
-                controls with live local settings loaded from the MySQL backend.
-                Save workflows remain disabled until update actions exist.
+                Manage delivery charges with live local settings loaded from
+                the MySQL backend. Automation, integrations and admin system
+                controls are coming later.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -385,7 +385,7 @@ export function RealSettingsPage() {
                     <h2 className="text-lg font-bold text-slate-900">
                       {item.title}
                     </h2>
-                    <Badge tone={item.status === "Review" ? "warn" : "good"}>
+                    <Badge tone={item.status === "Coming later" ? "warn" : "good"}>
                       {item.status}
                     </Badge>
                   </div>
@@ -393,7 +393,7 @@ export function RealSettingsPage() {
                     {item.desc}
                   </p>
                   <div className="mt-4">
-                    <DisabledButton>Configure</DisabledButton>
+                    <DisabledButton>Configure coming later</DisabledButton>
                   </div>
                 </div>
               ))}
@@ -404,7 +404,7 @@ export function RealSettingsPage() {
                 Automation Rules
               </div>
               <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                System Toggles
+                System Toggles Coming Later
               </h2>
               <div className="mt-5 space-y-3">
                 {systemToggles.map(([label, enabled]) => (
