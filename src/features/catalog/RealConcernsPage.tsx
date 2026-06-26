@@ -5,6 +5,7 @@ import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import { adminAuthHeaders } from "@/lib/admin-auth";
 import { bnbApiUrl } from "@/lib/bnb-api";
 
 import type { ConcernRecord } from "./concerns-data";
@@ -606,14 +607,6 @@ export function RealConcernsPage({
   async function handleConcernSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (editingConcern) {
-      setFormState({
-        ok: false,
-        message: "Concern editing needs the update endpoint. Use Add Concern for new records.",
-      });
-      return;
-    }
-
     const formData = new FormData(event.currentTarget);
     setIsPending(true);
     setFormState({ ok: false, message: "" });
@@ -621,8 +614,10 @@ export function RealConcernsPage({
     try {
       const response = await fetch(MANAGE_CATALOG_META_ENDPOINT, {
         body: JSON.stringify({
-          action: "add_concern",
+          action: editingConcern ? "update_concern" : "add_concern",
+          id: editingConcern?.id,
           data: {
+            id: editingConcern?.id,
             description: String(formData.get("metaDescription") ?? ""),
             featured: formData.get("featured") === "on",
             image_url: String(formData.get("image") ?? ""),
@@ -634,7 +629,7 @@ export function RealConcernsPage({
             status: String(formData.get("status") ?? "active"),
           },
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: adminAuthHeaders({ "Content-Type": "application/json" }),
         method: "POST",
       });
       const result = (await response.json()) as {
@@ -643,10 +638,10 @@ export function RealConcernsPage({
       };
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message ?? "Concern could not be added.");
+        throw new Error(result.message ?? "Concern could not be saved.");
       }
 
-      setFormState({ ok: true, message: result.message ?? "Concern added successfully." });
+      setFormState({ ok: true, message: result.message ?? "Concern saved successfully." });
       await loadConcerns();
       setShowAddForm(false);
     } catch (error) {
@@ -675,7 +670,7 @@ export function RealConcernsPage({
           type: "concern",
         }),
         headers: {
-          "Content-Type": "application/json",
+          ...adminAuthHeaders({ "Content-Type": "application/json" }),
         },
         method: "POST",
       });

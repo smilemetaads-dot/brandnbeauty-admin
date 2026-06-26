@@ -8,11 +8,13 @@ import {
   defaultHomepageCmsData,
   fetchCmsMeta,
   fetchHomepageCms,
+  fetchHomepageProductOptions,
   UPDATE_HOMEPAGE_CMS_ENDPOINT,
   type CmsMeta,
   type HomepageCmsData,
   type HomepageHeroBanner,
   type HomepageOfferCard,
+  type HomepageProductOption,
 } from "@/features/cms/cms-meta-client";
 import { adminAuthHeaders } from "@/lib/admin-auth";
 
@@ -22,7 +24,7 @@ const stats = [
   {
     helper: "Live CMS surface",
     label: "Homepage module",
-    value: "Not connected",
+    value: "Live save",
   },
   {
     helper: "Canvas structure",
@@ -46,39 +48,39 @@ const sectionBlocks = [
     description: "Hero headline, campaign message, primary CTA and supporting trust strip.",
     label: "Hero section",
     placement: "Top",
-    status: "Preview only",
+    status: "Coming later",
   },
   {
     description: "Main category shortcuts for skincare, hair care, body care and makeup.",
     label: "Shop by category",
     placement: "Discovery",
-    status: "Preview only",
+    status: "Coming later",
   },
   {
     description: "Product cards for homepage merchandising and manual highlight slots.",
     label: "Featured products",
     placement: "Merchandising",
-    status: "Preview only",
+    status: "Coming later",
   },
   {
     description: "Routine-led block for cleanser, treatment, moisturizer and sunscreen sequence.",
     label: "Routine builder",
     placement: "Education",
-    status: "Preview only",
+    status: "Coming later",
   },
   {
     description: "Campaign row for homepage-visible deals and bundle promotions.",
     label: "Promotional banner",
     placement: "Campaign",
-    status: "Preview only",
+    status: "Coming later",
   },
 ];
 
 const productRows = [
-  ["Barrier Calm Serum", "BrandnBeauty", "Tk 990", "Hero / Featured", "Preview"],
-  ["Acne Balance Facewash", "BrandnBeauty", "Tk 690", "Routine Builder", "Preview"],
-  ["Hydra Gel Moisturizer", "BrandnBeauty", "Tk 850", "Editor Picks", "Preview"],
-  ["Daily Sun Gel", "BrandnBeauty", "Tk 760", "Best Sellers", "Preview"],
+  ["Barrier Calm Serum", "BrandnBeauty", "Tk 990", "Hero / Featured", "Static preview"],
+  ["Acne Balance Facewash", "BrandnBeauty", "Tk 690", "Routine Builder", "Static preview"],
+  ["Hydra Gel Moisturizer", "BrandnBeauty", "Tk 850", "Editor Picks", "Static preview"],
+  ["Daily Sun Gel", "BrandnBeauty", "Tk 760", "Best Sellers", "Static preview"],
 ];
 
 const previewProducts = [
@@ -219,11 +221,15 @@ export function RealHomepageCmsPage() {
   const [homepageCms, setHomepageCms] = useState<HomepageCmsData>(
     defaultHomepageCmsData,
   );
-  const [heroDraft, setHeroDraft] =
-    useState<HomepageHeroBanner>(defaultHeroDraft);
+  const [heroDrafts, setHeroDrafts] = useState<HomepageHeroBanner[]>([
+    defaultHeroDraft,
+  ]);
+  const [selectedHeroId, setSelectedHeroId] = useState(defaultHeroDraft.id);
+  const [deletedHeroIds, setDeletedHeroIds] = useState<string[]>([]);
   const [offerDraft, setOfferDraft] =
     useState<HomepageOfferCard>(defaultOfferDraft);
   const [editorPickIds, setEditorPickIds] = useState("");
+  const [productOptions, setProductOptions] = useState<HomepageProductOption[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [cmsMessage, setCmsMessage] = useState("");
 
@@ -232,18 +238,30 @@ export function RealHomepageCmsPage() {
 
     Promise.all([
       fetchCmsMeta(controller.signal),
-      fetchHomepageCms(controller.signal),
+      fetchHomepageCms(controller.signal, {
+        headers: adminAuthHeaders(),
+        includeInactive: true,
+      }),
+      fetchHomepageProductOptions(controller.signal),
     ])
-      .then(([meta, homepage]) => {
+      .then(([meta, homepage, products]) => {
         setCmsMeta(meta);
         setHomepageCms(homepage);
+        setProductOptions(products);
 
-        if (homepage.hero_banners[0]) {
-          setHeroDraft({
+        if (homepage.hero_banners.length > 0) {
+          const nextHeroDrafts = homepage.hero_banners.map((banner, index) => ({
             ...defaultHeroDraft,
-            ...homepage.hero_banners[0],
-            image_url: homepage.hero_banners[0].image_url ?? "",
-          });
+            ...banner,
+            id: String(banner.id || index + 1),
+            image_url: banner.image_url ?? "",
+            sort_order: Number.isFinite(Number(banner.sort_order))
+              ? Number(banner.sort_order)
+              : index + 1,
+          }));
+
+          setHeroDrafts(nextHeroDrafts);
+          setSelectedHeroId(nextHeroDrafts[0]?.id ?? defaultHeroDraft.id);
         }
         if (homepage.offer_cards[0]) {
           setOfferDraft({
@@ -263,6 +281,98 @@ export function RealHomepageCmsPage() {
     return () => controller.abort();
   }, []);
 
+  const selectedHeroDraft =
+    heroDrafts.find((hero) => hero.id === selectedHeroId) ??
+    heroDrafts[0] ??
+    defaultHeroDraft;
+
+  const updateSelectedHeroDraft = (
+    updater: (current: HomepageHeroBanner) => HomepageHeroBanner,
+  ) => {
+    setHeroDrafts((current) =>
+      current.map((hero) =>
+        hero.id === selectedHeroDraft.id ? updater(hero) : hero,
+      ),
+    );
+  };
+
+  const addHeroDraft = () => {
+    const numericIds = heroDrafts
+      .map((hero) => Number(hero.id))
+      .filter((id) => Number.isFinite(id) && id > 0);
+    const nextId = String((numericIds.length ? Math.max(...numericIds) : 0) + 1);
+    const nextHero = {
+      ...defaultHeroDraft,
+      id: nextId,
+      sort_order: heroDrafts.length + 1,
+      title: `Homepage Banner ${heroDrafts.length + 1}`,
+    };
+
+    setHeroDrafts((current) => [...current, nextHero]);
+    setSelectedHeroId(nextId);
+  };
+
+  const deleteSelectedHeroDraft = () => {
+    if (heroDrafts.length <= 1) {
+      updateSelectedHeroDraft((current) => ({ ...current, status: "deleted" }));
+      return;
+    }
+
+    setDeletedHeroIds((current) =>
+      selectedHeroDraft.id && /^\d+$/.test(selectedHeroDraft.id)
+        ? Array.from(new Set([...current, selectedHeroDraft.id]))
+        : current,
+    );
+    const nextHeroDrafts = heroDrafts.filter(
+      (hero) => hero.id !== selectedHeroDraft.id,
+    );
+
+    setHeroDrafts(nextHeroDrafts);
+    setSelectedHeroId(nextHeroDrafts[0]?.id ?? defaultHeroDraft.id);
+  };
+
+  const moveSelectedHeroDraft = (direction: -1 | 1) => {
+    setHeroDrafts((current) => {
+      const index = current.findIndex((hero) => hero.id === selectedHeroDraft.id);
+      const target = index + direction;
+
+      if (index < 0 || target < 0 || target >= current.length) return current;
+
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+
+      return next.map((hero, heroIndex) => ({
+        ...hero,
+        sort_order: heroIndex + 1,
+      }));
+    });
+  };
+
+  const toggleEditorPick = (productId: string) => {
+    const currentIds = editorPickIds
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
+    const nextIds = currentIds.includes(productId)
+      ? currentIds.filter((id) => id !== productId)
+      : [...currentIds, productId];
+
+    setEditorPickIds(nextIds.join(","));
+  };
+
+  const selectedEditorPickIds = useMemo(
+    () =>
+      editorPickIds
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean),
+    [editorPickIds],
+  );
+
+  const unknownEditorPickIds = selectedEditorPickIds.filter(
+    (id) => !productOptions.some((product) => product.id === id),
+  );
+
   const saveHomepageCms = async () => {
     setIsSaving(true);
     setCmsMessage("");
@@ -271,7 +381,9 @@ export function RealHomepageCmsPage() {
       const response = await fetch(UPDATE_HOMEPAGE_CMS_ENDPOINT, {
         body: JSON.stringify({
           editor_pick_product_ids: editorPickIds,
-          hero_banner: heroDraft,
+          deleted_hero_banner_ids: deletedHeroIds,
+          hero_banner: heroDrafts[0] ?? defaultHeroDraft,
+          hero_banners: heroDrafts,
           offer_card: offerDraft,
         }),
         headers: adminAuthHeaders({
@@ -288,8 +400,13 @@ export function RealHomepageCmsPage() {
         throw new Error(payload.message || "Homepage CMS save failed.");
       }
 
-      const freshCms = await fetchHomepageCms();
+      const freshCms = await fetchHomepageCms(undefined, {
+        headers: adminAuthHeaders(),
+        includeInactive: true,
+      });
       setHomepageCms(freshCms);
+      setHeroDrafts(freshCms.hero_banners.length ? freshCms.hero_banners : [defaultHeroDraft]);
+      setDeletedHeroIds([]);
       setCmsMessage(payload.message || "Homepage CMS saved.");
     } catch (error) {
       setCmsMessage(
@@ -393,7 +510,7 @@ export function RealHomepageCmsPage() {
                 >
                   {isSaving ? "Saving..." : "Save Homepage"}
                 </button>
-                <DisabledButton>Preview Storefront</DisabledButton>
+                  <DisabledButton>Preview coming later</DisabledButton>
               </div>
               {cmsMessage ? (
                 <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm">
@@ -422,13 +539,13 @@ export function RealHomepageCmsPage() {
                     Storefront Layout Control
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                    Section order and controls mirror the intended Canvas CMS
-                    surface while staying non-mutating.
+                    Hero, offer and editor pick fields save live. Reorder and
+                    full publish controls are coming later.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <DisabledButton>Reorder Sections</DisabledButton>
-                  <DisabledButton primary>Publish Changes</DisabledButton>
+                  <DisabledButton>Reorder coming later</DisabledButton>
+                  <DisabledButton primary>Full publish coming later</DisabledButton>
                 </div>
               </div>
               <div>
@@ -455,8 +572,8 @@ export function RealHomepageCmsPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="brand">Catalog</Badge>
-                  <DisabledButton>Filter</DisabledButton>
-                  <DisabledButton>Export</DisabledButton>
+                  <DisabledButton>Filter coming later</DisabledButton>
+                  <DisabledButton>Export coming later</DisabledButton>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -517,17 +634,75 @@ export function RealHomepageCmsPage() {
                 Live Campaign Controls
               </h3>
               <div className="mt-5 space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-stone-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-bold text-slate-900">
+                        Hero Slides
+                      </div>
+                      <div className="mt-1 text-xs font-semibold text-slate-500">
+                        Manage active, inactive and draft banners from the banners table.
+                      </div>
+                    </div>
+                    <button
+                      className="rounded-2xl bg-[#5E7F85] px-4 py-2.5 text-xs font-bold text-white"
+                      onClick={addHeroDraft}
+                      type="button"
+                    >
+                      Add Hero
+                    </button>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {heroDrafts.map((hero) => (
+                      <button
+                        className={`rounded-full px-3 py-2 text-xs font-bold ${
+                          hero.id === selectedHeroDraft.id
+                            ? "bg-[#5E7F85] text-white"
+                            : "bg-white text-slate-600"
+                        }`}
+                        key={hero.id}
+                        onClick={() => setSelectedHeroId(hero.id)}
+                        type="button"
+                      >
+                        {hero.title || `Hero ${hero.sort_order || hero.id}`}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                    <button
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600"
+                      onClick={() => moveSelectedHeroDraft(-1)}
+                      type="button"
+                    >
+                      Move Up
+                    </button>
+                    <button
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600"
+                      onClick={() => moveSelectedHeroDraft(1)}
+                      type="button"
+                    >
+                      Move Down
+                    </button>
+                    <button
+                      className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-700"
+                      onClick={deleteSelectedHeroDraft}
+                      type="button"
+                    >
+                      Delete Hero
+                    </button>
+                  </div>
+                </div>
                 <label className="block text-sm font-semibold text-slate-700">
                   Hero Title
                   <input
                     className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
                     onChange={(event) =>
-                      setHeroDraft((current) => ({
+                      updateSelectedHeroDraft((current) => ({
                         ...current,
                         title: event.target.value,
                       }))
                     }
-                    value={heroDraft.title}
+                    value={selectedHeroDraft.title}
                   />
                 </label>
                 <label className="block text-sm font-semibold text-slate-700">
@@ -535,12 +710,12 @@ export function RealHomepageCmsPage() {
                   <input
                     className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
                     onChange={(event) =>
-                      setHeroDraft((current) => ({
+                      updateSelectedHeroDraft((current) => ({
                         ...current,
                         subtitle: event.target.value,
                       }))
                     }
-                    value={heroDraft.subtitle}
+                    value={selectedHeroDraft.subtitle}
                   />
                 </label>
                 <label className="block text-sm font-semibold text-slate-700">
@@ -549,35 +724,35 @@ export function RealHomepageCmsPage() {
                     <input
                       className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
                       onChange={(event) =>
-                        setHeroDraft((current) => ({
+                        updateSelectedHeroDraft((current) => ({
                           ...current,
                           cta_text: event.target.value,
                         }))
                       }
                       placeholder="CTA text"
-                      value={heroDraft.cta_text}
+                      value={selectedHeroDraft.cta_text}
                     />
                     <input
                       className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
                       onChange={(event) =>
-                        setHeroDraft((current) => ({
+                        updateSelectedHeroDraft((current) => ({
                           ...current,
                           link: event.target.value,
                         }))
                       }
                       placeholder="/products"
-                      value={heroDraft.link}
+                      value={selectedHeroDraft.link}
                     />
                     <input
                       className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
                       onChange={(event) =>
-                        setHeroDraft((current) => ({
+                        updateSelectedHeroDraft((current) => ({
                           ...current,
                           image_url: event.target.value,
                         }))
                       }
                       placeholder="/hero-slide-1.jpg"
-                      value={heroDraft.image_url ?? ""}
+                      value={selectedHeroDraft.image_url ?? ""}
                     />
                   </div>
                 </label>
@@ -587,12 +762,12 @@ export function RealHomepageCmsPage() {
                     <select
                       className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
                       onChange={(event) =>
-                        setHeroDraft((current) => ({
+                        updateSelectedHeroDraft((current) => ({
                           ...current,
                           status: event.target.value,
                         }))
                       }
-                      value={heroDraft.status}
+                      value={selectedHeroDraft.status}
                     >
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
@@ -605,13 +780,13 @@ export function RealHomepageCmsPage() {
                       className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
                       min={0}
                       onChange={(event) =>
-                        setHeroDraft((current) => ({
+                        updateSelectedHeroDraft((current) => ({
                           ...current,
                           sort_order: Number(event.target.value) || 0,
                         }))
                       }
                       type="number"
-                      value={heroDraft.sort_order}
+                      value={selectedHeroDraft.sort_order}
                     />
                   </label>
                 </div>
@@ -699,7 +874,7 @@ export function RealHomepageCmsPage() {
                   </label>
                 </div>
                 <label className="block text-sm font-semibold text-slate-700">
-                  Editor Pick Product IDs
+                  Editor Picks
                   <input
                     className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
                     onChange={(event) => setEditorPickIds(event.target.value)}
@@ -707,6 +882,40 @@ export function RealHomepageCmsPage() {
                     value={editorPickIds}
                   />
                 </label>
+                <div className="rounded-2xl border border-slate-200 bg-stone-50 p-4">
+                  <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                    Product selector
+                  </div>
+                  <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
+                    {productOptions.length > 0 ? (
+                      productOptions.map((product) => (
+                        <label
+                          className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2 text-sm font-semibold text-slate-700"
+                          key={product.id}
+                        >
+                          <input
+                            checked={selectedEditorPickIds.includes(product.id)}
+                            onChange={() => toggleEditorPick(product.id)}
+                            type="checkbox"
+                          />
+                          <span>{product.name}</span>
+                          <span className="ml-auto text-xs text-slate-400">
+                            #{product.id}
+                          </span>
+                        </label>
+                      ))
+                    ) : (
+                      <div className="rounded-2xl bg-white px-3 py-3 text-sm font-semibold text-slate-500">
+                        Live products will appear here after catalog items are published.
+                      </div>
+                    )}
+                  </div>
+                  {unknownEditorPickIds.length > 0 ? (
+                    <div className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
+                      Unknown saved IDs: {unknownEditorPickIds.join(", ")}
+                    </div>
+                  ) : null}
+                </div>
                 <button
                   className="w-full rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
                   disabled={isSaving}
@@ -722,13 +931,13 @@ export function RealHomepageCmsPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-sm font-medium text-slate-500">
-                    Storefront Preview
+                    Static Storefront Preview
                   </div>
                   <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
                     Homepage Skeleton
                   </h3>
                 </div>
-                <Badge tone="warn">Preview</Badge>
+                <Badge tone="warn">Static preview</Badge>
               </div>
               <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-stone-50">
                 <div className="bg-[#5E7F85] p-5 text-white">

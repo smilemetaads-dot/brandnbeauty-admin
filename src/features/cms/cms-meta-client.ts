@@ -66,6 +66,11 @@ export type HomepageCmsData = {
   offer_cards: HomepageOfferCard[];
 };
 
+export type HomepageProductOption = {
+  id: string;
+  name: string;
+};
+
 type HomepageCmsResponse = Partial<HomepageCmsData> & {
   success?: boolean;
 };
@@ -73,6 +78,7 @@ type HomepageCmsResponse = Partial<HomepageCmsData> & {
 export const CMS_META_ENDPOINT = bnbApiUrl("get_cms_meta.php");
 export const MANAGE_REVIEWS_ENDPOINT = bnbApiUrl("manage_reviews.php");
 export const HOMEPAGE_CMS_ENDPOINT = bnbApiUrl("get_homepage_cms.php");
+export const STORE_PRODUCTS_ENDPOINT = bnbApiUrl("get_store_products.php");
 export const UPDATE_HOMEPAGE_CMS_ENDPOINT = bnbApiUrl("update_homepage_cms.php");
 
 export const defaultCmsMeta: CmsMeta = {
@@ -112,11 +118,20 @@ export async function fetchCmsMeta(signal?: AbortSignal): Promise<CmsMeta> {
   };
 }
 
-export async function fetchHomepageCms(signal?: AbortSignal): Promise<HomepageCmsData> {
-  const response = await fetch(HOMEPAGE_CMS_ENDPOINT, {
-    cache: "no-store",
-    signal,
-  });
+export async function fetchHomepageCms(
+  signal?: AbortSignal,
+  options: { includeInactive?: boolean; headers?: Record<string, string> } = {},
+): Promise<HomepageCmsData> {
+  const response = await fetch(
+    options.includeInactive
+      ? `${HOMEPAGE_CMS_ENDPOINT}?include_inactive=1`
+      : HOMEPAGE_CMS_ENDPOINT,
+    {
+      cache: "no-store",
+      headers: options.headers,
+      signal,
+    },
+  );
   const payload = (await response.json()) as HomepageCmsResponse;
 
   if (!response.ok || payload.success === false) {
@@ -133,4 +148,28 @@ export async function fetchHomepageCms(signal?: AbortSignal): Promise<HomepageCm
       : [],
     offer_cards: Array.isArray(payload.offer_cards) ? payload.offer_cards : [],
   };
+}
+
+export async function fetchHomepageProductOptions(
+  signal?: AbortSignal,
+): Promise<HomepageProductOption[]> {
+  const response = await fetch(STORE_PRODUCTS_ENDPOINT, {
+    cache: "no-store",
+    signal,
+  });
+  const payload = (await response.json()) as {
+    products?: Array<{ id?: number | string; product_name?: string }>;
+    success?: boolean;
+  };
+
+  if (!response.ok || payload.success === false || !Array.isArray(payload.products)) {
+    throw new Error("Homepage products could not be loaded.");
+  }
+
+  return payload.products
+    .map((product) => ({
+      id: String(product.id ?? "").trim(),
+      name: String(product.product_name ?? "").trim(),
+    }))
+    .filter((product) => product.id && product.name);
 }

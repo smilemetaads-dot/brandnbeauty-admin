@@ -5,6 +5,7 @@ import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import { adminAuthHeaders } from "@/lib/admin-auth";
 import { bnbApiUrl } from "@/lib/bnb-api";
 
 import type { CategoryRecord } from "./categories-data";
@@ -528,14 +529,6 @@ export function RealCategoriesPage({
   async function handleCategorySubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (editingCategory) {
-      setFormState({
-        ok: false,
-        message: "Category editing needs the update endpoint. Use Add Category for new records.",
-      });
-      return;
-    }
-
     const formData = new FormData(event.currentTarget);
     setIsPending(true);
     setFormState({ ok: false, message: "" });
@@ -543,8 +536,10 @@ export function RealCategoriesPage({
     try {
       const response = await fetch(MANAGE_CATALOG_META_ENDPOINT, {
         body: JSON.stringify({
-          action: "add_category",
+          action: editingCategory ? "update_category" : "add_category",
+          id: editingCategory?.id,
           data: {
+            id: editingCategory?.id,
             description: String(formData.get("metaDescription") ?? ""),
             featured: formData.get("featured") === "on",
             image_url: String(formData.get("image") ?? ""),
@@ -556,7 +551,7 @@ export function RealCategoriesPage({
             status: String(formData.get("status") ?? "active"),
           },
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: adminAuthHeaders({ "Content-Type": "application/json" }),
         method: "POST",
       });
       const result = (await response.json()) as {
@@ -565,10 +560,10 @@ export function RealCategoriesPage({
       };
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message ?? "Category could not be added.");
+        throw new Error(result.message ?? "Category could not be saved.");
       }
 
-      setFormState({ ok: true, message: result.message ?? "Category added successfully." });
+      setFormState({ ok: true, message: result.message ?? "Category saved successfully." });
       await loadCategories();
       setShowAddForm(false);
     } catch (error) {
@@ -597,7 +592,7 @@ export function RealCategoriesPage({
           type: "category",
         }),
         headers: {
-          "Content-Type": "application/json",
+          ...adminAuthHeaders({ "Content-Type": "application/json" }),
         },
         method: "POST",
       });

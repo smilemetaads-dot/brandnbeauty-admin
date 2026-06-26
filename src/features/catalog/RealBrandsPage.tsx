@@ -6,6 +6,7 @@ import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import { adminAuthHeaders } from "@/lib/admin-auth";
 import { bnbApiUrl } from "@/lib/bnb-api";
 
 import type { BrandRecord } from "./brands-data";
@@ -544,14 +545,6 @@ export function RealBrandsPage({
   async function handleBrandSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (editingBrand) {
-      setFormState({
-        ok: false,
-        message: "Brand editing needs the update endpoint. Use Add Brand for new records.",
-      });
-      return;
-    }
-
     const formData = new FormData(event.currentTarget);
     setIsPending(true);
     setFormState({ ok: false, message: "" });
@@ -559,8 +552,10 @@ export function RealBrandsPage({
     try {
       const response = await fetch(MANAGE_CATALOG_META_ENDPOINT, {
         body: JSON.stringify({
-          action: "add_brand",
+          action: editingBrand ? "update_brand" : "add_brand",
+          id: editingBrand?.id,
           data: {
+            id: editingBrand?.id,
             description: String(formData.get("metaDescription") ?? ""),
             featured: formData.get("featured") === "on",
             image_url: String(formData.get("image") ?? ""),
@@ -573,7 +568,7 @@ export function RealBrandsPage({
             status: String(formData.get("status") ?? "active"),
           },
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: adminAuthHeaders({ "Content-Type": "application/json" }),
         method: "POST",
       });
       const result = (await response.json()) as {
@@ -582,16 +577,16 @@ export function RealBrandsPage({
       };
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message ?? "Brand could not be added.");
+        throw new Error(result.message ?? "Brand could not be saved.");
       }
 
-      setFormState({ ok: true, message: result.message ?? "Brand added successfully." });
+      setFormState({ ok: true, message: result.message ?? "Brand saved successfully." });
       await loadBrands();
       setShowAddForm(false);
     } catch (error) {
       setFormState({
         ok: false,
-        message: error instanceof Error ? error.message : "Brand could not be added.",
+        message: error instanceof Error ? error.message : "Brand could not be saved.",
       });
     } finally {
       setIsPending(false);
@@ -613,7 +608,7 @@ export function RealBrandsPage({
           type: "brand",
         }),
         headers: {
-          "Content-Type": "application/json",
+          ...adminAuthHeaders({ "Content-Type": "application/json" }),
         },
         method: "POST",
       });
