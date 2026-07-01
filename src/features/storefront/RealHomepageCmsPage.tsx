@@ -45,10 +45,10 @@ const stats = [
 
 const sectionBlocks = [
   {
-    description: "Hero headline, campaign message, primary CTA and supporting trust strip.",
+    description: "Hero headline, image, CTA route and display status.",
     label: "Hero section",
     placement: "Top",
-    status: "Coming later",
+    status: "Live",
   },
   {
     description: "Main category shortcuts for skincare, hair care, body care and makeup.",
@@ -93,6 +93,9 @@ const previewProducts = [
 const safetyItems = [
   "Homepage hero, offer and editor pick saves now use the local PHP/MySQL CMS endpoint.",
   "If CMS data is missing, the storefront keeps the original static fallback content.",
+  "Only active hero banners appear on the storefront; inactive and draft banners stay hidden.",
+  "Use real storefront CTA routes such as /products, /category/skincare or /brand/brandnbeauty. Avoid # links.",
+  "Recommended hero images are wide JPG/WebP files around 1600 x 700 with important content centered.",
   "Category, concern, brand and product-feed layouts are unchanged.",
 ];
 
@@ -102,9 +105,9 @@ const defaultHeroDraft: HomepageHeroBanner = {
   image_url: "",
   link: "/products",
   sort_order: 1,
-  status: "active",
-  subtitle: "Curated skincare picks for healthy everyday routines.",
-  title: "Glow Essentials",
+  status: "inactive",
+  subtitle: "Update this copy before publishing the banner.",
+  title: "New Homepage Hero",
 };
 
 const defaultOfferDraft: HomepageOfferCard = {
@@ -305,7 +308,8 @@ export function RealHomepageCmsPage() {
       ...defaultHeroDraft,
       id: nextId,
       sort_order: heroDrafts.length + 1,
-      title: `Homepage Banner ${heroDrafts.length + 1}`,
+      status: "inactive",
+      title: `New Homepage Hero ${heroDrafts.length + 1}`,
     };
 
     setHeroDrafts((current) => [...current, nextHero]);
@@ -405,7 +409,9 @@ export function RealHomepageCmsPage() {
         includeInactive: true,
       });
       setHomepageCms(freshCms);
-      setHeroDrafts(freshCms.hero_banners.length ? freshCms.hero_banners : [defaultHeroDraft]);
+      const nextHeroDrafts = freshCms.hero_banners.length ? freshCms.hero_banners : [defaultHeroDraft];
+      setHeroDrafts(nextHeroDrafts);
+      setSelectedHeroId(nextHeroDrafts[0]?.id ?? defaultHeroDraft.id);
       setDeletedHeroIds([]);
       setCmsMessage(payload.message || "Homepage CMS saved.");
     } catch (error) {
@@ -440,7 +446,7 @@ export function RealHomepageCmsPage() {
     banner.title,
     "CMS",
     banner.link,
-    "Homepage Banner",
+    "Hero banner",
     "Live",
   ]);
   const liveHomepageSections = homepageCms.hero_banners.map((banner, index) => ({
@@ -468,10 +474,9 @@ export function RealHomepageCmsPage() {
                 Homepage CMS
               </h1>
               <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-white/80">
-                Canvas-style control room for homepage hero, discovery blocks,
-                featured products, routine sections and promotional slots. This
-                route reads and saves homepage/banner metadata through the
-                local PHP backend. Section reorder and full publish controls
+                Control room for the live homepage hero, offers and editor
+                picks. Hero banners save to the local PHP/MySQL banners table.
+                Discovery blocks, routine sections and full-page publish tools
                 remain disabled.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
@@ -495,10 +500,10 @@ export function RealHomepageCmsPage() {
               </div>
               <div className="mt-5 space-y-3 text-sm font-semibold text-slate-600">
                 <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
-                  Current route previously rendered the shared placeholder.
+                  Active hero banners appear on the storefront in sort order.
                 </div>
                 <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
-                  Hero, offer and editor pick saves are live.
+                  Inactive, draft and deleted hero banners stay hidden from shoppers.
                 </div>
               </div>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -510,7 +515,7 @@ export function RealHomepageCmsPage() {
                 >
                   {isSaving ? "Saving..." : "Save Homepage"}
                 </button>
-                  <DisabledButton>Preview coming later</DisabledButton>
+                  <DisabledButton>Preview panel only</DisabledButton>
               </div>
               {cmsMessage ? (
                 <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm">
@@ -539,12 +544,13 @@ export function RealHomepageCmsPage() {
                     Storefront Layout Control
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                    Hero, offer and editor pick fields save live. Reorder and
-                    full publish controls are coming later.
+                    Hero, offer and editor pick fields save live. Hero order is
+                    controlled by Move Up, Move Down and Hero Sort. Full-page
+                    section reorder is coming later.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <DisabledButton>Reorder coming later</DisabledButton>
+                    <DisabledButton>Section reorder coming later</DisabledButton>
                   <DisabledButton primary>Full publish coming later</DisabledButton>
                 </div>
               </div>
@@ -641,7 +647,7 @@ export function RealHomepageCmsPage() {
                         Hero Slides
                       </div>
                       <div className="mt-1 text-xs font-semibold text-slate-500">
-                        Manage active, inactive and draft banners from the banners table.
+                        Add, edit, reorder and hide hero banners from the banners table.
                       </div>
                     </div>
                     <button
@@ -691,6 +697,11 @@ export function RealHomepageCmsPage() {
                       Delete Hero
                     </button>
                   </div>
+                  <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-xs font-semibold leading-5 text-slate-500">
+                    Active heroes show on the storefront in sort order. Inactive
+                    and draft heroes are saved but hidden. Delete marks an
+                    existing hero as deleted so it no longer appears here.
+                  </div>
                 </div>
                 <label className="block text-sm font-semibold text-slate-700">
                   Hero Title
@@ -720,6 +731,11 @@ export function RealHomepageCmsPage() {
                 </label>
                 <label className="block text-sm font-semibold text-slate-700">
                   Hero CTA / Link / Image
+                  <span className="mt-1 block text-xs font-medium leading-5 text-slate-500">
+                    Use a real route for the CTA. Leave CTA text blank to hide
+                    the button. Use a wide centered image to avoid mobile crop
+                    issues.
+                  </span>
                   <div className="mt-2 grid gap-2">
                     <input
                       className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
