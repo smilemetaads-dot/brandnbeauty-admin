@@ -20,26 +20,23 @@ const GET_NAVIGATION_ENDPOINT = bnbApiUrl("get_navigation.php");
 const UPDATE_NAVIGATION_ENDPOINT = bnbApiUrl("update_navigation.php");
 
 const fallbackNavItems: NavigationItem[] = [
-  { label: "Skincare", href: "/category/skincare", sort_order: 1, status: "active", children: [] },
-  { label: "Hair Care", href: "/category/hair-care", sort_order: 2, status: "active", children: [] },
-  { label: "Body Care", href: "/category/body-care", sort_order: 3, status: "active", children: [] },
-  { label: "Makeup", href: "/category/makeup", sort_order: 4, status: "active", children: [] },
-  { label: "Tools", href: "/category/tools", sort_order: 5, status: "active", children: [] },
-  { label: "Fragrance", href: "/category/fragrance", sort_order: 6, status: "active", children: [] },
-  { label: "Men's Care", href: "/category/mens-care", sort_order: 7, status: "active", children: [] },
-  { label: "Mom & Baby", href: "/category/mom-baby", sort_order: 8, status: "active", children: [] },
+  { label: "Home", href: "/", sort_order: 1, status: "active", children: [] },
+  { label: "Shop", href: "/products", sort_order: 2, status: "active", children: [] },
+  { label: "Categories", href: "/category/skincare", sort_order: 3, status: "active", children: [] },
+  { label: "Concerns", href: "/concern/acne", sort_order: 4, status: "active", children: [] },
+  { label: "Brands", href: "/brand/brandnbeauty", sort_order: 5, status: "active", children: [] },
 ];
 
 const defaultNewItem: NavigationItem = {
   children: [],
-  href: "/category/new",
+  href: "/products",
   label: "",
   sort_order: fallbackNavItems.length + 1,
   status: "active",
 };
 
 const stats = [
-  ["Menu Items", "8", "Top navigation"],
+  ["Menu Items", "5", "Launch navigation"],
   ["Header Controls", "Live", "Menu save enabled"],
   ["Search Status", "Coming later", "Hidden on storefront"],
   ["Mobile Header", "Ready", "Responsive layout"],
@@ -57,7 +54,9 @@ const controls = [
 const safetyItems = [
   "Header menu saves now use the local PHP/MySQL settings table.",
   "Storefront header keeps its static fallback if navigation data is empty or unavailable.",
-  "Logo upload, search behavior, wishlist/login visibility and mobile drawer settings are coming later.",
+  "Use real storefront routes only. Leave href blank for a non-clickable parent item; do not use # links.",
+  "Child links appear as desktop dropdown items. Keep each child line as Label | /route.",
+  "Search, wishlist, customer login and logo upload are coming later and are not controlled here.",
 ];
 
 function Badge({
@@ -111,7 +110,7 @@ function normalizeNavigationItem(item: unknown): NavigationItem | null {
 
   const record = item as Partial<NavigationItem>;
   const label = typeof record.label === "string" ? record.label.trim() : "";
-  const href = typeof record.href === "string" && record.href.trim() ? record.href.trim() : "#";
+  const href = typeof record.href === "string" && record.href.trim() && record.href.trim() !== "#" ? record.href.trim() : "";
   const status = record.status === "inactive" ? "inactive" : "active";
 
   if (!label) return null;
@@ -136,7 +135,7 @@ function parseChildLines(value: string): NavigationItem[] {
 
       items.push({
         children: [],
-        href: rawHref || "#",
+        href: rawHref === "#" ? "" : rawHref,
         label: rawLabel,
         sort_order: index + 1,
         status: "active" as const,
@@ -349,13 +348,13 @@ export function RealHeaderNavigationPage() {
                     Header & Navigation Control
                   </h1>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                    Manage top menu and storefront navigation order with local
-                    PHP/MySQL-backed menu data. Logo upload, search, wishlist,
-                    login and mobile drawer settings are coming later.
+                    Manage the storefront menu links and order with local
+                    PHP/MySQL-backed data. Search, wishlist, customer login and
+                    logo upload are coming later and are not controlled here.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <DisabledButton>Preview coming later</DisabledButton>
+                  <DisabledButton>Header preview only</DisabledButton>
                   <button
                     className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
                     disabled={isSaving}
@@ -377,11 +376,7 @@ export function RealHeaderNavigationPage() {
                   <div className="text-xl font-black text-slate-900">
                     BrandnBeauty
                   </div>
-                  <div className="hidden flex-1 justify-center md:flex">
-                    <div className="w-full max-w-md rounded-full border border-slate-200 bg-stone-50 px-4 py-2 text-sm text-slate-400">
-                      Search hidden for launch
-                    </div>
-                  </div>
+                  <div className="hidden flex-1 justify-center md:flex" />
                   <div className="rounded-full bg-[#5E7F85] px-4 py-2 text-sm font-bold text-white">
                     Bag 0
                   </div>
@@ -412,7 +407,9 @@ export function RealHeaderNavigationPage() {
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                     Edit top-level menu rows and optional dropdown children.
-                    Save publishes the header menu to the storefront.
+                    Save publishes the header menu to the storefront. Use real
+                    routes such as /products, /category/skincare,
+                    /concern/acne or /brand/brandnbeauty.
                   </p>
                 </div>
                 <button
