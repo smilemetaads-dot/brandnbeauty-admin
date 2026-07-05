@@ -49,113 +49,25 @@ const MANAGE_OFFERS_ENDPOINT = bnbApiUrl("manage_offers.php");
 
 const fallbackOffers: OfferPreview[] = [
   {
-    apiStatus: "active",
-    badge: "BOGO",
-    channel: "Website",
-    conflict: "Watch",
-    conversion: "23%",
-    discount: "1 Free",
-    discountCost: "Tk 11,200",
-    end: "May 07",
-    id: "bogo-cleanser",
-    margin: "42%",
-    netProfit: "Tk 18,300",
-    orders: "58",
-    products: ["Acne Balance Facewash", "Glow Support Cleanser"],
-    revenue: "Tk 42,500",
-    start: "May 01",
-    status: "Live",
-    stock: "Safe",
-    title: "Buy 1 Get 1 Facewash Deal",
-    type: "Buy 1 Get 1",
-    visibility: "Homepage",
-  },
-  {
-    apiStatus: "active",
-    badge: "Combo",
-    channel: "Website",
-    conflict: "Conflict",
-    conversion: "21%",
-    discount: "Tk 150 Off",
-    discountCost: "Tk 6,600",
-    end: "May 18",
-    id: "glow-combo",
-    margin: "51%",
-    netProfit: "Tk 31,200",
-    orders: "44",
-    products: ["Barrier Calm Serum", "Hydra Gel Moisturizer", "Daily Sun Gel"],
-    revenue: "Tk 68,400",
-    start: "May 03",
-    status: "Live",
-    stock: "Watch",
-    title: "Glow Routine Combo",
-    type: "Combo Offer",
-    visibility: "PDP + Cart",
-  },
-  {
     apiStatus: "draft",
-    badge: "Free Delivery",
+    badge: "CMS",
     channel: "Website",
     conflict: "Safe",
-    conversion: "19%",
-    discount: "Delivery Free",
-    discountCost: "Tk 9,120",
-    end: "May 31",
-    id: "free-delivery",
-    margin: "Healthy",
-    netProfit: "Tk 37,400",
-    orders: "76",
-    products: ["All visible products above threshold"],
-    revenue: "Tk 92,200",
-    start: "May 01",
-    status: "Scheduled",
-    stock: "Safe",
-    title: "Free Delivery Over Tk 999",
-    type: "Free Shipping",
-    visibility: "Checkout",
-  },
-  {
-    apiStatus: "active",
-    badge: "Clearance",
-    channel: "Website",
-    conflict: "Watch",
-    conversion: "24%",
-    discount: "Up to 40%",
-    discountCost: "Tk 8,200",
-    end: "May 05",
-    id: "clearance",
-    margin: "Low",
-    netProfit: "Tk 4,100",
-    orders: "21",
-    products: ["Old Toner Sample", "Near expiry body wash", "Slow moving moisturizer"],
-    revenue: "Tk 18,800",
-    start: "Apr 25",
-    status: "Ending Soon",
-    stock: "Fast Moving",
-    title: "Clearance Stock Sale",
-    type: "Clearance Sale",
-    visibility: "Offers Page",
-  },
-  {
-    apiStatus: "draft",
-    badge: "Draft Deal",
-    channel: "Website",
-    conflict: "Safe",
-    conversion: "21%",
-    discount: "Tk 100 Off",
-    discountCost: "Tk 3,300",
-    end: "May 12",
-    id: "draft-offer",
-    margin: "48%",
-    netProfit: "Tk 14,600",
-    orders: "33",
-    products: ["Peeling Gel", "Brightening Soap"],
-    revenue: "Tk 31,200",
-    start: "May 02",
+    conversion: "Coming later",
+    discount: "Not set",
+    discountCost: "Coming later",
+    end: "Open",
+    id: "cms-offer-placeholder",
+    margin: "Coming later",
+    netProfit: "Coming later",
+    orders: "Coming later",
+    products: ["Connect to CMS to load offer rows"],
+    revenue: "Coming later",
+    start: "Now",
     status: "Draft",
     stock: "Safe",
-    title: "Draft Exclusive Combo",
-    type: "Draft Deal",
+    title: "Offer CMS unavailable",
+    type: "Offer row",
     visibility: "Hidden",
   },
 ];
@@ -168,7 +80,7 @@ const emptyDraft: OfferDraft = {
   link_url: "/products",
   sort_order: 1,
   starts_at: "",
-  status: "active",
+  status: "inactive",
   subtitle: "",
   title: "",
 };
@@ -487,8 +399,9 @@ export function RealOffersDealsPage() {
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-white/85">
                   Create and edit homepage offer cards through the live local
-                  offers table. Messenger sync, analytics and automation safety
-                  controls are coming later.
+                  offers table. Active offers appear during their date window.
+                  Messenger sync, analytics and automation controls are coming
+                  later.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -508,19 +421,19 @@ export function RealOffersDealsPage() {
           </div>
           <div className="grid gap-3 border-t border-white/20 bg-stone-50/80 p-4 text-sm md:grid-cols-5">
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Offer revenue: <b className="text-[#5E7F85]">Tk 253,100</b>
+              Offer revenue: <b className="text-[#5E7F85]">Coming later</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Net profit: <b className="text-emerald-700">Tk 105,600</b>
+              Net profit: <b className="text-emerald-700">Coming later</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Discount cost: <b className="text-amber-700">Coming later</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Date view: <b className="text-slate-900">30D</b>
+              Date view: <b className="text-slate-900">Content dates</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Conflict: <b className="text-rose-700">1</b>
+              Conflict: <b className="text-rose-700">Coming later</b>
             </div>
           </div>
         </section>
@@ -585,8 +498,8 @@ export function RealOffersDealsPage() {
                     Offer Campaign List
                   </h2>
                   <div className="mt-2 text-sm text-slate-500">
-                    Manage discount rules, product mapping, margins, conflicts
-                    and storefront placement.
+                    Manage offer title, subtitle, optional discount label,
+                    image, CTA route, status and date window.
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -941,8 +854,9 @@ export function RealOffersDealsPage() {
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                 Save homepage offer cards and deal rows directly to the local
-                PHP/MySQL offers table. Analytics and automation controls remain
-                coming later.
+                PHP/MySQL offers table. Use real routes only; blank, # and
+                unsafe links fall back to /products. Active offers are public
+                only inside their start/end date window.
               </p>
             </div>
             <Badge tone="good">Live Save</Badge>

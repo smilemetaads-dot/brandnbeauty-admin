@@ -821,6 +821,11 @@ export function RealHomepageCmsPage() {
                 </label>
                 <label className="block text-sm font-semibold text-slate-700">
                   Offer Subtitle / Link / Image
+                  <span className="mt-1 block text-xs font-medium leading-5 text-slate-500">
+                    Use a real storefront route for the offer link. Blank, #
+                    and unsafe links are saved as /products. Use Offers & Deals
+                    for start/end dates and additional offer rows.
+                  </span>
                   <div className="mt-2 grid gap-2">
                     <input
                       className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
