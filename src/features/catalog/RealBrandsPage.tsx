@@ -32,7 +32,7 @@ const inputClassName =
 
 const labelClassName = "text-sm font-semibold text-slate-700";
 
-const BRANDS_ENDPOINT = bnbApiUrl("get_brands.php");
+const BRANDS_ENDPOINT = bnbApiUrl("get_brands.php?include_inactive=1");
 const MANAGE_CATALOG_META_ENDPOINT = bnbApiUrl("manage_catalog_meta.php");
 const DELETE_CATALOG_ITEM_ENDPOINT = bnbApiUrl("delete_catalog_item.php");
 
@@ -116,19 +116,6 @@ const brandPreviews: Record<string, BrandPreview> = {
     products: "Preview",
     type: "Imported",
   },
-};
-
-const topProductsMap: Record<string, string[]> = {
-  cosrx: [
-    "Low pH Good Morning Gel Cleanser",
-    "Advanced Snail Mucin",
-    "BHA Blackhead Power Liquid",
-    "Aloe Soothing Sun Cream",
-  ],
-  "some-by-mi": ["AHA BHA PHA Toner", "Acne Clear Foam", "Miracle Serum"],
-  "the-derma-plus": ["Kojic Body Wash", "Glutathione Body Wash", "Vitamin C Serum"],
-  "beauty-of-joseon": ["Relief Sun", "Glow Serum", "Dynasty Cream"],
-  simple: ["Hydrating Light Moisturizer", "Refreshing Facial Wash", "Micellar Gel Wash"],
 };
 
 const defaultBrandPreview: BrandPreview = {
@@ -297,8 +284,9 @@ function BrandForm({
             </h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
               This form now creates live brand metadata through the local PHP
-              backend. Brand type, origin, logo/banner upload, storefront
-              revenue, and product mapping are preview-only until connected.
+              backend. Active brands appear on the homepage and brand routes;
+              inactive brands stay hidden. Use a clean slug, logo/image URL,
+              and lower sort order for earlier placement.
             </p>
           </div>
           {isEditing ? (
@@ -336,6 +324,9 @@ function BrandForm({
 
           <label className={labelClassName}>
             Slug
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Do not leave blank when editing; routes use /brand/slug.
+            </span>
             <input
               className={`${inputClassName} bg-stone-50 font-semibold`}
               defaultValue={editingBrand?.slug ?? ""}
@@ -368,6 +359,9 @@ function BrandForm({
 
           <label className={labelClassName}>
             Storefront Visibility
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Active means visible on storefront sections; inactive hides it.
+            </span>
             <select
               className={inputClassName}
               defaultValue={editingBrand?.status ?? "active"}
@@ -380,6 +374,9 @@ function BrandForm({
 
           <label className={labelClassName}>
             Sort Order
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Lower numbers appear first; ties sort by name.
+            </span>
             <input
               className={inputClassName}
               defaultValue={editingBrand?.sort_order ?? 0}
@@ -391,6 +388,9 @@ function BrandForm({
 
           <label className={labelClassName}>
             Image URL
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Use a logo or square image. Blank is allowed and shows the brand name.
+            </span>
             <input
               className={inputClassName}
               defaultValue={editingBrand?.image ?? ""}
@@ -672,9 +672,8 @@ export function RealBrandsPage({
     brands[0] ??
     null;
   const selectedPreview = getPreviewForBrand(selectedBrand);
-  const topProductPreview =
-    topProductsMap[selectedPreview.id] ?? topProductsMap.cosrx;
   const topBrand = brands[0] ?? null;
+  const visibleBrandCount = brands.filter((brand) => brand.status !== "inactive").length;
   const mappedProductCount = brands.reduce(
     (sum, brand) => sum + (brand.product_count ?? 0),
     0,
@@ -707,8 +706,7 @@ export function RealBrandsPage({
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-500">
                 Manage brand landing pages, logo/banner assets, SEO health,
-                homepage featured brands, product mapping and date-wise brand
-                revenue.
+                homepage featured brands and live product mapping.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -733,7 +731,7 @@ export function RealBrandsPage({
               <b className="text-[#5E7F85]">{mappedProductCount}</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Date view: <b className="text-slate-900">30D</b>
+              Visible brands: <b className="text-slate-900">{visibleBrandCount}</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Top brand:{" "}
@@ -747,13 +745,13 @@ export function RealBrandsPage({
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
-            ["Filtered Revenue", "Preview", "30D"],
-            ["Top Brand", topBrand?.name ?? "Review", "Revenue preview"],
+            ["Active Brands", String(visibleBrandCount), "Storefront visible"],
+            ["First by Sort", topBrand?.name ?? "Review", "Homepage ordering"],
             ["Featured Brands", String(featuredCount), "Homepage visible"],
             ["Mapped Products", String(mappedProductCount), "Product mapping"],
           ].map((item, index) => (
             <StatCard
-              active={item[0] === "Filtered Revenue" || item[0] === "Top Brand"}
+              active={item[0] === "Active Brands" || item[0] === "First by Sort"}
               index={index}
               item={item as [string, string, string]}
               key={item[0]}
@@ -768,13 +766,13 @@ export function RealBrandsPage({
                 <div>
                   <div className="flex items-center gap-3">
                     <h2 className="text-xl font-bold tracking-tight">
-                      Brand Revenue Directory
+                      Brand Directory
                     </h2>
-                    <Badge tone="brand">Date Wise</Badge>
+                    <Badge tone="brand">Live CMS</Badge>
                   </div>
                   <p className="mt-2 text-sm text-slate-500">
-                    Control brand visibility, SEO readiness, product mapping and
-                    revenue by selected date range.
+                    Control brand visibility, SEO readiness, product mapping
+                    and homepage ordering.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -794,18 +792,18 @@ export function RealBrandsPage({
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                   <div>
                     <div className="text-xs font-bold uppercase tracking-[0.14em] text-[#5E7F85]">
-                      Revenue Date Filter
+                      Homepage Visibility
                     </div>
                     <div className="mt-1 text-sm font-semibold text-slate-700">
-                      30D
+                      Active brands are public
                     </div>
                   </div>
                   <div className="flex flex-col items-start gap-3 xl:items-end">
                     <div className="flex flex-wrap gap-2">
-                      {["Today", "7D", "30D", "This Month"].map((item) => (
+                      {["All", "Featured", "Active", "Hidden"].map((item) => (
                         <button
                           className={`cursor-not-allowed rounded-full px-4 py-2 text-xs font-semibold transition ${
-                            item === "30D"
+                            item === "Active"
                               ? "bg-[#5E7F85] text-white shadow-sm"
                               : "border border-slate-200 bg-white text-slate-400"
                           }`}
@@ -820,25 +818,23 @@ export function RealBrandsPage({
                     <div className="flex flex-wrap gap-3">
                       <DisabledButton
                         className="inline-flex min-w-[150px] items-center justify-center gap-2 text-slate-700"
-                        title="Custom date filtering is not connected yet"
+                        title="Use each brand form to edit sort order"
                       >
-                        <span aria-hidden="true">📅</span>
-                        <span>Apr 1, 2026</span>
+                        <span>Sort order</span>
                       </DisabledButton>
                       <DisabledButton
                         className="inline-flex min-w-[150px] items-center justify-center gap-2 text-slate-700"
-                        title="Custom date filtering is not connected yet"
+                        title="Use status to control homepage visibility"
                       >
-                        <span aria-hidden="true">📅</span>
-                        <span>Apr 30, 2026</span>
+                        <span>Status</span>
                       </DisabledButton>
                       <DisabledButton
                         className="bg-[#5E7F85]/10 text-[#5E7F85]/50"
-                        title="Revenue filter is not connected yet"
+                        title="Use the search and filters below"
                       >
                         Apply Filter
                       </DisabledButton>
-                      <DisabledButton title="Revenue filter reset is not connected yet">
+                      <DisabledButton title="Clear search manually">
                         Reset
                       </DisabledButton>
                     </div>
@@ -894,8 +890,8 @@ export function RealBrandsPage({
                       "Brand",
                       "Type",
                       "Products",
-                      "Revenue",
-                      "Share",
+                      "Sort",
+                      "Homepage",
                       "SEO",
                       "Assets",
                       "Status",
@@ -973,17 +969,16 @@ export function RealBrandsPage({
                             {brand.product_count ?? 0}
                           </td>
                           <td className="px-3 py-4 2xl:px-5">
-                            <div className="font-bold text-slate-900">Preview</div>
-                            <div className="mt-1 text-xs text-slate-500">30D</div>
+                            <div className="font-bold text-slate-900">
+                              {brand.sort_order ?? 0}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              Low first
+                            </div>
                           </td>
                           <td className="px-3 py-4 2xl:px-5">
-                            <div className="min-w-20">
-                              <div className="mb-1 text-xs font-bold text-[#5E7F85]">
-                                Preview
-                              </div>
-                              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                                <div className="h-full w-1/2 rounded-full bg-[#5E7F85]" />
-                              </div>
+                            <div className="text-xs font-bold text-[#5E7F85]">
+                              {brand.status === "inactive" ? "Hidden" : "Visible"}
                             </div>
                           </td>
                           <td className="px-3 py-4 2xl:px-5">
@@ -1142,9 +1137,9 @@ export function RealBrandsPage({
                   <div className="mt-5 grid grid-cols-2 gap-3">
                     {[
                       ["Products", selectedBrand.product_count ?? 0],
-                      ["Revenue", "Preview"],
-                      ["Share", "Preview"],
-                      ["Date View", "30D"],
+                      ["Status", getStatusLabel(selectedBrand.status)],
+                      ["Sort", selectedBrand.sort_order ?? 0],
+                      ["Homepage", selectedBrand.status === "inactive" ? "Hidden" : "Visible"],
                     ].map(([label, value]) => (
                       <div className="rounded-2xl bg-stone-50 p-4" key={label}>
                         <div className="text-xs text-slate-500">{label}</div>
@@ -1181,33 +1176,27 @@ export function RealBrandsPage({
                 Product Mapping
               </div>
               <h3 className="mt-1 text-xl font-bold tracking-tight">
-                Top Brand Products
+                Brand Product Links
               </h3>
-              <div className="mt-4 space-y-2">
-                {topProductPreview.map((item, index) => (
-                  <div
-                    className="flex items-center justify-between rounded-2xl bg-stone-50 px-4 py-3 text-xs"
-                    key={item}
-                  >
-                    <span className="font-bold text-slate-700">{item}</span>
-                    <span className="rounded-full bg-white px-2 py-1 font-bold text-[#5E7F85]">
-                      #{index + 1}
-                    </span>
-                  </div>
-                ))}
+              <div className="mt-4 rounded-2xl bg-stone-50 px-4 py-4 text-xs font-semibold leading-5 text-slate-600">
+                Products mapped to this brand are counted from the live
+                database. Product-level brand mapping is managed from product
+                create/edit screens.
               </div>
               <div className="mt-5 rounded-2xl border border-[#5E7F85]/15 bg-[#5E7F85]/5 p-4">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-semibold text-slate-600">
-                    Selected range revenue
+                    Homepage status
                   </span>
-                  <b className="text-[#5E7F85]">Preview</b>
+                  <b className="text-[#5E7F85]">
+                    {selectedBrand?.status === "inactive" ? "Hidden" : "Visible"}
+                  </b>
                 </div>
                 <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-white">
                   <div className="h-full w-1/2 rounded-full bg-[#5E7F85]" />
                 </div>
                 <div className="mt-2 text-xs font-semibold text-slate-500">
-                  Revenue and product mapping are preview-only.
+                  Active brands appear in public storefront metadata responses.
                 </div>
               </div>
               <div className="mt-5 grid gap-2 sm:grid-cols-2">
@@ -1225,7 +1214,7 @@ export function RealBrandsPage({
 
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
               <div className="text-sm font-medium text-slate-500">
-                Brand Revenue Ranking
+                Brand SEO Ranking
               </div>
               <h3 className="mt-1 text-xl font-bold tracking-tight">
                 SEO Readiness
@@ -1269,9 +1258,9 @@ export function RealBrandsPage({
                 SEO + Storefront Note
               </div>
               <div className="mt-2 text-sm leading-6 text-amber-700">
-                Every visible brand should have clean slug, logo, banner, SEO
-                title, meta description, featured sorting and mapped active
-                products before showing strongly on storefront.
+                Active brands are visible on storefront sections. Keep slug
+                and logo clean, use sort order for placement, and set inactive
+                before saving unfinished rows.
               </div>
             </div>
           </div>

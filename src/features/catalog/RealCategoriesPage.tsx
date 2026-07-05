@@ -56,19 +56,12 @@ const hierarchyBlueprints: HierarchyPreview[] = [
   },
 ];
 
-const mappedProductPreview = [
-  "Acne Balance Facewash",
-  "Barrier Calm Serum",
-  "Daily Sun Gel",
-  "Hydra Gel Moisturizer",
-];
-
 const inputClassName =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15";
 
 const labelClassName = "text-sm font-semibold text-slate-700";
 
-const CATEGORIES_ENDPOINT = bnbApiUrl("get_categories.php");
+const CATEGORIES_ENDPOINT = bnbApiUrl("get_categories.php?include_inactive=1");
 const MANAGE_CATALOG_META_ENDPOINT = bnbApiUrl("manage_catalog_meta.php");
 const DELETE_CATALOG_ITEM_ENDPOINT = bnbApiUrl("delete_catalog_item.php");
 
@@ -262,8 +255,9 @@ function CategoryForm({
             </h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
               This form now creates live category metadata through the local PHP
-              backend. Subcategory, banner upload, and bulk workflow controls
-              are preview-only until connected.
+              backend. Active categories appear on the homepage and catalog
+              discovery; inactive categories stay hidden. Use a clean slug,
+              square image URL, and lower sort order for earlier placement.
             </p>
           </div>
           {isEditing ? (
@@ -318,6 +312,9 @@ function CategoryForm({
 
           <label className={labelClassName}>
             Slug
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Do not leave blank when editing; routes use /category/slug.
+            </span>
             <input
               className={`${inputClassName} bg-stone-50 font-semibold`}
               defaultValue={editingCategory?.slug ?? ""}
@@ -350,6 +347,9 @@ function CategoryForm({
 
           <label className={labelClassName}>
             Visibility
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Active means visible on storefront sections; inactive hides it.
+            </span>
             <select
               className={inputClassName}
               defaultValue={editingCategory?.status ?? "active"}
@@ -362,6 +362,9 @@ function CategoryForm({
 
           <label className={labelClassName}>
             Sort Order
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Lower numbers appear first; ties sort by name.
+            </span>
             <input
               className={inputClassName}
               defaultValue={editingCategory?.sort_order ?? 0}
@@ -383,6 +386,9 @@ function CategoryForm({
 
           <label className={labelClassName}>
             Image URL
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Use a square JPG, PNG, or WEBP. Blank is allowed and shows the category name.
+            </span>
             <input
               className={inputClassName}
               defaultValue={editingCategory?.image ?? ""}
@@ -828,7 +834,7 @@ export function RealCategoriesPage({
                   </h2>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <DisabledButton title="Sort display order is not connected yet">
+                  <DisabledButton title="Use each category form to edit sort order">
                     Sort Order
                   </DisabledButton>
                   <DisabledButton
@@ -1127,25 +1133,12 @@ export function RealCategoriesPage({
               </div>
               <div className="mt-5 border-t border-slate-100 pt-5">
                 <div className="text-sm font-medium text-slate-500">
-                  Top Mapped Products
+                  Product Mapping
                 </div>
-                <div className="mt-3 space-y-2">
-                  {mappedProductPreview.slice(0, 4).map((item, index) => (
-                    <div
-                      className="rounded-2xl bg-stone-50 px-4 py-3 text-xs"
-                      key={item}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-bold text-slate-700">{item}</span>
-                        <span className="rounded-full bg-white px-2 py-1 font-bold text-[#5E7F85]">
-                          #{index + 1}
-                        </span>
-                      </div>
-                      <div className="mt-2 text-[11px] font-semibold text-slate-400">
-                        Preview mapping
-                      </div>
-                    </div>
-                  ))}
+                <div className="mt-3 rounded-2xl bg-stone-50 px-4 py-4 text-xs font-semibold leading-5 text-slate-600">
+                  Products mapped to this category are counted from the live
+                  database. Individual product mapping is managed from product
+                  create/edit screens.
                 </div>
               </div>
             </div>
@@ -1155,9 +1148,9 @@ export function RealCategoriesPage({
                 SEO + Storefront Note
               </div>
               <div className="mt-2 text-sm leading-6 text-amber-700">
-                Every visible category should have clean slug, banner, SEO
-                title, meta description and mapped products before showing on
-                storefront.
+                Active categories are visible on storefront sections. Keep slug
+                and image clean, use sort order for placement, and set inactive
+                before saving unfinished rows.
               </div>
             </div>
           </div>

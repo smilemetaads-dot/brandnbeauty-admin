@@ -35,7 +35,7 @@ const inputClassName =
 
 const labelClassName = "text-sm font-semibold text-slate-700";
 
-const CONCERNS_ENDPOINT = bnbApiUrl("get_concerns.php");
+const CONCERNS_ENDPOINT = bnbApiUrl("get_concerns.php?include_inactive=1");
 const MANAGE_CATALOG_META_ENDPOINT = bnbApiUrl("manage_catalog_meta.php");
 const DELETE_CATALOG_ITEM_ENDPOINT = bnbApiUrl("delete_catalog_item.php");
 
@@ -145,13 +145,6 @@ const concernPreviews: ConcernPreview[] = [
     status: "Draft",
   },
 ];
-
-const mappedProductPreview = {
-  acne: ["Acne Balance Facewash", "Spot Care Gel", "Niacinamide Serum"],
-  "dark-spots": ["Vitamin C Serum", "Brightening Cream", "Niacinamide Serum"],
-  "oily-skin": ["Oil Control Cleanser", "Gel Moisturizer", "Clay Mask"],
-  "sensitive-skin": ["Barrier Calm Serum", "Gentle Cleanser", "Calming Moisturizer"],
-};
 
 const getStatusLabel = (status: string | null) =>
   status === "inactive" ? "Draft" : "Active";
@@ -319,8 +312,9 @@ function ConcernForm({
             </h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
               This form now creates live concern metadata through the local PHP
-              backend. Routine mapping, severity, education copy, and product
-              matching controls are preview-only until connected.
+              backend. Active concerns appear on the homepage and concern
+              routes; inactive concerns stay hidden. Use a clean slug, square
+              image URL, and lower sort order for earlier placement.
             </p>
           </div>
           {isEditing ? (
@@ -376,6 +370,9 @@ function ConcernForm({
 
           <label className={labelClassName}>
             Slug
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Do not leave blank when editing; routes use /concern/slug.
+            </span>
             <input
               className={`${inputClassName} bg-stone-50 font-semibold`}
               defaultValue={editingConcern?.slug ?? ""}
@@ -408,6 +405,9 @@ function ConcernForm({
 
           <label className={labelClassName}>
             Visibility
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Active means visible on storefront sections; inactive hides it.
+            </span>
             <select
               className={inputClassName}
               defaultValue={editingConcern?.status ?? "active"}
@@ -420,6 +420,9 @@ function ConcernForm({
 
           <label className={labelClassName}>
             Sort Order
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Lower numbers appear first; ties sort by name.
+            </span>
             <input
               className={inputClassName}
               defaultValue={editingConcern?.sort_order ?? 0}
@@ -441,6 +444,9 @@ function ConcernForm({
 
           <label className={labelClassName}>
             Image URL
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Use a square JPG, PNG, or WEBP. Blank is allowed and shows the concern name.
+            </span>
             <input
               className={inputClassName}
               defaultValue={editingConcern?.image ?? ""}
@@ -722,10 +728,6 @@ export function RealConcernsPage({
       )
     : 0;
   const selectedPreview = getPreviewForConcern(selectedConcern);
-  const previewProducts =
-    mappedProductPreview[
-      selectedPreview.id as keyof typeof mappedProductPreview
-    ] ?? mappedProductPreview.acne;
   const filteredConcerns = useMemo(
     () =>
       concerns.filter((concern) => {
@@ -930,7 +932,7 @@ export function RealConcernsPage({
                   </h2>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <DisabledButton title="Sort display order is not connected yet">
+                  <DisabledButton title="Use each concern form to edit sort order">
                     Sort Order
                   </DisabledButton>
                   <DisabledButton
@@ -1241,37 +1243,16 @@ export function RealConcernsPage({
               <div className="mt-5 border-t border-slate-100 pt-5">
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-sm font-medium text-slate-500">
-                    Top Mapped Products
+                    Product Mapping
                   </div>
                   <Badge tone="good">
                     {selectedConcern.product_count ?? 0} Products
                   </Badge>
                 </div>
-                <div className="mt-3 space-y-2">
-                  {previewProducts.map((item, index) => (
-                    <div
-                      className="rounded-2xl bg-stone-50 px-4 py-3 text-xs"
-                      key={item}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-bold text-slate-700">{item}</span>
-                        <span className="rounded-full bg-white px-2 py-1 font-bold text-[#5E7F85]">
-                          #{index + 1}
-                        </span>
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <span className="rounded-full bg-white px-2 py-1 font-bold text-slate-500">
-                          {index === 0 ? "Best Match" : "Related"}
-                        </span>
-                        <span className="rounded-full bg-white px-2 py-1 font-bold text-slate-500">
-                          Step{" "}
-                          {selectedPreview.routine[
-                            Math.min(index, selectedPreview.routine.length - 1)
-                          ] ?? "Routine"}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                <div className="mt-3 rounded-2xl bg-stone-50 px-4 py-4 text-xs font-semibold leading-5 text-slate-600">
+                  Products mapped to this concern are counted from the live
+                  database. Product-level concern mapping is managed from
+                  product create/edit screens.
                 </div>
               </div>
             </div>
@@ -1281,9 +1262,9 @@ export function RealConcernsPage({
                 SEO + Storefront Note
               </div>
               <div className="mt-2 text-sm leading-6 text-amber-700">
-                Every visible concern should have clean slug, educational intro,
-                SEO title, meta description, routine mapping and safe cosmetic
-                wording before showing on storefront.
+                Active concerns are visible on storefront sections. Keep slug
+                and image clean, avoid medical claims, use sort order for
+                placement, and set inactive before saving unfinished rows.
               </div>
             </div>
           </div>

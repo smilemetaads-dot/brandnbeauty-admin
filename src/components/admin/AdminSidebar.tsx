@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { adminNavGroups } from "@/config/adminNav";
+import type { AdminNavItem } from "@/config/adminNav";
 
 const storefrontUrl =
   process.env.NEXT_PUBLIC_BNB_STOREFRONT_URL?.trim() || "/";
@@ -71,7 +72,7 @@ function GroupIcon({ label }: { label: string }) {
           <path d="M9 9h6M9 13h6M9 17h3" />
         </svg>
       );
-    case "Orders":
+    case "Orders & Ops":
       return (
         <svg {...commonProps}>
           <path d="M8 6h12M8 12h12M8 18h12" />
@@ -92,7 +93,7 @@ function GroupIcon({ label }: { label: string }) {
           <path d="M4 5v14M20 5v14" />
         </svg>
       );
-    case "Finance":
+    case "Reports & Finance":
       return (
         <svg {...commonProps}>
           <path d="M7 5h7.5a3.5 3.5 0 0 1 0 7H7" />
@@ -123,6 +124,32 @@ function GroupIcon({ label }: { label: string }) {
         </svg>
       );
   }
+}
+
+function StatusBadge({ status, active }: { status: AdminNavItem["status"]; active: boolean }) {
+  if (status === "Live") {
+    return (
+      <span
+        className={`rounded-full px-2 py-0.5 text-[0.62rem] font-black ${
+          active ? "bg-white/18 text-white" : "bg-emerald-50 text-emerald-700"
+        }`}
+      >
+        Live
+      </span>
+    );
+  }
+
+  const className = {
+    Partial: active ? "bg-white/18 text-white" : "bg-amber-50 text-amber-700",
+    Preview: active ? "bg-white/18 text-white" : "bg-slate-100 text-slate-500",
+    "Setup Needed": active ? "bg-white/18 text-white" : "bg-rose-50 text-rose-700",
+  }[status];
+
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[0.62rem] font-black ${className}`}>
+      {status}
+    </span>
+  );
 }
 
 export function AdminSidebar() {
@@ -214,7 +241,7 @@ export function AdminSidebar() {
 
                       return (
                         <Link
-                          className={`flex min-h-10 items-center rounded-2xl px-4 text-sm font-bold transition ${
+                          className={`flex min-h-10 items-center justify-between gap-2 rounded-2xl px-4 text-sm font-bold transition ${
                             isActive
                               ? "bg-[#5E7F85] text-white shadow-[0_12px_26px_rgba(94,127,133,0.22)]"
                               : "text-slate-500 hover:bg-stone-50 hover:text-[#41696f]"
@@ -222,7 +249,8 @@ export function AdminSidebar() {
                           href={item.href}
                           key={item.href}
                         >
-                          {item.label}
+                          <span className="min-w-0 truncate">{item.label}</span>
+                          <StatusBadge active={isActive} status={item.status} />
                         </Link>
                       );
                     })}

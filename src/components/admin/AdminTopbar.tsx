@@ -2,6 +2,9 @@
 
 import { usePathname } from "next/navigation";
 
+import { adminNavGroups } from "@/config/adminNav";
+import type { AdminNavItem } from "@/config/adminNav";
+
 const pageTitles: Record<string, string> = {
   "/": "Dashboard",
   "/banners": "Banner CMS",
@@ -37,6 +40,10 @@ const pageTitles: Record<string, string> = {
   "/suppliers/price-history": "Supplier Price History",
 };
 
+const navItems = adminNavGroups
+  .flatMap((group) => group.items)
+  .sort((a, b) => b.href.length - a.href.length);
+
 function getPageTitle(pathname: string) {
   const exact = pageTitles[pathname];
   if (exact) return exact;
@@ -48,9 +55,27 @@ function getPageTitle(pathname: string) {
   return match?.[1] ?? "Admin Console";
 }
 
+function getPageStatus(pathname: string): AdminNavItem["status"] | null {
+  const match = navItems.find(
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+  );
+
+  return match?.status ?? null;
+}
+
+function getStatusTone(status: AdminNavItem["status"] | null) {
+  if (status === "Live") return "bg-emerald-50 text-emerald-700";
+  if (status === "Partial") return "bg-amber-50 text-amber-700";
+  if (status === "Preview") return "bg-slate-100 text-slate-600";
+  if (status === "Setup Needed") return "bg-rose-50 text-rose-700";
+  return "bg-slate-100 text-slate-600";
+}
+
 export function AdminTopbar() {
   const pathname = usePathname();
   const title = getPageTitle(pathname);
+  const status = getPageStatus(pathname);
+  const showSetupNotice = status !== null && status !== "Live";
 
   return (
     <header className="sticky top-0 z-10 border-b border-slate-200/70 bg-[#f7f5f1]/95 backdrop-blur">
@@ -60,14 +85,23 @@ export function AdminTopbar() {
             BrandnBeauty Admin
           </div>
           <div className="hidden text-xs font-bold uppercase tracking-[0.18em] text-[#5E7F85] lg:block">
-            Live admin workspace
+            {status === "Live" ? "Live admin workspace" : "Admin setup workspace"}
           </div>
           <h1 className="mt-1 truncate text-2xl font-black tracking-tight text-slate-950">
             {title}
           </h1>
-          <p className="mt-1 text-sm font-medium text-slate-500">
-            Catalog, orders, storefront, and operations
-          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {status ? (
+              <span className={`rounded-full px-2.5 py-1 text-xs font-black ${getStatusTone(status)}`}>
+                {status}
+              </span>
+            ) : null}
+            <p className="text-sm font-medium text-slate-500">
+              {showSetupNotice
+                ? "This module is available for setup/review. Some actions may be preview-only."
+                : "Catalog, orders, storefront, and operations"}
+            </p>
+          </div>
         </div>
 
         <div className="flex min-w-0 items-center gap-3">
@@ -85,9 +119,11 @@ export function AdminTopbar() {
           </div>
 
           <div className="hidden rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm sm:block">
-            <div className="text-sm font-bold text-slate-800">Live Workspace</div>
+            <div className="text-sm font-bold text-slate-800">
+              {status === "Live" ? "Live Workspace" : "Setup Review"}
+            </div>
             <div className="text-xs font-medium text-slate-500">
-              Live actions preserved
+              {status === "Live" ? "Live actions preserved" : "Preview-safe actions"}
             </div>
           </div>
 
