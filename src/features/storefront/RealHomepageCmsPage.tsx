@@ -80,7 +80,7 @@ const productRows = [
   ["Barrier Calm Serum", "BrandnBeauty", "Tk 990", "Hero / Featured", "Static preview"],
   ["Acne Balance Facewash", "BrandnBeauty", "Tk 690", "Routine Builder", "Static preview"],
   ["Hydra Gel Moisturizer", "BrandnBeauty", "Tk 850", "Editor Picks", "Static preview"],
-  ["Daily Sun Gel", "BrandnBeauty", "Tk 760", "Best Sellers", "Static preview"],
+  ["Daily Sun Gel", "BrandnBeauty", "Tk 760", "Featured Products", "Static preview"],
 ];
 
 const previewProducts = [
@@ -459,7 +459,17 @@ export function RealHomepageCmsPage() {
     .split(",")
     .map((id) => id.trim())
     .filter(Boolean)
-    .map((id) => ["Product ID " + id, "CMS", "Selected", "Editor Picks", "Live"]);
+    .map((id) => {
+      const product = productOptions.find((option) => option.id === id);
+
+      return [
+        product?.name ?? "Product ID " + id,
+        "CMS",
+        product ? "Selected" : "Not in active feed",
+        "Editor Picks",
+        product ? "Active" : "Review ID",
+      ];
+    });
 
   return (
     <AdminShell>
@@ -475,7 +485,9 @@ export function RealHomepageCmsPage() {
               </h1>
               <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-white/80">
                 Control room for the live homepage hero, offers and editor
-                picks. Hero banners save to the local PHP/MySQL banners table.
+                picks. Editor picks save product IDs to homepage settings and
+                render only when those products are active in the storefront feed.
+                Hero banners save to the local PHP/MySQL banners table.
                 Discovery blocks, routine sections and full-page publish tools
                 remain disabled.
               </p>
@@ -896,6 +908,9 @@ export function RealHomepageCmsPage() {
                 </div>
                 <label className="block text-sm font-semibold text-slate-700">
                   Editor Picks
+                  <span className="mt-1 block text-xs font-medium leading-5 text-slate-500">
+                    Comma-separated active product IDs. Checkbox selections add or remove IDs from this field.
+                  </span>
                   <input
                     className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
                     onChange={(event) => setEditorPickIds(event.target.value)}
@@ -905,7 +920,12 @@ export function RealHomepageCmsPage() {
                 </label>
                 <div className="rounded-2xl border border-slate-200 bg-stone-50 p-4">
                   <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
-                    Product selector
+                    Active product selector
+                  </div>
+                  <div className="mt-2 rounded-2xl bg-white px-3 py-3 text-xs font-semibold leading-5 text-slate-600">
+                    The checklist uses active, in-stock storefront products.
+                    Unknown, inactive or deleted IDs can stay saved for review,
+                    but they will not render on the homepage.
                   </div>
                   <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
                     {productOptions.length > 0 ? (
@@ -933,7 +953,7 @@ export function RealHomepageCmsPage() {
                   </div>
                   {unknownEditorPickIds.length > 0 ? (
                     <div className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
-                      Unknown saved IDs: {unknownEditorPickIds.join(", ")}
+                      Review saved IDs not in the active product feed: {unknownEditorPickIds.join(", ")}
                     </div>
                   ) : null}
                 </div>
