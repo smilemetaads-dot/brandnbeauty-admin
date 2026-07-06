@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
@@ -48,7 +48,7 @@ const fallbackFooterContent: FooterContent = {
     links: [
       { label: "Categories", href: "/category/skincare", sort_order: 1, status: "active" },
       { label: "Concerns", href: "/concern/acne", sort_order: 2, status: "active" },
-      { label: "Brands", href: "/brand/the-derma-plus", sort_order: 3, status: "active" },
+      { label: "Brands", href: "/brand/brandnbeauty", sort_order: 3, status: "active" },
       { label: "Best Sellers", href: "/products", sort_order: 4, status: "active" },
       { label: "Offers", href: "/products", sort_order: 5, status: "active" },
     ],
@@ -60,7 +60,6 @@ const fallbackFooterContent: FooterContent = {
     links: [
       { label: "Order confirmation after checkout", href: "", sort_order: 1, status: "active" },
       { label: "Customer care details are shared with confirmed orders", href: "", sort_order: 2, status: "active" },
-      { label: "FAQ coming later", href: "", sort_order: 3, status: "active" },
     ],
     sort_order: 2,
     status: "active",
@@ -115,9 +114,19 @@ const detailPanels = [
 
 const safetyItems = [
   "Footer links and social icons save through the local PHP/MySQL settings table.",
-  "Storefront footer keeps its static fallback if footer data is empty or unavailable.",
-  "Newsletter block, trust strip and advanced visibility rules are coming later.",
+  "Active groups and active links appear on the storefront; inactive entries stay saved but hidden.",
+  "Blank, #, javascript/data links and placeholder social URLs render as labels or are filtered.",
+  "Only add social links after the real account URL is ready.",
+  "Newsletter block and advanced footer rules are coming later.",
 ] as const;
+
+function isUnsafeFooterHref(href: string): boolean {
+  const normalized = href.trim().toLowerCase();
+
+  return normalized.startsWith("javascript:")
+    || normalized.startsWith("data:")
+    || normalized.startsWith("vbscript:");
+}
 
 function Badge({
   children,
@@ -170,7 +179,8 @@ function normalizeFooterLink(link: unknown): FooterLink | null {
 
   const record = link as Partial<FooterLink>;
   const label = typeof record.label === "string" ? record.label.trim() : "";
-  const href = typeof record.href === "string" && record.href.trim() ? record.href.trim() : "#";
+  const rawHref = typeof record.href === "string" && record.href.trim() ? record.href.trim() : "";
+  const href = rawHref === "#" || isUnsafeFooterHref(rawHref) ? "" : rawHref;
 
   if (!label) return null;
 
@@ -261,7 +271,7 @@ function parseLinkLines(value: string): FooterLink[] {
     if (!rawLabel) return links;
 
     links.push({
-      href: rawHref || "#",
+      href: rawHref === "#" || isUnsafeFooterHref(rawHref) ? "" : rawHref,
       label: rawLabel,
       sort_order: index + 1,
       status: rawStatus === "inactive" ? "inactive" : "active",
@@ -284,7 +294,7 @@ function parseSocialLines(value: string): FooterSocialLink[] {
 
     links.push({
       aria_label: rawAriaLabel || rawLabel,
-      href: rawHref || "#",
+      href: rawHref === "#" || isUnsafeFooterHref(rawHref) ? "" : rawHref,
       label: rawLabel,
       sort_order: index + 1,
       status: rawStatus === "inactive" ? "inactive" : "active",
@@ -450,9 +460,10 @@ export function RealFooterCmsPage() {
                     Footer CMS
                   </h1>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                    Control footer brand block, social links, policy links and
-                    customer support links through local PHP/MySQL settings.
-                    Trust strip controls are coming later.
+                    Control footer brand name, copyright, link groups, link
+                    status and social links through local PHP/MySQL settings.
+                    Use blank hrefs for non-clickable labels and avoid # links
+                    until a real storefront route exists.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -488,8 +499,8 @@ export function RealFooterCmsPage() {
                   <div>
                     <div className="text-2xl font-black">{footerContent.brand.name}</div>
                     <p className="mt-3 text-sm leading-6 text-white/80">
-                      Authentic beauty products, practical routines and support
-                      for Bangladeshi customers.
+                      Footer links are saved from the local CMS settings and
+                      filtered before reaching the storefront.
                     </p>
                     <div className="mt-4 flex gap-2">
                       {footerContent.social_links.map((item) => (
@@ -580,6 +591,33 @@ export function RealFooterCmsPage() {
                     </div>
                   </div>
                 ))}
+                <button
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#5E7F85]"
+                  onClick={() =>
+                    setFooterContent((current) => ({
+                      ...current,
+                      groups: [
+                        ...current.groups,
+                        {
+                          links: [
+                            {
+                              href: "",
+                              label: "New footer label",
+                              sort_order: 1,
+                              status: "inactive",
+                            },
+                          ],
+                          sort_order: current.groups.length + 1,
+                          status: "inactive",
+                          title: "New Section",
+                        },
+                      ],
+                    }))
+                  }
+                  type="button"
+                >
+                  Add Footer Group
+                </button>
               </div>
             </div>
 
@@ -625,7 +663,7 @@ export function RealFooterCmsPage() {
                       social_links: parseSocialLines(event.target.value),
                     }))
                   }
-                  placeholder="f | https://example.com | Facebook | active"
+                  placeholder="f | https://real-account.example | Facebook | active"
                   value={formatSocialLines(footerContent.social_links)}
                 />
                 <button
@@ -648,12 +686,10 @@ export function RealFooterCmsPage() {
               </h3>
               <div className="mt-5 space-y-3">
                 {[
-                  "Footer column order",
-                  "Social link editor",
-                  "Legal link editor",
+                  "Drag-and-drop footer ordering",
                   "Newsletter block",
-                  "Copyright text",
-                  "Storefront visibility",
+                  "Footer A/B testing",
+                  "Advanced visibility rules",
                 ].map((item) => (
                   <div
                     className="flex items-center justify-between rounded-2xl bg-stone-50 px-4 py-3 text-sm font-semibold"
