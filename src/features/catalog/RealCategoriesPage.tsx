@@ -77,6 +77,35 @@ function toStringOrNull(value: unknown) {
     : null;
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function getDescendantIds(categories: CategoryRecord[], categoryId: string) {
+  const descendantIds = new Set<string>();
+  const pendingIds = [categoryId];
+
+  while (pendingIds.length > 0) {
+    const parentId = pendingIds.shift();
+
+    for (const category of categories) {
+      if (
+        String(category.parent_id ?? "") === parentId &&
+        !descendantIds.has(category.id)
+      ) {
+        descendantIds.add(category.id);
+        pendingIds.push(category.id);
+      }
+    }
+  }
+
+  return descendantIds;
+}
+
 function normalizeCategory(value: unknown): CategoryRecord | null {
   if (!value || typeof value !== "object") return null;
 
@@ -95,6 +124,10 @@ function normalizeCategory(value: unknown): CategoryRecord | null {
     meta_description: toStringOrNull(category.meta_description),
     meta_title: toStringOrNull(category.meta_title),
     name,
+    parent_id:
+      category.parent_id == null || category.parent_id === ""
+        ? null
+        : toNumber(category.parent_id),
     product_count: toNumber(category.product_count),
     slug: slug || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
     sort_order: category.sort_order == null ? null : toNumber(category.sort_order),
@@ -228,12 +261,14 @@ function DisabledButton({
 }
 
 function CategoryForm({
+  categories,
   editingCategory,
   isPending,
   onSubmit,
   state,
   onClose,
 }: {
+  categories: CategoryRecord[];
   editingCategory: CategoryRecord | null;
   isPending: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -241,6 +276,20 @@ function CategoryForm({
   onClose: () => void;
 }) {
   const isEditing = Boolean(editingCategory);
+  const [name, setName] = useState(editingCategory?.name ?? "");
+  const [slug, setSlug] = useState(editingCategory?.slug ?? "");
+  const [slugEdited, setSlugEdited] = useState(false);
+  const invalidParentIds = editingCategory
+    ? getDescendantIds(categories, editingCategory.id)
+    : new Set<string>();
+
+  function handleNameChange(value: string) {
+    setName(value);
+
+    if (!slugEdited) {
+      setSlug(slugify(value));
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
@@ -251,7 +300,7 @@ function CategoryForm({
               Category Action
             </div>
             <h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-              {isEditing ? `Edit ${editingCategory?.name}` : "Add Parent Category"}
+              {isEditing ? `Edit ${editingCategory?.name}` : "Add Category"}
             </h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
               This form now creates live category metadata through the local PHP
@@ -278,23 +327,6 @@ function CategoryForm({
           )}
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <button
-            className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-bold text-white"
-            type="button"
-          >
-            Parent Category
-          </button>
-          <button
-            className="cursor-not-allowed rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm font-bold text-slate-400"
-            disabled
-            title="Subcategory save is not connected yet"
-            type="button"
-          >
-            Subcategory Preview
-          </button>
-        </div>
-
         <form onSubmit={onSubmit} className="mt-5 grid gap-4 md:grid-cols-2">
           <input name="id" type="hidden" value={editingCategory?.id ?? ""} />
 
@@ -302,11 +334,12 @@ function CategoryForm({
             Name
             <input
               className={inputClassName}
-              defaultValue={editingCategory?.name ?? ""}
               name="name"
+              onChange={(event) => handleNameChange(event.target.value)}
               placeholder="Skincare"
               required
               type="text"
+              value={name}
             />
           </label>
 
@@ -317,31 +350,37 @@ function CategoryForm({
             </span>
             <input
               className={`${inputClassName} bg-stone-50 font-semibold`}
-              defaultValue={editingCategory?.slug ?? ""}
               name="slug"
+              onChange={(event) => {
+                setSlug(event.target.value);
+                setSlugEdited(true);
+              }}
               placeholder="auto-generated-slug"
               required
               type="text"
+              value={slug}
             />
           </label>
 
           <label className={labelClassName}>
             Parent
-            <input
-              className={`${inputClassName} cursor-not-allowed bg-stone-50 text-slate-500`}
-              disabled
-              placeholder="Root"
-              type="text"
-            />
-          </label>
-
-          <label className={labelClassName}>
-            Menu Placement
             <select
-              className={`${inputClassName} cursor-not-allowed bg-stone-50 text-slate-500`}
-              disabled
+              className={inputClassName}
+              defaultValue={editingCategory?.parent_id ?? ""}
+              name="parentId"
             >
-              <option>Header</option>
+              <option value="">Root / no parent</option>
+              {categories
+                .filter(
+                  (category) =>
+                    category.id !== editingCategory?.id &&
+                    !invalidParentIds.has(category.id),
+                )
+                .map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
             </select>
           </label>
 
@@ -552,6 +591,7 @@ export function RealCategoriesPage({
             meta_description: String(formData.get("metaDescription") ?? ""),
             meta_title: String(formData.get("metaTitle") ?? ""),
             name: String(formData.get("name") ?? ""),
+            parent_id: String(formData.get("parentId") ?? ""),
             slug: String(formData.get("slug") ?? ""),
             sort_order: Number(formData.get("sortOrder") ?? 0),
             status: String(formData.get("status") ?? "active"),
@@ -1158,8 +1198,10 @@ export function RealCategoriesPage({
 
         {showForm ? (
           <CategoryForm
+            categories={categories}
             editingCategory={editingCategory}
             isPending={isPending}
+            key={editingCategory?.id ?? "new-category"}
             onClose={() => setShowAddForm(false)}
             onSubmit={handleCategorySubmit}
             state={formState}

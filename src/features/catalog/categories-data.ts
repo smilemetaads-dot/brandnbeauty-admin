@@ -5,6 +5,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 export type CategoryRecord = {
   id: string;
   name: string;
+  parent_id?: number | null;
   slug: string;
   image: string | null;
   status: string | null;
