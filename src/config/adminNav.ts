@@ -24,32 +24,24 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Catalog",
     items: [
       { label: "Products", href: "/products", status: "Live" },
-      { label: "Add Product", href: "/products/edit", status: "Live" },
+      { label: "Add/Edit Product", href: "/products/edit", status: "Live" },
       { label: "Categories", href: "/categories", status: "Live" },
       { label: "Concerns", href: "/concerns", status: "Live" },
       { label: "Brands", href: "/brands", status: "Live" },
-      { label: "Offers", href: "/offers", status: "Live" },
+      { label: "Offers & Deals", href: "/offers", status: "Live" },
+      { label: "Product Recommendations", href: "/recommendations", status: "Preview" },
       { label: "Inventory", href: "/inventory", status: "Live" },
       { label: "Purchase Stock Entry", href: "/purchases", status: "Partial" },
-      { label: "Product Recommendations", href: "/recommendations", status: "Preview" },
-    ],
-  },
-  {
-    icon: "SU",
-    label: "Suppliers",
-    items: [
-      { label: "Suppliers", href: "/suppliers", status: "Partial" },
-      { label: "Supplier Analytics", href: "/suppliers/analytics", status: "Partial" },
-      { label: "Supplier Price History", href: "/suppliers/price-history", status: "Preview" },
     ],
   },
   {
     icon: "OR",
-    label: "Orders & Ops",
+    label: "Orders",
     items: [
       { label: "Orders", href: "/orders", status: "Live" },
-      { label: "Courier & Payments", href: "/courier", status: "Partial" },
+      { label: "Order Details", href: "/orders/details", status: "Partial" },
       { label: "Packing Desk", href: "/packing", status: "Partial" },
+      { label: "Courier & Payments", href: "/courier", status: "Partial" },
       { label: "Checkout & Shipping Rules", href: "/checkout-rules", status: "Preview" },
       { label: "Invoice & Thank You Settings", href: "/invoice-settings", status: "Preview" },
     ],
@@ -59,14 +51,23 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Customers",
     items: [
       { label: "Customers", href: "/customers", status: "Live" },
+      { label: "Customers Profile", href: "/customers/profile", status: "Partial" },
+    ],
+  },
+  {
+    icon: "SU",
+    label: "Suppliers",
+    items: [
+      { label: "Suppliers", href: "/suppliers", status: "Partial" },
+      { label: "Suppliers Analytics", href: "/suppliers/analytics", status: "Partial" },
     ],
   },
   {
     icon: "FI",
-    label: "Reports & Finance",
+    label: "Finance",
     items: [
-      { label: "Reports & Insights", href: "/reports", status: "Partial" },
       { label: "Finance Reconciliation", href: "/finance/reconciliation", status: "Partial" },
+      { label: "Reports & Insights", href: "/reports", status: "Partial" },
     ],
   },
   {

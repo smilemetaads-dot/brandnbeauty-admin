@@ -72,7 +72,7 @@ function GroupIcon({ label }: { label: string }) {
           <path d="M9 9h6M9 13h6M9 17h3" />
         </svg>
       );
-    case "Orders & Ops":
+    case "Orders":
       return (
         <svg {...commonProps}>
           <path d="M8 6h12M8 12h12M8 18h12" />
@@ -93,7 +93,7 @@ function GroupIcon({ label }: { label: string }) {
           <path d="M4 5v14M20 5v14" />
         </svg>
       );
-    case "Reports & Finance":
+    case "Finance":
       return (
         <svg {...commonProps}>
           <path d="M7 5h7.5a3.5 3.5 0 0 1 0 7H7" />
