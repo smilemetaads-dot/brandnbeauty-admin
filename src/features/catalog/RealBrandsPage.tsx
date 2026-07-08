@@ -48,6 +48,14 @@ function toStringOrNull(value: unknown) {
     : null;
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function normalizeBrand(value: unknown): BrandRecord | null {
   if (!value || typeof value !== "object") return null;
 
@@ -60,6 +68,8 @@ function normalizeBrand(value: unknown): BrandRecord | null {
   if (!id || !name) return null;
 
   return {
+    brand_type:
+      toStringOrNull(brand.brand_type) ?? toStringOrNull(brand.type),
     created_at: toStringOrNull(brand.created_at),
     featured: Boolean(brand.featured),
     id,
@@ -67,6 +77,10 @@ function normalizeBrand(value: unknown): BrandRecord | null {
     meta_description: toStringOrNull(brand.meta_description),
     meta_title: toStringOrNull(brand.meta_title),
     name,
+    origin_country:
+      toStringOrNull(brand.origin_country) ??
+      toStringOrNull(brand.country) ??
+      toStringOrNull(brand.origin),
     product_count: toNumber(brand.product_count),
     slug: slug || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
     sort_order: brand.sort_order == null ? null : toNumber(brand.sort_order),
@@ -253,7 +267,13 @@ function getPreviewForBrand(brand: BrandRecord | null): BrandPreview {
     return defaultBrandPreview;
   }
 
-  return brandPreviews[brand.slug] ?? defaultBrandPreview;
+  const preview = brandPreviews[brand.slug] ?? defaultBrandPreview;
+
+  return {
+    ...preview,
+    origin: brand.origin_country ?? preview.origin,
+    type: brand.brand_type ?? preview.type,
+  };
 }
 
 function BrandForm({
@@ -270,6 +290,18 @@ function BrandForm({
   onClose: () => void;
 }) {
   const isEditing = Boolean(editingBrand);
+  const preview = getPreviewForBrand(editingBrand);
+  const [name, setName] = useState(editingBrand?.name ?? "");
+  const [slug, setSlug] = useState(editingBrand?.slug ?? "");
+  const [slugEdited, setSlugEdited] = useState(false);
+
+  function handleNameChange(value: string) {
+    setName(value);
+
+    if (!slugEdited) {
+      setSlug(slugify(value));
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
@@ -314,11 +346,12 @@ function BrandForm({
             Brand Name
             <input
               className={inputClassName}
-              defaultValue={editingBrand?.name ?? ""}
               name="name"
+              onChange={(event) => handleNameChange(event.target.value)}
               placeholder="COSRX"
               required
               type="text"
+              value={name}
             />
           </label>
 
@@ -329,29 +362,44 @@ function BrandForm({
             </span>
             <input
               className={`${inputClassName} bg-stone-50 font-semibold`}
-              defaultValue={editingBrand?.slug ?? ""}
               name="slug"
+              onChange={(event) => {
+                setSlug(event.target.value);
+                setSlugEdited(true);
+              }}
               placeholder="auto-generated-slug"
               required
               type="text"
+              value={slug}
             />
           </label>
 
           <label className={labelClassName}>
             Brand Type
             <select
-              className={`${inputClassName} cursor-not-allowed bg-stone-50 text-slate-500`}
-              disabled
+              className={inputClassName}
+              defaultValue={
+                editingBrand?.brand_type ?? (editingBrand ? preview.type : "")
+              }
+              name="brandType"
             >
-              <option>Imported</option>
+              <option value="">Select type</option>
+              <option value="Imported">Imported</option>
+              <option value="Local">Local</option>
+              <option value="Official">Official</option>
+              <option value="Owned">Owned</option>
+              <option value="Other">Other</option>
             </select>
           </label>
 
           <label className={labelClassName}>
             Origin Country
             <input
-              className={`${inputClassName} cursor-not-allowed bg-stone-50 text-slate-500`}
-              disabled
+              className={inputClassName}
+              defaultValue={
+                editingBrand?.origin_country ?? (editingBrand ? preview.origin : "")
+              }
+              name="originCountry"
               placeholder="South Korea"
               type="text"
             />
@@ -558,11 +606,13 @@ export function RealBrandsPage({
             id: editingBrand?.id,
             description: String(formData.get("metaDescription") ?? ""),
             featured: formData.get("featured") === "on",
+            brand_type: String(formData.get("brandType") ?? ""),
             image_url: String(formData.get("image") ?? ""),
             logo_url: String(formData.get("image") ?? ""),
             meta_description: String(formData.get("metaDescription") ?? ""),
             meta_title: String(formData.get("metaTitle") ?? ""),
             name: String(formData.get("name") ?? ""),
+            origin_country: String(formData.get("originCountry") ?? ""),
             slug: String(formData.get("slug") ?? ""),
             sort_order: Number(formData.get("sortOrder") ?? 0),
             status: String(formData.get("status") ?? "active"),
@@ -1270,6 +1320,7 @@ export function RealBrandsPage({
           <BrandForm
             editingBrand={editingBrand}
             isPending={isPending}
+            key={editingBrand?.id ?? "new-brand"}
             onClose={() => setShowAddForm(false)}
             onSubmit={handleBrandSubmit}
             state={formState}

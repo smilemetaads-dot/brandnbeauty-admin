@@ -3,8 +3,10 @@ import "server-only";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 export type BrandRecord = {
+  brand_type?: string | null;
   id: string;
   name: string;
+  origin_country?: string | null;
   slug: string;
   image: string | null;
   status: string | null;
