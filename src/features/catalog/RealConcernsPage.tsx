@@ -1182,31 +1182,40 @@ export function RealConcernsPage({
               <h3 className="mt-1 text-xl font-bold tracking-tight">
                 Routine / Related Filters
               </h3>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {selectedPreview.routine.map((item) => (
-                  <span
-                    className="rounded-full bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85]"
-                    key={item}
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-5 border-t border-slate-100 pt-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-sm font-medium text-slate-500">
-                    Product Mapping
+              {selectedConcern ? (
+                <>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {selectedPreview.routine.map((item) => (
+                      <span
+                        className="rounded-full bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85]"
+                        key={item}
+                      >
+                        {item}
+                      </span>
+                    ))}
                   </div>
-                  <Badge tone="good">
-                    {selectedConcern.product_count ?? 0} Products
-                  </Badge>
+                  <div className="mt-5 border-t border-slate-100 pt-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-medium text-slate-500">
+                        Product Mapping
+                      </div>
+                      <Badge tone="good">
+                        {selectedConcern.product_count ?? 0} Products
+                      </Badge>
+                    </div>
+                    <div className="mt-3 rounded-2xl bg-stone-50 px-4 py-4 text-xs font-semibold leading-5 text-slate-600">
+                      Products mapped to this concern are counted from the live
+                      database. Product-level concern mapping is managed from
+                      product create/edit screens.
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="mt-5 rounded-2xl bg-stone-50 px-4 py-4 text-sm font-medium text-slate-500">
+                  Select or add a concern to view routine and product mapping.
+                  <div className="mt-2 font-bold text-slate-700">0 Products</div>
                 </div>
-                <div className="mt-3 rounded-2xl bg-stone-50 px-4 py-4 text-xs font-semibold leading-5 text-slate-600">
-                  Products mapped to this concern are counted from the live
-                  database. Product-level concern mapping is managed from
-                  product create/edit screens.
-                </div>
-              </div>
+              )}
             </div>
 
             <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
