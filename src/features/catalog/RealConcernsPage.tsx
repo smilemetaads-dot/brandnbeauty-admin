@@ -51,6 +51,14 @@ function toStringOrNull(value: unknown) {
     : null;
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function normalizeConcern(value: unknown): ConcernRecord | null {
   if (!value || typeof value !== "object") return null;
 
@@ -65,7 +73,11 @@ function normalizeConcern(value: unknown): ConcernRecord | null {
     created_at: toStringOrNull(concern.created_at),
     featured: Boolean(concern.featured),
     id,
-    image: toStringOrNull(concern.image),
+    image:
+      toStringOrNull(concern.image_url) ??
+      toStringOrNull(concern.image_path) ??
+      toStringOrNull(concern.thumbnail) ??
+      toStringOrNull(concern.image),
     meta_description: toStringOrNull(concern.meta_description),
     meta_title: toStringOrNull(concern.meta_title),
     name,
@@ -298,6 +310,17 @@ function ConcernForm({
   onClose: () => void;
 }) {
   const isEditing = Boolean(editingConcern);
+  const [name, setName] = useState(editingConcern?.name ?? "");
+  const [slug, setSlug] = useState(editingConcern?.slug ?? "");
+  const [slugEdited, setSlugEdited] = useState(false);
+
+  function handleNameChange(value: string) {
+    setName(value);
+
+    if (!slugEdited) {
+      setSlug(slugify(value));
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
@@ -335,24 +358,6 @@ function ConcernForm({
           )}
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {["Skin", "Hair", "Body"].map((item, index) => (
-            <button
-              className={`cursor-not-allowed rounded-2xl px-4 py-3 text-sm font-bold ${
-                index === 0
-                  ? "bg-[#5E7F85] text-white"
-                  : "border border-slate-200 bg-stone-50 text-slate-400"
-              }`}
-              disabled
-              key={item}
-              title="Concern group switching is not connected yet"
-              type="button"
-            >
-              {item} Concern
-            </button>
-          ))}
-        </div>
-
         <form onSubmit={onSubmit} className="mt-5 grid gap-4 md:grid-cols-2">
           <input name="id" type="hidden" value={editingConcern?.id ?? ""} />
 
@@ -360,11 +365,12 @@ function ConcernForm({
             Name
             <input
               className={inputClassName}
-              defaultValue={editingConcern?.name ?? ""}
               name="name"
+              onChange={(event) => handleNameChange(event.target.value)}
               placeholder="Acne"
               required
               type="text"
+              value={name}
             />
           </label>
 
@@ -375,32 +381,16 @@ function ConcernForm({
             </span>
             <input
               className={`${inputClassName} bg-stone-50 font-semibold`}
-              defaultValue={editingConcern?.slug ?? ""}
               name="slug"
+              onChange={(event) => {
+                setSlug(event.target.value);
+                setSlugEdited(true);
+              }}
               placeholder="auto-generated-slug"
               required
               type="text"
+              value={slug}
             />
-          </label>
-
-          <label className={labelClassName}>
-            Concern Group
-            <select
-              className={`${inputClassName} cursor-not-allowed bg-stone-50 text-slate-500`}
-              disabled
-            >
-              <option>Skin Concern</option>
-            </select>
-          </label>
-
-          <label className={labelClassName}>
-            Severity
-            <select
-              className={`${inputClassName} cursor-not-allowed bg-stone-50 text-slate-500`}
-              disabled
-            >
-              <option>Medium</option>
-            </select>
           </label>
 
           <label className={labelClassName}>
@@ -429,16 +419,6 @@ function ConcernForm({
               name="sortOrder"
               step="1"
               type="number"
-            />
-          </label>
-
-          <label className={labelClassName}>
-            Banner Status
-            <input
-              className={`${inputClassName} cursor-not-allowed bg-stone-50 text-slate-500`}
-              disabled
-              placeholder={editingConcern?.image ? "Ready" : "Needs Image"}
-              type="text"
             />
           </label>
 
@@ -475,34 +455,6 @@ function ConcernForm({
               name="metaDescription"
               placeholder="Find acne care products in Bangladesh with simple routine guidance..."
             />
-          </label>
-
-          <label className={`${labelClassName} md:col-span-2`}>
-            Concern Education Copy
-            <textarea
-              className={`${inputClassName} h-24 cursor-not-allowed resize-y bg-stone-50 text-slate-500`}
-              disabled
-              placeholder="Short educational intro for concern landing page..."
-            />
-          </label>
-
-          <label className={`${labelClassName} md:col-span-2`}>
-            Safety Note
-            <textarea
-              className={`${inputClassName} h-20 cursor-not-allowed resize-y bg-stone-50 text-slate-500`}
-              disabled
-              placeholder="Cosmetic guidance only. Patch test before use."
-            />
-          </label>
-
-          <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-            <input
-              className="h-4 w-4 rounded border-slate-300 text-[#5E7F85]"
-              defaultChecked={editingConcern?.featured ?? false}
-              name="featured"
-              type="checkbox"
-            />
-            Featured concern
           </label>
 
           {state.message ? (
@@ -1274,6 +1226,7 @@ export function RealConcernsPage({
           <ConcernForm
             editingConcern={editingConcern}
             isPending={isPending}
+            key={editingConcern?.id ?? "new-concern"}
             onClose={() => setShowAddForm(false)}
             onSubmit={handleConcernSubmit}
             state={formState}
