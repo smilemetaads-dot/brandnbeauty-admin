@@ -61,6 +61,9 @@ function TableHead({ children, className = "" }) {
 
 const ADD_EDIT_PRODUCT_ENDPOINT = bnbApiUrl("add_edit_product.php");
 const PRODUCT_DETAILS_ENDPOINT = bnbApiUrl("get_product_details.php");
+const CATEGORIES_ENDPOINT = bnbApiUrl("get_categories.php");
+const CONCERNS_ENDPOINT = bnbApiUrl("get_concerns.php");
+const BRANDS_ENDPOINT = bnbApiUrl("get_brands.php");
 const UPLOAD_MEDIA_ENDPOINT = bnbApiUrl("upload_media.php");
 const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024;
 
@@ -135,6 +138,46 @@ function splitLines(value) {
     .filter(Boolean);
 }
 
+function toCatalogOption(item) {
+  if (!item || typeof item !== "object") return null;
+  const id = readProductField(item, ["id"], "");
+  const name = readProductField(item, ["name", "title", "label"], "");
+  const slug = readProductField(item, ["slug"], "");
+  const status = readProductField(item, ["status"], "active").toLowerCase();
+
+  if (!id || !name || ["inactive", "disabled", "deleted"].includes(status)) {
+    return null;
+  }
+
+  return { id, name, slug, status };
+}
+
+function normalizeCatalogPayload(payload, keys) {
+  const rows = Array.isArray(payload)
+    ? payload
+    : keys.reduce((found, key) => found || (Array.isArray(payload?.[key]) ? payload[key] : null), null);
+
+  if (!Array.isArray(rows)) return [];
+
+  return rows.map(toCatalogOption).filter(Boolean);
+}
+
+function fallbackOptions(names) {
+  return names.map((name) => ({ id: `name:${name}`, name, slug: "" }));
+}
+
+function optionValueFor(id, name) {
+  return id ? String(id) : `name:${name}`;
+}
+
+function applyCatalogSelection(value, options, setId, setName) {
+  const selected = options.find((item) => String(item.id) === String(value));
+  if (!selected) return;
+
+  setName(selected.name);
+  setId(String(selected.id).startsWith("name:") ? "" : String(selected.id));
+}
+
 function parseFaqText(value) {
   return String(value || "")
     .split(/\r?\n/)
@@ -165,10 +208,16 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   const [status, setStatus] = useState(readProductField(editingProduct, ["status"], "Draft") === "active" ? "Published" : "Draft");
   const [productName, setProductName] = useState(readProductField(editingProduct, ["product_name", "name"], ""));
   const [brandList, setBrandList] = useState(["BrandnBeauty", "The Derma Plus", "COSRX", "Some By Mi", "Beauty of Joseon", "Simple"]);
-  const [brand, setBrand] = useState("BrandnBeauty");
-  const [category, setCategory] = useState("Skincare");
+  const [brandOptions, setBrandOptions] = useState([]);
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [concernOptions, setConcernOptions] = useState([]);
+  const [brandId, setBrandId] = useState(readProductField(editingProduct, ["brand_id"], ""));
+  const [categoryId, setCategoryId] = useState(readProductField(editingProduct, ["category_id"], ""));
+  const [concernId, setConcernId] = useState(readProductField(editingProduct, ["concern_id"], ""));
+  const [brand, setBrand] = useState(readProductField(editingProduct, ["brand_name", "brand"], "BrandnBeauty"));
+  const [category, setCategory] = useState(readProductField(editingProduct, ["category_name", "category"], "Skincare"));
   const [subcategory, setSubcategory] = useState("Face Wash");
-  const [concern, setConcern] = useState("Acne");
+  const [concern, setConcern] = useState(readProductField(editingProduct, ["concern_name", "concern"], "Acne"));
   const [skuCounter, setSkuCounter] = useState(1001);
   const [costPrice, setCostPrice] = useState(readProductField(editingProduct, ["purchase_cost", "cost_price", "cost"], "420"));
   const [regularPrice, setRegularPrice] = useState(readProductField(editingProduct, ["price", "regular_price"], "1290"));
@@ -225,10 +274,14 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   const categoryTree = {
     Skincare: ["Face Wash", "Serum", "Moisturizer", "Sunscreen", "Toner"],
     "Hair Care": ["Shampoo", "Hair Mask", "Hair Serum", "Scalp Care"],
+    Haircare: ["Shampoo", "Hair Mask", "Hair Serum", "Scalp Care"],
     Makeup: ["Lip", "Face", "Eye", "Brushes"],
     "Body Care": ["Body Wash", "Lotion", "Scrub"],
   };
   const concernList = ["Acne", "Dark Spots", "Brightening", "Oily Skin", "Dry Skin", "Sensitive Skin", "Hairfall", "Dull Skin"];
+  const visibleBrandOptions = brandOptions.length ? brandOptions : fallbackOptions(brandList);
+  const visibleCategoryOptions = categoryOptions.length ? categoryOptions : fallbackOptions(Object.keys(categoryTree));
+  const visibleConcernOptions = concernOptions.length ? concernOptions : fallbackOptions(concernList);
   const catalogProducts = [
     { name: "Acne Balance Facewash", brand: "Some By Mi", price: 890, stock: 44 },
     { name: "Barrier Calm Serum", brand: "BrandnBeauty", price: 990, stock: 18 },
@@ -269,6 +322,48 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
+    async function loadOptions(endpoint, keys, setter) {
+      const response = await fetch(endpoint, {
+        cache: "no-store",
+        headers: adminAuthHeaders(),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error("Catalog options could not be loaded");
+      }
+
+      const options = normalizeCatalogPayload(payload, keys);
+      if (isMounted && options.length) {
+        setter(options);
+      }
+    }
+
+    Promise.allSettled([
+      loadOptions(CATEGORIES_ENDPOINT, ["categories"], setCategoryOptions),
+      loadOptions(CONCERNS_ENDPOINT, ["concerns"], setConcernOptions),
+      loadOptions(BRANDS_ENDPOINT, ["brands"], setBrandOptions),
+    ]).catch(() => undefined);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const matchedBrand = brandOptions.find((item) => item.name.toLowerCase() === brand.toLowerCase());
+    if (!brandId && matchedBrand) setBrandId(String(matchedBrand.id));
+
+    const matchedCategory = categoryOptions.find((item) => item.name.toLowerCase() === category.toLowerCase());
+    if (!categoryId && matchedCategory) setCategoryId(String(matchedCategory.id));
+
+    const matchedConcern = concernOptions.find((item) => item.name.toLowerCase() === concern.toLowerCase());
+    if (!concernId && matchedConcern) setConcernId(String(matchedConcern.id));
+  }, [brandOptions, categoryOptions, concernOptions, brand, category, concern, brandId, categoryId, concernId]);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const productId = params.get("id");
 
@@ -290,6 +385,12 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
         const product = payload.product;
         setLoadedProduct(product);
         setProductName(readProductField(product, ["product_name", "name"], ""));
+        setBrandId(readProductField(product, ["brand_id"], ""));
+        setBrand(readProductField(product, ["brand_name", "brand"], brand));
+        setCategoryId(readProductField(product, ["category_id"], ""));
+        setCategory(readProductField(product, ["category_name", "category"], category));
+        setConcernId(readProductField(product, ["concern_id"], ""));
+        setConcern(readProductField(product, ["concern_name", "concern"], concern));
         setCostPrice(readProductField(product, ["purchase_cost", "cost_price", "cost"], costPrice));
         setRegularPrice(readProductField(product, ["price", "regular_price"], regularPrice));
         setSalePrice(readProductField(product, ["sale_price", "price"], salePrice));
@@ -354,7 +455,15 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
 
     const payload = {
       ...(editingProductId ? { id: editingProductId } : {}),
+      brand,
+      brand_id: brandId || null,
+      brand_ids: brandId ? [brandId] : [],
       category,
+      category_id: categoryId || null,
+      category_ids: categoryId ? [categoryId] : [],
+      concern,
+      concern_id: concernId || null,
+      concern_ids: concernId ? [concernId] : [],
       description: [shortDescription, fullDescription].filter(Boolean).join("\n\n"),
       benefits: splitLines(productDetails),
       faq: parseFaqText(faqText || productFaqs.map((faq) => `${faq.question} | ${faq.answer}`).join("\n")),
@@ -546,10 +655,10 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
               <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Slug (auto)</div><input value={autoSlug} readOnly className="w-full rounded-2xl border border-slate-300 bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none" /></label>
               <label className="space-y-2"><div className="flex items-center justify-between gap-2"><div className="text-sm font-medium text-slate-600">Parent SKU</div><span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">AUTO GENERATED</span></div><input disabled placeholder="Auto-generated Number" className="w-full rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 outline-none disabled:opacity-100" /></label>
               <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Barcode (optional)</div><input className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" placeholder="Barcode (optional)" /></label>
-              <label className="space-y-2"><div className="flex items-center justify-between gap-2"><div className="text-sm font-medium text-slate-600">Brand</div><button type="button" onClick={() => setBrandList((current) => current.includes("New Brand") ? current : [...current, "New Brand"])} className="text-xs font-bold text-[#5E7F85]">+ Add Brand</button></div><select value={brand} onChange={(event) => setBrand(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">{brandList.map((item) => <option key={item}>{item}</option>)}</select></label>
-              <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Category</div><select value={category} onChange={(event) => { setCategory(event.target.value); setSubcategory(categoryTree[event.target.value]?.[0] || ""); }} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">{Object.keys(categoryTree).map((item) => <option key={item}>{item}</option>)}</select></label>
+              <label className="space-y-2"><div className="flex items-center justify-between gap-2"><div className="text-sm font-medium text-slate-600">Brand</div><button type="button" onClick={() => setBrandList((current) => current.includes("New Brand") ? current : [...current, "New Brand"])} className="text-xs font-bold text-[#5E7F85]">+ Add Brand</button></div><select value={optionValueFor(brandId, brand)} onChange={(event) => applyCatalogSelection(event.target.value, visibleBrandOptions, setBrandId, setBrand)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">{visibleBrandOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+              <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Category</div><select value={optionValueFor(categoryId, category)} onChange={(event) => { applyCatalogSelection(event.target.value, visibleCategoryOptions, setCategoryId, setCategory); const selected = visibleCategoryOptions.find((item) => String(item.id) === String(event.target.value)); setSubcategory(categoryTree[selected?.name]?.[0] || ""); }} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">{visibleCategoryOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
               <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Subcategory</div><select value={subcategory} onChange={(event) => setSubcategory(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">{(categoryTree[category] || []).map((item) => <option key={item}>{item}</option>)}</select></label>
-              <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Concern</div><select value={concern} onChange={(event) => setConcern(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">{concernList.map((item) => <option key={item}>{item}</option>)}</select></label>
+              <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Concern</div><select value={optionValueFor(concernId, concern)} onChange={(event) => applyCatalogSelection(event.target.value, visibleConcernOptions, setConcernId, setConcern)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">{visibleConcernOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
             </div>
           </div>
 
