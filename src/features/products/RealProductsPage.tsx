@@ -18,12 +18,14 @@ import { adminAuthHeaders } from "@/lib/admin-auth";
 import { bnbApiAssetUrl, bnbApiUrl } from "@/lib/bnb-api";
 
 import type { ProductRecord } from "./products-data";
+import { ProductCsvImportPanel } from "./ProductCsvImportPanel";
 
 type RealProductsPageProps = {
   products?: ProductRecord[];
 };
 
 type AdminProductRow = {
+  attributes?: unknown;
   category?: unknown;
   created_at?: unknown;
   description?: unknown;
@@ -33,6 +35,7 @@ type AdminProductRow = {
   price?: unknown;
   product_name?: unknown;
   sku?: unknown;
+  slug?: unknown;
   status?: unknown;
   stock?: unknown;
   stock_quantity?: unknown;
@@ -90,6 +93,25 @@ function normalizeImageUrl(imageUrl: string | null) {
   return bnbApiAssetUrl(imageUrl);
 }
 
+function normalizeAttributes(value: unknown): Record<string, unknown> | null {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
 function normalizeAdminProduct(value: unknown): ProductRecord | null {
   if (!value || typeof value !== "object") return null;
 
@@ -101,9 +123,12 @@ function normalizeAdminProduct(value: unknown): ProductRecord | null {
 
   const stock = toNumber(product.stock_quantity ?? product.stock);
   const categoryName = toStringOrNull(product.category);
+  const attributes = normalizeAttributes(product.attributes);
+  const importedSku = toStringOrNull(attributes?.import_sku);
+  const importedSlug = toStringOrNull(attributes?.import_slug);
 
   return {
-    attributes: null,
+    attributes,
     brand_id: null,
     brands: null,
     category_id: null,
@@ -117,8 +142,11 @@ function normalizeAdminProduct(value: unknown): ProductRecord | null {
     old_price: null,
     price: toNumber(product.price),
     short_description: toStringOrNull(product.description),
-    sku: toStringOrNull(product.sku) ?? `BNB-${id.padStart(4, "0")}`,
-    slug: slugify(name) || `product-${id}`,
+    sku: toStringOrNull(product.sku) ?? importedSku ?? `BNB-${id.padStart(4, "0")}`,
+    slug:
+      toStringOrNull(product.slug) ??
+      importedSlug ??
+      (slugify(name) || `product-${id}`),
     status: normalizeStatus(toStringOrNull(product.status), stock),
     stock,
     updated_at: toStringOrNull(product.updated_at),
@@ -349,6 +377,7 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
   const [products, setProducts] = useState<ProductRecord[]>(initialProducts);
   const [deleteMessage, setDeleteMessage] = useState("");
   const [deletingProductIds, setDeletingProductIds] = useState<string[]>([]);
+  const [showCsvImport, setShowCsvImport] = useState(false);
 
   const loadProducts = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -464,7 +493,13 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DisabledAction>Bulk Import</DisabledAction>
+              <button
+                className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-stone-50"
+                onClick={() => setShowCsvImport((current) => !current)}
+                type="button"
+              >
+                Bulk Import
+              </button>
               <DisabledAction>Export</DisabledAction>
               <Link
                 className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-950"
@@ -474,6 +509,12 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
               </Link>
             </div>
           </div>
+          {showCsvImport ? (
+            <ProductCsvImportPanel
+              onClose={() => setShowCsvImport(false)}
+              onImported={() => loadProducts()}
+            />
+          ) : null}
           <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-4">
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Stock value:{" "}
