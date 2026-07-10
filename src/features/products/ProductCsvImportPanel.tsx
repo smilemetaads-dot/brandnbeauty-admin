@@ -47,7 +47,9 @@ const CSV_HEADERS = [
   "image_url",
   "gallery_images",
   "category_slug",
+  "subcategory_slug",
   "concern_slug",
+  "concern_slugs",
   "brand_slug",
   "short_description",
   "description",
@@ -79,6 +81,8 @@ const CSV_TEMPLATE = [
     "",
     "skincare",
     "",
+    "",
+    "acne|brightening",
     "brandnbeauty",
     "Replace with verified product copy",
     "Replace with verified PDP description",
@@ -107,6 +111,8 @@ const CSV_TEMPLATE = [
     "",
     "skincare",
     "",
+    "",
+    "acne|brightening",
     "brandnbeauty",
     "",
     "",
@@ -135,6 +141,8 @@ const CSV_TEMPLATE = [
     "",
     "skincare",
     "",
+    "",
+    "acne|brightening",
     "brandnbeauty",
     "",
     "",
@@ -259,7 +267,9 @@ export function ProductCsvImportPanel({
         <p className="mt-3 text-xs leading-5 text-slate-500">
           Required: product_type, product_name, price, stock_quantity. Variant rows
           also require variant_sku and either parent_sku or slug. Existing SKU or slug
-          matches are skipped unless update mode is enabled.
+          matches are skipped unless update mode is enabled. Blank SKU and slug values
+          are generated. Use concern_slugs with pipe-separated values and subcategory_slug
+          when a child category should own the product mapping.
         </p>
       </div>
 

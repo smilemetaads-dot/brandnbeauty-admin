@@ -144,12 +144,13 @@ function toCatalogOption(item) {
   const name = readProductField(item, ["name", "title", "label"], "");
   const slug = readProductField(item, ["slug"], "");
   const status = readProductField(item, ["status"], "active").toLowerCase();
+  const parentId = readProductField(item, ["parent_id"], "");
 
   if (!id || !name || ["inactive", "disabled", "deleted"].includes(status)) {
     return null;
   }
 
-  return { id, name, slug, status };
+  return { id, name, parentId, slug, status };
 }
 
 function normalizeCatalogPayload(payload, keys) {
@@ -163,7 +164,21 @@ function normalizeCatalogPayload(payload, keys) {
 }
 
 function fallbackOptions(names) {
-  return names.map((name) => ({ id: `name:${name}`, name, slug: "" }));
+  return names.map((name) => ({ id: `name:${name}`, name, parentId: "", slug: "" }));
+}
+
+function readConcernIds(product) {
+  if (!product || typeof product !== "object") return [];
+
+  const directIds = Array.isArray(product.concern_ids)
+    ? product.concern_ids.map(String)
+    : [];
+  const mappedIds = Array.isArray(product.concerns)
+    ? product.concerns.map((item) => readProductField(item, ["id", "concern_id"], ""))
+    : [];
+  const legacyId = readProductField(product, ["concern_id"], "");
+
+  return Array.from(new Set([...directIds, ...mappedIds, legacyId].filter(Boolean)));
 }
 
 function optionValueFor(id, name) {
@@ -197,6 +212,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   const [loadedProduct, setLoadedProduct] = useState(null);
   const editingProduct = loadedProduct || initialEditingProduct;
   const editingProductId = readProductField(editingProduct, ["id", "product_id"], "");
+  const initialConcernIds = readConcernIds(editingProduct);
   const [trackStock, setTrackStock] = useState(true);
   const [featured, setFeatured] = useState(true);
   const [freeDelivery, setFreeDelivery] = useState(false);
@@ -214,6 +230,8 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   const [brandId, setBrandId] = useState(readProductField(editingProduct, ["brand_id"], ""));
   const [categoryId, setCategoryId] = useState(readProductField(editingProduct, ["category_id"], ""));
   const [concernId, setConcernId] = useState(readProductField(editingProduct, ["concern_id"], ""));
+  const [concernIds, setConcernIds] = useState(initialConcernIds);
+  const [subcategoryId, setSubcategoryId] = useState("");
   const [brand, setBrand] = useState(readProductField(editingProduct, ["brand_name", "brand"], "BrandnBeauty"));
   const [category, setCategory] = useState(readProductField(editingProduct, ["category_name", "category"], "Skincare"));
   const [subcategory, setSubcategory] = useState("Face Wash");
@@ -282,6 +300,10 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   const visibleBrandOptions = brandOptions.length ? brandOptions : fallbackOptions(brandList);
   const visibleCategoryOptions = categoryOptions.length ? categoryOptions : fallbackOptions(Object.keys(categoryTree));
   const visibleConcernOptions = concernOptions.length ? concernOptions : fallbackOptions(concernList);
+  const rootCategoryOptions = visibleCategoryOptions.filter((item) => !item.parentId);
+  const subcategoryOptions = visibleCategoryOptions.filter(
+    (item) => String(item.parentId) === String(categoryId),
+  );
   const catalogProducts = [
     { name: "Acne Balance Facewash", brand: "Some By Mi", price: 890, stock: 44 },
     { name: "Barrier Calm Serum", brand: "BrandnBeauty", price: 990, stock: 18 },
@@ -360,8 +382,19 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
     if (!categoryId && matchedCategory) setCategoryId(String(matchedCategory.id));
 
     const matchedConcern = concernOptions.find((item) => item.name.toLowerCase() === concern.toLowerCase());
-    if (!concernId && matchedConcern) setConcernId(String(matchedConcern.id));
+    if (!concernId && matchedConcern) {
+      setConcernId(String(matchedConcern.id));
+      setConcernIds((current) => current.length ? current : [String(matchedConcern.id)]);
+    }
   }, [brandOptions, categoryOptions, concernOptions, brand, category, concern, brandId, categoryId, concernId]);
+
+  useEffect(() => {
+    const selectedCategory = categoryOptions.find((item) => String(item.id) === String(categoryId));
+    if (selectedCategory) setCategory(selectedCategory.name);
+
+    const selectedSubcategory = categoryOptions.find((item) => String(item.id) === String(subcategoryId));
+    if (selectedSubcategory) setSubcategory(selectedSubcategory.name);
+  }, [categoryOptions, categoryId, subcategoryId]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -373,8 +406,9 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
 
     async function loadProductForEdit() {
       try {
-        const response = await fetch(`${PRODUCT_DETAILS_ENDPOINT}?id=${encodeURIComponent(productId)}`, {
+        const response = await fetch(`${PRODUCT_DETAILS_ENDPOINT}?id=${encodeURIComponent(productId)}&include_inactive=1`, {
           cache: "no-store",
+          headers: adminAuthHeaders(),
         });
         const payload = await response.json();
 
@@ -387,10 +421,20 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
         setProductName(readProductField(product, ["product_name", "name"], ""));
         setBrandId(readProductField(product, ["brand_id"], ""));
         setBrand(readProductField(product, ["brand_name", "brand"], brand));
-        setCategoryId(readProductField(product, ["category_id"], ""));
+        const loadedCategoryId = readProductField(product, ["category_id"], "");
+        const loadedCategoryParentId = readProductField(product, ["category_parent_id"], "");
+        setCategoryId(loadedCategoryParentId || loadedCategoryId);
+        setSubcategoryId(loadedCategoryParentId ? loadedCategoryId : "");
         setCategory(readProductField(product, ["category_name", "category"], category));
-        setConcernId(readProductField(product, ["concern_id"], ""));
-        setConcern(readProductField(product, ["concern_name", "concern"], concern));
+        setSubcategory(loadedCategoryParentId ? readProductField(product, ["category_name", "category"], "") : "");
+        const loadedConcernIds = readConcernIds(product);
+        const loadedPrimaryConcernId = readProductField(product, ["concern_id"], "") || loadedConcernIds[0] || "";
+        setConcernId(loadedPrimaryConcernId);
+        setConcernIds(loadedConcernIds.length ? loadedConcernIds : loadedPrimaryConcernId ? [loadedPrimaryConcernId] : []);
+        const loadedPrimaryConcern = Array.isArray(product.concerns)
+          ? product.concerns.find((item) => String(item.id) === String(loadedPrimaryConcernId))
+          : null;
+        setConcern(readProductField(loadedPrimaryConcern, ["name"], readProductField(product, ["concern_name", "concern"], concern)));
         setCostPrice(readProductField(product, ["purchase_cost", "cost_price", "cost"], costPrice));
         setRegularPrice(readProductField(product, ["price", "regular_price"], regularPrice));
         setSalePrice(readProductField(product, ["sale_price", "price"], salePrice));
@@ -453,17 +497,20 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
     setSaveStatus("Saving...");
     setIsSavingProduct(true);
 
+    const mappedCategoryId = subcategoryId || categoryId;
+    const mappedCategoryName = subcategoryId ? subcategory : category;
+    const primaryConcernId = concernId || concernIds[0] || "";
     const payload = {
       ...(editingProductId ? { id: editingProductId } : {}),
       brand,
       brand_id: brandId || null,
       brand_ids: brandId ? [brandId] : [],
-      category,
-      category_id: categoryId || null,
-      category_ids: categoryId ? [categoryId] : [],
+      category: mappedCategoryName,
+      category_id: mappedCategoryId || null,
+      category_ids: mappedCategoryId ? [mappedCategoryId] : [],
       concern,
-      concern_id: concernId || null,
-      concern_ids: concernId ? [concernId] : [],
+      concern_id: primaryConcernId || null,
+      concern_ids: concernIds,
       description: [shortDescription, fullDescription].filter(Boolean).join("\n\n"),
       benefits: splitLines(productDetails),
       faq: parseFaqText(faqText || productFaqs.map((faq) => `${faq.question} | ${faq.answer}`).join("\n")),
@@ -621,6 +668,33 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
     showActionToast("Variant row added");
   };
 
+  const toggleConcern = (option, checked) => {
+    const optionId = String(option.id);
+    const persistedId = optionId.startsWith("name:") ? "" : optionId;
+
+    if (checked) {
+      if (persistedId) {
+        setConcernIds((current) => Array.from(new Set([...current, persistedId])));
+      }
+      if (!concernId) {
+        setConcernId(persistedId);
+        setConcern(option.name);
+      }
+      return;
+    }
+
+    const nextIds = concernIds.filter((id) => id !== persistedId);
+    setConcernIds(nextIds);
+    if (concernId === persistedId) {
+      const nextPrimaryId = nextIds[0] || "";
+      const nextPrimary = visibleConcernOptions.find(
+        (item) => String(item.id) === String(nextPrimaryId),
+      );
+      setConcernId(nextPrimaryId);
+      setConcern(nextPrimary?.name || "");
+    }
+  };
+
   return (
     <AdminShell>
       <div className="space-y-6">
@@ -656,9 +730,9 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
               <label className="space-y-2"><div className="flex items-center justify-between gap-2"><div className="text-sm font-medium text-slate-600">Parent SKU</div><span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">AUTO GENERATED</span></div><input disabled placeholder="Auto-generated Number" className="w-full rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 outline-none disabled:opacity-100" /></label>
               <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Barcode (optional)</div><input className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none" placeholder="Barcode (optional)" /></label>
               <label className="space-y-2"><div className="flex items-center justify-between gap-2"><div className="text-sm font-medium text-slate-600">Brand</div><button type="button" onClick={() => setBrandList((current) => current.includes("New Brand") ? current : [...current, "New Brand"])} className="text-xs font-bold text-[#5E7F85]">+ Add Brand</button></div><select value={optionValueFor(brandId, brand)} onChange={(event) => applyCatalogSelection(event.target.value, visibleBrandOptions, setBrandId, setBrand)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">{visibleBrandOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-              <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Category</div><select value={optionValueFor(categoryId, category)} onChange={(event) => { applyCatalogSelection(event.target.value, visibleCategoryOptions, setCategoryId, setCategory); const selected = visibleCategoryOptions.find((item) => String(item.id) === String(event.target.value)); setSubcategory(categoryTree[selected?.name]?.[0] || ""); }} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">{visibleCategoryOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-              <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Subcategory</div><select value={subcategory} onChange={(event) => setSubcategory(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">{(categoryTree[category] || []).map((item) => <option key={item}>{item}</option>)}</select></label>
-              <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Concern</div><select value={optionValueFor(concernId, concern)} onChange={(event) => applyCatalogSelection(event.target.value, visibleConcernOptions, setConcernId, setConcern)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">{visibleConcernOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+              <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Category</div><select value={optionValueFor(categoryId, category)} onChange={(event) => { applyCatalogSelection(event.target.value, rootCategoryOptions, setCategoryId, setCategory); setSubcategoryId(""); setSubcategory(""); }} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none">{rootCategoryOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+              <label className="space-y-2"><div className="text-sm font-medium text-slate-600">Subcategory</div><select value={subcategoryId} onChange={(event) => { const nextId = event.target.value; const selected = subcategoryOptions.find((item) => String(item.id) === String(nextId)); setSubcategoryId(nextId); setSubcategory(selected?.name || ""); }} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none"><option value="">No subcategory</option>{subcategoryOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+              <fieldset className="space-y-2 md:col-span-2"><legend className="text-sm font-medium text-slate-600">Concerns</legend><div className="grid gap-2 rounded-2xl border border-slate-300 bg-white p-3 sm:grid-cols-2">{visibleConcernOptions.map((item) => { const itemId = String(item.id); const persistedId = itemId.startsWith("name:") ? "" : itemId; const checked = persistedId ? concernIds.includes(persistedId) : concern === item.name; return <label className="flex items-center gap-3 rounded-xl bg-stone-50 px-3 py-2 text-sm font-medium text-slate-700" key={item.id}><input checked={checked} className="h-4 w-4 rounded border-slate-300 text-[#5E7F85]" onChange={(event) => toggleConcern(item, event.target.checked)} type="checkbox" />{item.name}{concernId === persistedId && persistedId ? <span className="ml-auto text-[10px] font-bold uppercase text-[#5E7F85]">Primary</span> : null}</label>; })}</div></fieldset>
             </div>
           </div>
 
