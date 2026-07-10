@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { FormEvent, ReactNode } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   AdminBadge,
@@ -26,7 +26,9 @@ type RealProductsPageProps = {
 
 type AdminProductRow = {
   attributes?: unknown;
+  brand_id?: unknown;
   category?: unknown;
+  category_id?: unknown;
   created_at?: unknown;
   description?: unknown;
   id?: unknown;
@@ -40,6 +42,28 @@ type AdminProductRow = {
   stock?: unknown;
   stock_quantity?: unknown;
   updated_at?: unknown;
+};
+
+type CatalogRelation = {
+  name: string | null;
+  slug: string | null;
+} | null;
+
+type SearchableProductRecord = ProductRecord & {
+  categoryParent?: CatalogRelation;
+  subcategory?: CatalogRelation;
+};
+
+type CatalogItem = {
+  id: string;
+  name: string;
+  parent_id?: number | string | null;
+  slug: string;
+};
+
+type CatalogMeta = {
+  brandsById: Map<string, CatalogItem>;
+  categoriesById: Map<string, CatalogItem>;
 };
 
 const PRODUCT_FILTERS = [
@@ -56,6 +80,13 @@ const PRODUCT_FILTERS = [
 const UPDATE_PRODUCT_ENDPOINT = bnbApiUrl("update_product.php");
 const ADMIN_PRODUCTS_ENDPOINT = bnbApiUrl("admin_products.php");
 const DELETE_CATALOG_ITEM_ENDPOINT = bnbApiUrl("delete_catalog_item.php");
+const BRANDS_ENDPOINT = bnbApiUrl("get_brands.php?include_inactive=1");
+const CATEGORIES_ENDPOINT = bnbApiUrl("get_categories.php?include_inactive=1");
+
+const EMPTY_CATALOG_META: CatalogMeta = {
+  brandsById: new Map<string, CatalogItem>(),
+  categoriesById: new Map<string, CatalogItem>(),
+};
 
 function toNumber(value: unknown) {
   const numberValue = Number(value);
@@ -64,9 +95,16 @@ function toNumber(value: unknown) {
 }
 
 function toStringOrNull(value: unknown) {
-  return typeof value === "string" && value.trim().length > 0
-    ? value
-    : null;
+  if (typeof value === "string") {
+    const trimmedValue = value.trim();
+    return trimmedValue.length > 0 ? trimmedValue : null;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return null;
 }
 
 function slugify(value: string) {
@@ -77,10 +115,11 @@ function slugify(value: string) {
 }
 
 function normalizeStatus(status: string | null, stock: number) {
-  if (stock <= 0) return "out_of_stock";
-  if (status === "active" || status === "draft" || status === "inactive") {
+  if (status === "draft" || status === "inactive") {
     return status;
   }
+  if (stock <= 0) return "out_of_stock";
+  if (status === "active") return status;
   if (stock <= 10) return "low_stock";
 
   return "draft";
@@ -112,7 +151,40 @@ function normalizeAttributes(value: unknown): Record<string, unknown> | null {
   return null;
 }
 
-function normalizeAdminProduct(value: unknown): ProductRecord | null {
+function normalizeCatalogItem(value: unknown): CatalogItem | null {
+  if (!value || typeof value !== "object") return null;
+
+  const item = value as Record<string, unknown>;
+  const id = String(item.id ?? "");
+  const name = String(item.name ?? "").trim();
+
+  if (!id || !name) return null;
+
+  return {
+    id,
+    name,
+    parent_id:
+      typeof item.parent_id === "number" || typeof item.parent_id === "string"
+        ? item.parent_id
+        : null,
+    slug: toStringOrNull(item.slug) ?? slugify(name),
+  };
+}
+
+function buildCatalogMap(payload: unknown): Map<string, CatalogItem> {
+  const items = Array.isArray(payload)
+    ? payload
+        .map(normalizeCatalogItem)
+        .filter((item): item is CatalogItem => Boolean(item))
+    : [];
+
+  return new Map(items.map((item) => [item.id, item]));
+}
+
+function normalizeAdminProduct(
+  value: unknown,
+  catalogMeta: CatalogMeta = EMPTY_CATALOG_META,
+): SearchableProductRecord | null {
   if (!value || typeof value !== "object") return null;
 
   const product = value as AdminProductRow;
@@ -126,13 +198,36 @@ function normalizeAdminProduct(value: unknown): ProductRecord | null {
   const attributes = normalizeAttributes(product.attributes);
   const importedSku = toStringOrNull(attributes?.import_sku);
   const importedSlug = toStringOrNull(attributes?.import_slug);
+  const brandId = toStringOrNull(product.brand_id);
+  const categoryId = toStringOrNull(product.category_id);
+  const brand = brandId ? catalogMeta.brandsById.get(brandId) : null;
+  const mappedCategory = categoryId ? catalogMeta.categoriesById.get(categoryId) : null;
+  const parentCategory =
+    mappedCategory?.parent_id !== null && mappedCategory?.parent_id !== undefined
+      ? catalogMeta.categoriesById.get(String(mappedCategory.parent_id))
+      : null;
+  const parentRelation = parentCategory
+    ? { name: parentCategory.name, slug: parentCategory.slug }
+    : null;
+  const subcategoryRelation =
+    mappedCategory && parentCategory
+      ? { name: mappedCategory.name, slug: mappedCategory.slug }
+      : null;
+  const categoryRelation =
+    parentRelation ??
+    (mappedCategory
+      ? { name: mappedCategory.name, slug: mappedCategory.slug }
+      : categoryName
+        ? { name: categoryName, slug: slugify(categoryName) }
+        : null);
 
   return {
     attributes,
-    brand_id: null,
-    brands: null,
-    category_id: null,
-    categories: categoryName ? { name: categoryName, slug: slugify(categoryName) } : null,
+    brand_id: brandId,
+    brands: brand ? { name: brand.name, slug: brand.slug } : null,
+    category_id: categoryId,
+    categories: categoryRelation,
+    categoryParent: parentRelation,
     concernIds: [],
     created_at: toStringOrNull(product.created_at),
     featured: false,
@@ -149,15 +244,16 @@ function normalizeAdminProduct(value: unknown): ProductRecord | null {
       (slugify(name) || `product-${id}`),
     status: normalizeStatus(toStringOrNull(product.status), stock),
     stock,
+    subcategory: subcategoryRelation,
     updated_at: toStringOrNull(product.updated_at),
   };
 }
 
-function normalizeAdminProducts(payload: unknown) {
+function normalizeAdminProducts(payload: unknown, catalogMeta: CatalogMeta = EMPTY_CATALOG_META) {
   return Array.isArray(payload)
     ? payload
-        .map(normalizeAdminProduct)
-        .filter((product): product is ProductRecord => Boolean(product))
+        .map((product) => normalizeAdminProduct(product, catalogMeta))
+        .filter((product): product is SearchableProductRecord => Boolean(product))
     : [];
 }
 
@@ -191,6 +287,51 @@ const getStockRuleLabel = (status: string | null) => {
 
 const hasAttributes = (attributes: ProductRecord["attributes"]) =>
   Boolean(attributes && Object.keys(attributes).length > 0);
+
+const getCategoryLabel = (product: SearchableProductRecord) =>
+  [product.categories?.name, product.subcategory?.name].filter(Boolean).join(" / ") || "-";
+
+const getSearchableText = (product: SearchableProductRecord) =>
+  [
+    product.name,
+    product.sku,
+    product.slug,
+    product.brands?.name,
+    product.brands?.slug,
+    product.categories?.name,
+    product.categories?.slug,
+    product.subcategory?.name,
+    product.subcategory?.slug,
+    product.categoryParent?.name,
+    product.categoryParent?.slug,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+const getMatchesProductFilter = (product: SearchableProductRecord, filter: string) => {
+  const visibility = getVisibilityLabel(product.status);
+
+  switch (filter) {
+    case "Visible":
+      return visibility === "Visible";
+    case "Hidden":
+      return visibility === "Hidden";
+    case "Active":
+      return product.status === "active";
+    case "Low Stock":
+      return product.stock > 0 && product.stock <= 10;
+    case "Out of Stock":
+      return product.stock <= 0;
+    case "Discontinued":
+      return product.status === "inactive";
+    case "Notify Me":
+      return visibility === "Visible" && product.stock <= 0;
+    case "All Products":
+    default:
+      return true;
+  }
+};
 
 function StatusControl({
   product,
@@ -374,10 +515,43 @@ function DetailRow({ label, value }: { label: string; value: ReactNode }) {
 }
 
 export function RealProductsPage({ products: initialProducts = [] }: RealProductsPageProps) {
-  const [products, setProducts] = useState<ProductRecord[]>(initialProducts);
+  const [catalogMeta, setCatalogMeta] = useState<CatalogMeta>(EMPTY_CATALOG_META);
+  const [products, setProducts] = useState<SearchableProductRecord[]>(
+    initialProducts as SearchableProductRecord[],
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState("All Products");
   const [deleteMessage, setDeleteMessage] = useState("");
   const [deletingProductIds, setDeletingProductIds] = useState<string[]>([]);
   const [showCsvImport, setShowCsvImport] = useState(false);
+
+  const loadCatalogMeta = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const [brandsResponse, categoriesResponse] = await Promise.all([
+        fetch(BRANDS_ENDPOINT, { cache: "no-store", signal }),
+        fetch(CATEGORIES_ENDPOINT, { cache: "no-store", signal }),
+      ]);
+
+      if (!brandsResponse.ok || !categoriesResponse.ok) {
+        throw new Error("Catalog metadata could not be loaded.");
+      }
+
+      const [brandsPayload, categoriesPayload] = await Promise.all([
+        brandsResponse.json() as Promise<unknown>,
+        categoriesResponse.json() as Promise<unknown>,
+      ]);
+
+      setCatalogMeta({
+        brandsById: buildCatalogMap(brandsPayload),
+        categoriesById: buildCatalogMap(categoriesPayload),
+      });
+    } catch (error) {
+      if (!signal?.aborted) {
+        console.error("Catalog metadata could not be loaded.", error);
+        setCatalogMeta(EMPTY_CATALOG_META);
+      }
+    }
+  }, []);
 
   const loadProducts = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -392,14 +566,24 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
       }
 
       const payload = (await response.json()) as unknown;
-      setProducts(normalizeAdminProducts(payload));
+      setProducts(normalizeAdminProducts(payload, catalogMeta));
     } catch (error) {
       if (!signal?.aborted) {
         console.error("Admin products could not be loaded.", error);
         setProducts([]);
       }
     }
-  }, []);
+  }, [catalogMeta]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void Promise.resolve().then(() => loadCatalogMeta(controller.signal));
+
+    return () => {
+      controller.abort();
+    };
+  }, [loadCatalogMeta]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -428,7 +612,21 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
   const lowOrOutCount = products.filter((product) =>
     ["low_stock", "out_of_stock"].includes(product.status ?? ""),
   ).length;
-  const selectedProduct = products[0] ?? null;
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredProducts = useMemo(
+    () =>
+      products.filter((product) => {
+        const matchesSearch =
+          normalizedSearch === "" || getSearchableText(product).includes(normalizedSearch);
+        return matchesSearch && getMatchesProductFilter(product, activeFilter);
+      }),
+    [activeFilter, normalizedSearch, products],
+  );
+  const selectedProduct = filteredProducts[0] ?? null;
+  const hasActiveSearchOrFilter = normalizedSearch !== "" || activeFilter !== "All Products";
+  const emptyProductMessage = hasActiveSearchOrFilter
+    ? "No products match your search."
+    : "No products found.";
 
   async function handleDeleteProduct(productId: string) {
     if (!window.confirm("Delete this product from the catalog?")) {
@@ -590,31 +788,44 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
               <div className="mt-5 grid gap-3 xl:grid-cols-[minmax(20rem,36rem)_1fr] xl:items-center">
                 <div className="relative">
                   <input
-                    className="w-full rounded-2xl border border-slate-300 bg-stone-50 px-4 py-3 pl-10 text-sm outline-none placeholder:text-slate-400 disabled:text-slate-500"
-                    disabled
+                    className="w-full rounded-2xl border border-slate-300 bg-stone-50 px-4 py-3 pl-10 pr-20 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/20"
+                    onChange={(event) => setSearchQuery(event.target.value)}
                     placeholder="Search product / SKU / brand / category..."
                     type="search"
+                    value={searchQuery}
                   />
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                     /
                   </span>
+                  {searchQuery ? (
+                    <button
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-xs font-semibold text-slate-500 transition hover:bg-white hover:text-slate-900"
+                      onClick={() => setSearchQuery("")}
+                      type="button"
+                    >
+                      Clear
+                    </button>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {PRODUCT_FILTERS.map((item) => (
                     <button
                       className={`rounded-full px-4 py-2 text-xs font-semibold ${
-                        item === "All Products"
+                        item === activeFilter
                           ? "bg-[#5E7F85] text-white"
                           : "border border-slate-200 bg-white text-slate-600"
                       }`}
-                      disabled
                       key={item}
+                      onClick={() => setActiveFilter(item)}
                       type="button"
                     >
                       {item}
                     </button>
                   ))}
                 </div>
+              </div>
+              <div className="mt-3 text-xs font-semibold text-slate-500">
+                Showing {filteredProducts.length} of {products.length} products
               </div>
             </div>
 
@@ -638,8 +849,8 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                   </tr>
                 </AdminTableHead>
                 <tbody>
-                  {products.length > 0 ? (
-                    products.map((product, index) => (
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map((product, index) => (
                       <AdminTableRow
                         className={
                           index === 0
@@ -673,7 +884,7 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                             {product.brands?.name ?? "-"}
                           </div>
                           <div className="mt-1 text-xs text-slate-500">
-                            {product.categories?.name ?? "-"}
+                            {getCategoryLabel(product)}
                           </div>
                         </td>
                         <td className="px-5 py-4">
@@ -745,7 +956,7 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                         className="px-5 py-14 text-center text-sm text-slate-500"
                         colSpan={7}
                       >
-                        No products found.
+                        {emptyProductMessage}
                       </td>
                     </tr>
                   )}
@@ -825,7 +1036,7 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                     />
                     <DetailRow
                       label="Category"
-                      value={selectedProduct.categories?.name ?? "-"}
+                      value={getCategoryLabel(selectedProduct)}
                     />
                     <DetailRow
                       label="Website"
@@ -880,7 +1091,9 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                 </>
               ) : (
                 <div className="rounded-3xl border border-dashed border-slate-300 bg-stone-50 p-6 text-center text-sm font-medium text-slate-500">
-                  Product details appear here after live products are added.
+                  {hasActiveSearchOrFilter
+                    ? "No product is selected for the current filters."
+                    : "Product details appear here after live products are added."}
                 </div>
               )}
             </section>
