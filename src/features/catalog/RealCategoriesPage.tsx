@@ -106,6 +106,25 @@ function getDescendantIds(categories: CategoryRecord[], categoryId: string) {
   return descendantIds;
 }
 
+function getParentId(category: CategoryRecord) {
+  return category.parent_id == null ? null : String(category.parent_id);
+}
+
+function getParentName(
+  category: CategoryRecord,
+  categoryById: Map<string, CategoryRecord>,
+) {
+  const parentId = getParentId(category);
+
+  if (!parentId) return "Root";
+
+  return categoryById.get(parentId)?.name ?? "Missing parent";
+}
+
+function isChildCategory(category: CategoryRecord) {
+  return Boolean(getParentId(category));
+}
+
 function normalizeCategory(value: unknown): CategoryRecord | null {
   if (!value || typeof value !== "object") return null;
 
@@ -532,6 +551,8 @@ export function RealCategoriesPage({
   );
   const [showAddForm, setShowAddForm] = useState(false);
   const [deletingCategoryIds, setDeletingCategoryIds] = useState<string[]>([]);
+  const [parentFilter, setParentFilter] = useState("all");
+  const [categorySort, setCategorySort] = useState("hierarchy");
 
   const loadCategories = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -689,6 +710,63 @@ export function RealCategoriesPage({
           categories.length,
       )
     : 0;
+  const categoryById = useMemo(
+    () => new Map(categories.map((category) => [category.id, category])),
+    [categories],
+  );
+  const rootCategories = useMemo(
+    () => categories.filter((category) => !isChildCategory(category)),
+    [categories],
+  );
+  const childCount = useMemo(
+    () => categories.filter(isChildCategory).length,
+    [categories],
+  );
+  const visibleCategories = useMemo(() => {
+    const filteredCategories = categories.filter((category) => {
+      if (parentFilter === "all") return true;
+      if (parentFilter === "root") return !isChildCategory(category);
+
+      return getParentId(category) === parentFilter;
+    });
+
+    return [...filteredCategories].sort((left, right) => {
+      if (categorySort === "parent") {
+        const parentCompare = getParentName(left, categoryById).localeCompare(
+          getParentName(right, categoryById),
+        );
+        if (parentCompare !== 0) return parentCompare;
+      }
+
+      if (categorySort === "name") {
+        return left.name.localeCompare(right.name);
+      }
+
+      if (categorySort === "priority") {
+        const priorityCompare =
+          (left.sort_order ?? 0) - (right.sort_order ?? 0);
+        if (priorityCompare !== 0) return priorityCompare;
+      }
+
+      const leftParentId = getParentId(left);
+      const rightParentId = getParentId(right);
+
+      if (leftParentId !== rightParentId) {
+        if (!leftParentId) return -1;
+        if (!rightParentId) return 1;
+
+        const leftParentName = categoryById.get(leftParentId)?.name ?? "";
+        const rightParentName = categoryById.get(rightParentId)?.name ?? "";
+        const parentCompare = leftParentName.localeCompare(rightParentName);
+        if (parentCompare !== 0) return parentCompare;
+      }
+
+      const priorityCompare = (left.sort_order ?? 0) - (right.sort_order ?? 0);
+      if (priorityCompare !== 0) return priorityCompare;
+
+      return left.name.localeCompare(right.name);
+    });
+  }, [categories, categoryById, categorySort, parentFilter]);
   const hierarchyRows = useMemo(
     () =>
       hierarchyBlueprints.map((blueprint) => {
@@ -782,7 +860,7 @@ export function RealCategoriesPage({
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
             ["Total Categories", String(categories.length), "Catalog structure"],
-            ["Subcategories", "Preview", "Nested discovery"],
+            ["Subcategories", String(childCount), "Nested discovery"],
             [
               "Mapped Products",
               String(
@@ -874,9 +952,9 @@ export function RealCategoriesPage({
                   </h2>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <DisabledButton title="Use each category form to edit sort order">
-                    Sort Order
-                  </DisabledButton>
+                  <span className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600">
+                    Parent View
+                  </span>
                   <DisabledButton
                     className="bg-[#5E7F85]/10 text-[#5E7F85]/50"
                     title="Bulk visibility update is not connected yet"
@@ -886,18 +964,43 @@ export function RealCategoriesPage({
                 </div>
               </div>
               <div className="mt-5 grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
-                <div className="relative max-w-xl">
-                  <input
-                    className="w-full cursor-not-allowed rounded-2xl border border-slate-300 bg-stone-50 px-4 py-3 pl-10 text-sm text-slate-500 outline-none"
-                    disabled
-                    placeholder="Search category / slug / parent..."
-                    type="search"
-                  />
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                    Search
-                  </span>
+                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+                  <div className="relative">
+                    <input
+                      className="w-full cursor-not-allowed rounded-2xl border border-slate-300 bg-stone-50 px-4 py-3 pl-10 text-sm text-slate-500 outline-none"
+                      disabled
+                      placeholder="Search category / slug / parent..."
+                      type="search"
+                    />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                      Search
+                    </span>
+                  </div>
+                  <select
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15"
+                    onChange={(event) => setParentFilter(event.target.value)}
+                    value={parentFilter}
+                  >
+                    <option value="all">All parents</option>
+                    <option value="root">Root only</option>
+                    {rootCategories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <select
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15"
+                    onChange={(event) => setCategorySort(event.target.value)}
+                    value={categorySort}
+                  >
+                    <option value="hierarchy">Hierarchy sort</option>
+                    <option value="parent">Parent sort</option>
+                    <option value="priority">Priority sort</option>
+                    <option value="name">Name sort</option>
+                  </select>
                   {["All", "Active", "Draft", "Visible", "Hidden", "Header"].map(
                     (item) => (
                       <button
@@ -940,108 +1043,130 @@ export function RealCategoriesPage({
                   </tr>
                 </TableHead>
                 <tbody>
-                  {categories.length > 0 ? (
-                    categories.map((category) => (
-                      <tr
-                        className={`cursor-pointer border-t border-slate-100 transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${
-                          selectedCategory?.id === category.id
-                            ? "bg-[#5E7F85]/[0.06] shadow-[inset_3px_0_0_#5E7F85]"
-                            : category.status === "inactive"
-                              ? "bg-amber-50/25"
-                              : "bg-white"
-                        }`}
-                        key={category.id}
-                        onClick={() => setSelectedId(category.id)}
-                      >
-                        <td className="px-5 py-4">
-                          <div className="font-bold text-slate-900">
-                            {category.name}
-                          </div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            Priority {category.sort_order ?? 0} - subcategories
-                            preview
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 text-xs font-semibold text-slate-500">
-                          /category/{category.slug}
-                        </td>
-                        <td className="px-5 py-4">Root</td>
-                        <td className="px-5 py-4 font-semibold text-slate-500">
-                          {category.product_count ?? 0}
-                        </td>
-                        <td className="px-5 py-4">
-                          <Badge
-                            tone={
-                              category.status === "inactive" ? "default" : "brand"
-                            }
-                          >
-                            {category.status === "inactive"
-                              ? "Not in Menu"
-                              : "Header"}
-                          </Badge>
-                        </td>
-                        <td className="px-5 py-4">
-                          <Badge
-                            tone={
-                              getSeoScore(category) >= 80
-                                ? "good"
-                                : getSeoScore(category) >= 70
-                                  ? "warn"
-                                  : "bad"
-                            }
-                          >
-                            {getSeoScore(category)}/100
-                          </Badge>
-                        </td>
-                        <td className="px-5 py-4">
-                          <Badge tone={category.image ? "good" : "warn"}>
-                            {category.image ? "Ready" : "Needs Image"}
-                          </Badge>
-                        </td>
-                        <td className="px-5 py-4">
-                          <Badge tone={getStatusTone(category.status)}>
-                            {getStatusLabel(category.status)}
-                          </Badge>
-                        </td>
-                        <td
-                          className="px-5 py-4"
-                          onClick={(event) => event.stopPropagation()}
+                  {visibleCategories.length > 0 ? (
+                    visibleCategories.map((category) => {
+                      const parentName = getParentName(category, categoryById);
+                      const childCategory = isChildCategory(category);
+
+                      return (
+                        <tr
+                          className={`cursor-pointer border-t border-slate-100 transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${
+                            selectedCategory?.id === category.id
+                              ? "bg-[#5E7F85]/[0.06] shadow-[inset_3px_0_0_#5E7F85]"
+                              : category.status === "inactive"
+                                ? "bg-amber-50/25"
+                                : "bg-white"
+                          }`}
+                          key={category.id}
+                          onClick={() => setSelectedId(category.id)}
                         >
-                          <div className="flex items-center gap-2">
-                            <Link
-                              className="rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-semibold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
-                              href={`/categories?edit=${category.id}`}
+                          <td className="px-5 py-4">
+                            <div
+                              className={`font-bold text-slate-900 ${
+                                childCategory ? "pl-5" : ""
+                              }`}
                             >
-                              Edit
-                            </Link>
-                            <button
-                              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-stone-50"
-                              onClick={() => setSelectedId(category.id)}
-                              type="button"
+                              {childCategory ? (
+                                <span className="mr-2 text-slate-400">-&gt;</span>
+                              ) : null}
+                              {category.name}
+                            </div>
+                            <div
+                              className={`mt-1 text-xs text-slate-500 ${
+                                childCategory ? "pl-5" : ""
+                              }`}
                             >
-                              Open
-                            </button>
-                            <button
-                              className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                              disabled={deletingCategoryIds.includes(category.id)}
-                              onClick={() => handleDeleteCategory(category.id)}
-                              type="button"
+                              {childCategory ? "Child category" : "Root category"} -
+                              Priority {category.sort_order ?? 0}
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 text-xs font-semibold text-slate-500">
+                            /category/{category.slug}
+                          </td>
+                          <td className="px-5 py-4">
+                            <Badge tone={childCategory ? "default" : "brand"}>
+                              {parentName}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-4 font-semibold text-slate-500">
+                            {category.product_count ?? 0}
+                          </td>
+                          <td className="px-5 py-4">
+                            <Badge
+                              tone={
+                                category.status === "inactive"
+                                  ? "default"
+                                  : "brand"
+                              }
                             >
-                              {deletingCategoryIds.includes(category.id)
-                                ? "Deleting..."
-                                : "Delete"}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                              {category.status === "inactive"
+                                ? "Not in Menu"
+                                : "Header"}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-4">
+                            <Badge
+                              tone={
+                                getSeoScore(category) >= 80
+                                  ? "good"
+                                  : getSeoScore(category) >= 70
+                                    ? "warn"
+                                    : "bad"
+                              }
+                            >
+                              {getSeoScore(category)}/100
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-4">
+                            <Badge tone={category.image ? "good" : "warn"}>
+                              {category.image ? "Ready" : "Needs Image"}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-4">
+                            <Badge tone={getStatusTone(category.status)}>
+                              {getStatusLabel(category.status)}
+                            </Badge>
+                          </td>
+                          <td
+                            className="px-5 py-4"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Link
+                                className="rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-semibold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
+                                href={`/categories?edit=${category.id}`}
+                              >
+                                Edit
+                              </Link>
+                              <button
+                                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-stone-50"
+                                onClick={() => setSelectedId(category.id)}
+                                type="button"
+                              >
+                                Open
+                              </button>
+                              <button
+                                className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                disabled={deletingCategoryIds.includes(category.id)}
+                                onClick={() => handleDeleteCategory(category.id)}
+                                type="button"
+                              >
+                                {deletingCategoryIds.includes(category.id)
+                                  ? "Deleting..."
+                                  : "Delete"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td
                         className="px-5 py-14 text-center text-sm text-slate-500"
                         colSpan={9}
                       >
-                        No categories found.
+                        No categories found for this parent filter.
                       </td>
                     </tr>
                   )}
@@ -1109,7 +1234,13 @@ export function RealCategoriesPage({
                   </div>
                   <div className="mt-5 space-y-3 text-sm">
                     {[
-                      ["Parent", "Root"],
+                      ["Parent", getParentName(selectedCategory, categoryById)],
+                      [
+                        "Hierarchy Type",
+                        isChildCategory(selectedCategory)
+                          ? "Child category"
+                          : "Root category",
+                      ],
                       [
                         "Menu Visibility",
                         selectedCategory.status === "inactive"
