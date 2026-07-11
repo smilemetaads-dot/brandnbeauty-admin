@@ -25,6 +25,7 @@ type RealProductsPageProps = {
 };
 
 type AdminProductRow = {
+  active_variant_count?: unknown;
   attributes?: unknown;
   brand_id?: unknown;
   category?: unknown;
@@ -36,12 +37,17 @@ type AdminProductRow = {
   name?: unknown;
   price?: unknown;
   product_name?: unknown;
+  product_type?: unknown;
+  max_variant_price?: unknown;
+  min_variant_price?: unknown;
   sku?: unknown;
   slug?: unknown;
   status?: unknown;
   stock?: unknown;
   stock_quantity?: unknown;
   updated_at?: unknown;
+  variant_count?: unknown;
+  variant_stock?: unknown;
 };
 
 type CatalogRelation = {
@@ -50,8 +56,13 @@ type CatalogRelation = {
 } | null;
 
 type SearchableProductRecord = ProductRecord & {
+  activeVariantCount: number;
   categoryParent?: CatalogRelation;
+  maxVariantPrice: number | null;
+  minVariantPrice: number | null;
+  productType: "single" | "variant";
   subcategory?: CatalogRelation;
+  variantCount: number;
 };
 
 type CatalogItem = {
@@ -193,7 +204,19 @@ function normalizeAdminProduct(
 
   if (!id || !name) return null;
 
-  const stock = toNumber(product.stock_quantity ?? product.stock);
+  const productType = toStringOrNull(product.product_type) === "variant" ? "variant" : "single";
+  const stock =
+    productType === "variant"
+      ? toNumber(product.variant_stock)
+      : toNumber(product.stock_quantity ?? product.stock);
+  const minVariantPrice =
+    product.min_variant_price === null || product.min_variant_price === undefined
+      ? null
+      : toNumber(product.min_variant_price);
+  const maxVariantPrice =
+    product.max_variant_price === null || product.max_variant_price === undefined
+      ? null
+      : toNumber(product.max_variant_price);
   const categoryName = toStringOrNull(product.category);
   const attributes = normalizeAttributes(product.attributes);
   const importedSku = toStringOrNull(attributes?.import_sku);
@@ -223,6 +246,7 @@ function normalizeAdminProduct(
 
   return {
     attributes,
+    activeVariantCount: toNumber(product.active_variant_count),
     brand_id: brandId,
     brands: brand ? { name: brand.name, slug: brand.slug } : null,
     category_id: categoryId,
@@ -235,7 +259,8 @@ function normalizeAdminProduct(
     image: normalizeImageUrl(toStringOrNull(product.image_url)),
     name,
     old_price: null,
-    price: toNumber(product.price),
+    price: productType === "variant" && minVariantPrice !== null ? minVariantPrice : toNumber(product.price),
+    productType,
     short_description: toStringOrNull(product.description),
     sku: toStringOrNull(product.sku) ?? importedSku ?? `BNB-${id.padStart(4, "0")}`,
     slug:
@@ -246,6 +271,9 @@ function normalizeAdminProduct(
     stock,
     subcategory: subcategoryRelation,
     updated_at: toStringOrNull(product.updated_at),
+    maxVariantPrice,
+    minVariantPrice,
+    variantCount: toNumber(product.variant_count),
   };
 }
 
@@ -283,6 +311,28 @@ const getStockRuleLabel = (status: string | null) => {
   if (status === "draft" || status === "inactive") return "Disabled";
 
   return "Sellable";
+};
+
+const isVariantProduct = (product: Pick<SearchableProductRecord, "productType">) =>
+  product.productType === "variant";
+
+const getPriceLabel = (product: SearchableProductRecord) => {
+  if (!isVariantProduct(product)) {
+    return `BDT ${formatPrice(product.price)}`;
+  }
+
+  if (product.minVariantPrice === null) {
+    return "No active price";
+  }
+
+  if (
+    product.maxVariantPrice === null ||
+    product.maxVariantPrice === product.minVariantPrice
+  ) {
+    return `BDT ${formatPrice(product.minVariantPrice)}`;
+  }
+
+  return `From BDT ${formatPrice(product.minVariantPrice)}`;
 };
 
 const hasAttributes = (attributes: ProductRecord["attributes"]) =>
@@ -353,12 +403,19 @@ function StatusControl({
 
     try {
       const response = await fetch(UPDATE_PRODUCT_ENDPOINT, {
-        body: JSON.stringify({
-          price: product.price,
-          product_id: product.id,
-          status,
-          stock_quantity: product.stock,
-        }),
+        body: JSON.stringify(
+          isVariantProduct(product as SearchableProductRecord)
+            ? {
+                product_id: product.id,
+                status,
+              }
+            : {
+                price: product.price,
+                product_id: product.id,
+                status,
+                stock_quantity: product.stock,
+              },
+        ),
         headers: adminAuthHeaders({
           "Content-Type": "application/json",
         }),
@@ -393,7 +450,15 @@ function StatusControl({
         onChange={(event) => setStatus(event.target.value)}
         value={status}
       >
-        <option value="active">Active</option>
+        <option
+          disabled={
+            isVariantProduct(product as SearchableProductRecord) &&
+            (product as SearchableProductRecord).activeVariantCount <= 0
+          }
+          value="active"
+        >
+          Active
+        </option>
         <option value="draft">Draft</option>
         <option value="inactive">Inactive</option>
       </select>
@@ -424,12 +489,19 @@ function DraftArchiveButton({
 
     try {
       const response = await fetch(UPDATE_PRODUCT_ENDPOINT, {
-        body: JSON.stringify({
-          price: product.price,
-          product_id: product.id,
-          status: "draft",
-          stock_quantity: product.stock,
-        }),
+        body: JSON.stringify(
+          isVariantProduct(product as SearchableProductRecord)
+            ? {
+                product_id: product.id,
+                status: "draft",
+              }
+            : {
+                price: product.price,
+                product_id: product.id,
+                status: "draft",
+                stock_quantity: product.stock,
+              },
+        ),
         headers: adminAuthHeaders({
           "Content-Type": "application/json",
         }),
@@ -871,7 +943,9 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                                 {product.name}
                               </div>
                               <div className="mt-1 text-xs text-slate-500">
-                                {product.featured ? "Featured" : "Standard"} item
+                                {isVariantProduct(product)
+                                  ? `${product.variantCount} variants`
+                                  : `${product.featured ? "Featured" : "Standard"} item`}
                               </div>
                             </div>
                           </div>
@@ -889,14 +963,19 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                         </td>
                         <td className="px-5 py-4">
                           <div className="font-semibold text-slate-900">
-                            BDT {formatPrice(product.price)}
+                            {getPriceLabel(product)}
                           </div>
                           <div className="mt-1 text-xs font-semibold text-slate-500">
-                            Stock {product.stock}
+                            {isVariantProduct(product) ? "Variant stock" : "Stock"} {product.stock}
                           </div>
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex flex-wrap gap-2">
+                            <AdminBadge
+                              tone={isVariantProduct(product) ? "brand" : "default"}
+                            >
+                              {isVariantProduct(product) ? "Variant" : "Single"}
+                            </AdminBadge>
                             <AdminBadge
                               tone={
                                 product.status === "draft" ? "bad" : "good"
@@ -980,6 +1059,15 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                       <div className="mt-1 text-xs text-slate-500">
                         {selectedProduct.sku ?? "No SKU"}
                       </div>
+                      <div className="mt-2">
+                        <AdminBadge
+                          tone={isVariantProduct(selectedProduct) ? "brand" : "default"}
+                        >
+                          {isVariantProduct(selectedProduct)
+                            ? `${selectedProduct.variantCount} variants`
+                            : "Single product"}
+                        </AdminBadge>
+                      </div>
                     </div>
                     <AdminBadge tone={getAdminStatusTone(selectedProduct.status)}>
                       {formatStatus(selectedProduct.status)}
@@ -1025,11 +1113,20 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                         {getStockRuleLabel(selectedProduct.status)}
                       </AdminBadge>
                       <AdminBadge tone="warn">
-                        Stock {selectedProduct.stock}
+                        {isVariantProduct(selectedProduct) ? "Variant stock" : "Stock"}{" "}
+                        {selectedProduct.stock}
                       </AdminBadge>
                     </div>
                   </div>
                   <div className="mt-5 space-y-3 text-sm">
+                    <DetailRow
+                      label="Product Type"
+                      value={
+                        isVariantProduct(selectedProduct)
+                          ? `Variant (${selectedProduct.activeVariantCount} active)`
+                          : "Single"
+                      }
+                    />
                     <DetailRow
                       label="Brand"
                       value={selectedProduct.brands?.name ?? "-"}
@@ -1064,7 +1161,7 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                     />
                     <DetailRow
                       label="Selling Price"
-                      value={`BDT ${formatPrice(selectedProduct.price)}`}
+                      value={getPriceLabel(selectedProduct)}
                     />
                   </div>
                   <div className="mt-5 grid gap-3">

@@ -250,11 +250,8 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   const [focusKeyword, setFocusKeyword] = useState("");
   const [ignoredDuplicates, setIgnoredDuplicates] = useState(false);
   const [actionToast, setActionToast] = useState("");
-  const [variants, setVariants] = useState([
-    { id: 1, option: "30ml", sku: "1001-1", cost: "390", regular: "890", sale: "750", stock: "24", lowStock: "5", status: "Active" },
-    { id: 2, option: "50ml", sku: "1001-2", cost: "520", regular: "1290", sale: "990", stock: "12", lowStock: "4", status: "Active" },
-  ]);
-  const [variantDraft, setVariantDraft] = useState({ option: "", cost: "", regular: "", sale: "", stock: "", lowStock: "", status: "Active" });
+  const [variants, setVariants] = useState([]);
+  const [variantDraft, setVariantDraft] = useState({ option: "", sku: "", cost: "", regular: "", sale: "", stock: "", lowStock: "", status: "Active" });
   const [mainImageReady, setMainImageReady] = useState(false);
   const [mainImageFile, setMainImageFile] = useState(null);
   const [galleryImages, setGalleryImages] = useState(splitLines(readAttribute(editingProduct, ["gallery_images", "gallery", "images"], "Angle 1\nTexture\nBox\nRoutine")));
@@ -316,9 +313,9 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   const autoSlug = productName ? productName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") : "auto-generated-slug";
   const isVariantProduct = productType === "Variant Product";
   const selectedVariant = variants[0];
-  const previewSalePrice = isVariantProduct ? selectedVariant.sale : salePrice;
-  const previewRegularPrice = isVariantProduct ? selectedVariant.regular : regularPrice;
-  const previewCostPrice = isVariantProduct ? selectedVariant.cost : costPrice;
+  const previewSalePrice = isVariantProduct ? (selectedVariant?.sale || "") : salePrice;
+  const previewRegularPrice = isVariantProduct ? (selectedVariant?.regular || "") : regularPrice;
+  const previewCostPrice = isVariantProduct ? (selectedVariant?.cost || "") : costPrice;
   const previewStockQty = isVariantProduct ? String(variants.reduce((sum, item) => sum + Number(item.stock || 0), 0)) : stockQty;
   const netProfit = Math.max((Number(previewSalePrice) || 0) - (Number(previewCostPrice) || 0) - (Number(courierCost) || 0), 0);
   const margin = Number(previewSalePrice) > 0 ? Math.round((netProfit / Number(previewSalePrice)) * 100) : 0;
@@ -330,6 +327,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   const contentScore = Math.round((contentItems.filter(Boolean).length / contentItems.length) * 100);
   const publishChecks = [
     { label: "Product name", ok: Boolean(productName) },
+    { label: "At least one valid variant", ok: !isVariantProduct || variants.length > 0 },
     { label: "Sale price", ok: Number(previewSalePrice) > 0 },
     { label: "Stock or variant stock", ok: Number(previewStockQty) > 0 || stockRule !== "Sellable" },
     { label: "Main image", ok: mainImageReady },
@@ -440,6 +438,16 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
         setSalePrice(readProductField(product, ["sale_price", "price"], salePrice));
         setStockQty(readProductField(product, ["stock_quantity", "stock", "quantity"], stockQty));
         setLowStockAlert(readProductField(product, ["low_stock_threshold", "low_stock_limit", "reorder_level"], lowStockAlert));
+        setProductType(product.product_type === "variant" ? "Variant Product" : "Single Product");
+        setVariants(Array.isArray(product.variants) ? product.variants.map((variant) => ({
+          id: variant.id,
+          option: variant.option_value || variant.variant_name || "",
+          sku: variant.sku || "",
+          cost: String(variant.cost_price ?? ""), regular: String(variant.regular_price ?? ""),
+          sale: String(variant.sale_price ?? ""), stock: String(variant.stock_quantity ?? "0"),
+          lowStock: String(variant.low_stock_threshold ?? "0"),
+          status: variant.status === "active" ? "Active" : variant.status === "inactive" ? "Disabled" : "Draft",
+        })) : []);
         setImageUrl(readProductField(product, ["image_url", "image"], ""));
         setMainImageReady(Boolean(readProductField(product, ["image_url", "image"], "")));
         setShortDescription(readProductField(product, ["short_description"], ""));
@@ -520,6 +528,21 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
       ingredients,
       key_ingredients: splitLines(keyIngredients),
       low_stock_threshold: String(lowStockAlert || "0"),
+      product_type: isVariantProduct ? "variant" : "single",
+      sku: readProductField(loadedProduct || editingProduct, ["sku"], autoSku),
+      variants: isVariantProduct ? variants.map((variant) => ({
+        id: variant.id,
+        variant_name: variant.option,
+        option_name: "Option",
+        option_value: variant.option,
+        sku: variant.sku,
+        cost_price: variant.cost || "0",
+        regular_price: variant.regular,
+        sale_price: variant.sale || null,
+        stock_quantity: variant.stock,
+        low_stock_threshold: variant.lowStock || "0",
+        status: variant.status === "Active" ? "active" : variant.status === "Disabled" ? "inactive" : "draft",
+      })) : [],
       name: productName.trim(),
       product_name: productName.trim(),
       price: String(previewSalePrice),
@@ -655,7 +678,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
     const nextVariant = {
       id: Date.now(),
       option,
-      sku: `${autoSku}-${variants.length + 1}`,
+      sku: variantDraft.sku.trim() || `${readProductField(loadedProduct || editingProduct, ["sku"], autoSku)}-${variants.length + 1}`,
       cost: variantDraft.cost || costPrice,
       regular: variantDraft.regular || regularPrice,
       sale: variantDraft.sale || salePrice,
@@ -664,7 +687,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
       status: variantDraft.status || "Active",
     };
     setVariants((current) => [...current, nextVariant]);
-    setVariantDraft({ option: "", cost: "", regular: "", sale: "", stock: "", lowStock: "", status: "Active" });
+    setVariantDraft({ option: "", sku: "", cost: "", regular: "", sale: "", stock: "", lowStock: "", status: "Active" });
     showActionToast("Variant row added");
   };
 
@@ -737,8 +760,8 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
           </div>
 
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div><h2 className="text-xl font-bold tracking-tight">Pricing & Inventory</h2></div><div className="rounded-2xl border border-slate-200 bg-stone-50 p-1">{["Single Product", "Variant Product"].map((item) => <button key={item} onClick={() => setProductType(item)} className={`rounded-xl px-4 py-2.5 text-xs font-bold transition ${productType === item ? "bg-[#5E7F85] text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}>{item}</button>)}</div></div>
-            {!isVariantProduct ? <div className="mt-5 grid gap-4 md:grid-cols-2">{[["Cost Price", costPrice, setCostPrice], ["Regular Price", regularPrice, setRegularPrice], ["Sale Price", salePrice, setSalePrice], ["Stock Qty", stockQty, setStockQty], ["Low Stock Alert", lowStockAlert, setLowStockAlert], ["Weight (gm/ml)", weight, setWeight], ["Avg Courier Cost", courierCost, setCourierCost]].map(([label, value, setter]) => <label key={label} className="space-y-2"><div className="text-sm font-medium text-slate-600">{label}</div><input value={value} onChange={(event) => setter(event.target.value)} className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none" placeholder={label} /></label>)}</div> : <div className="mt-5 space-y-5"><div className="rounded-2xl border border-[#5E7F85]/15 bg-[#5E7F85]/5 p-4 text-sm font-semibold leading-6 text-slate-700">Variant rows are draft-only for staff planning. The current product save still uses the main product pricing and stock fields.</div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{["option", "cost", "regular", "sale", "stock", "lowStock"].map((key) => <label key={key} className="space-y-2"><div className="text-sm font-medium capitalize text-slate-600">{key === "lowStock" ? "Low Stock" : key}</div><input value={variantDraft[key]} onChange={(event) => setVariantDraft((current) => ({ ...current, [key]: event.target.value }))} className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none" placeholder={key === "option" ? "30ml / Red / Combo" : key} /></label>)}<label className="space-y-2"><div className="text-sm font-medium text-slate-600">Status</div><select value={variantDraft.status} onChange={(event) => setVariantDraft((current) => ({ ...current, status: event.target.value }))} className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none"><option>Active</option><option>Draft</option><option>Disabled</option></select></label></div><div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold leading-6 text-emerald-800">Variant SKU generation is coming later. Example format: parent 1001, variants 1001-1 and 1001-2.</div><button type="button" onClick={addVariant} className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white">+ Add draft variant row</button><div className="overflow-x-auto rounded-2xl border border-slate-200"><table className="min-w-full text-left text-sm"><TableHead><tr>{["Variant", "SKU", "Cost", "Regular", "Sale", "Stock", "Low", "Status"].map((head) => <th key={head} className="px-4 py-3 font-medium">{head}</th>)}</tr></TableHead><tbody>{variants.map((row) => <tr key={row.id} className="border-t border-slate-100 hover:bg-stone-50"><td className="px-4 py-3">{row.option}</td><td className="px-4 py-3 font-bold text-emerald-800">{row.sku}</td><td className="px-4 py-3">{row.cost}</td><td className="px-4 py-3">{row.regular}</td><td className="px-4 py-3 font-bold">{row.sale}</td><td className="px-4 py-3">{row.stock}</td><td className="px-4 py-3">{row.lowStock}</td><td className="px-4 py-3"><Badge tone="good">{row.status}</Badge></td></tr>)}</tbody></table></div></div>}
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div><h2 className="text-xl font-bold tracking-tight">Pricing & Inventory</h2></div><div className="rounded-2xl border border-slate-200 bg-stone-50 p-1">{["Single Product", "Variant Product"].map((item) => <button key={item} type="button" onClick={() => { if (item === "Single Product" && isVariantProduct && variants.length && !window.confirm("Switch to single product? Existing variants will be kept and must be disabled explicitly when saving.")) return; setProductType(item); }} className={`rounded-xl px-4 py-2.5 text-xs font-bold transition ${productType === item ? "bg-[#5E7F85] text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}>{item}</button>)}</div></div>
+            {!isVariantProduct ? <div className="mt-5 grid gap-4 md:grid-cols-2">{[["Cost Price", costPrice, setCostPrice], ["Regular Price", regularPrice, setRegularPrice], ["Sale Price", salePrice, setSalePrice], ["Stock Qty", stockQty, setStockQty], ["Low Stock Alert", lowStockAlert, setLowStockAlert], ["Weight (gm/ml)", weight, setWeight], ["Avg Courier Cost", courierCost, setCourierCost]].map(([label, value, setter]) => <label key={label} className="space-y-2"><div className="text-sm font-medium text-slate-600">{label}</div><input value={value} onChange={(event) => setter(event.target.value)} className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none" placeholder={label} /></label>)}</div> : <div className="mt-5 space-y-5"><div className="rounded-2xl border border-[#5E7F85]/15 bg-[#5E7F85]/5 p-4 text-sm font-semibold leading-6 text-slate-700">Variants are saved with the product. New variant products start empty and cannot be published until a valid row is added.</div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{["option", "sku", "cost", "regular", "sale", "stock", "lowStock"].map((key) => <label key={key} className="space-y-2"><div className="text-sm font-medium capitalize text-slate-600">{key === "lowStock" ? "Low Stock" : key}</div><input value={variantDraft[key]} onChange={(event) => setVariantDraft((current) => ({ ...current, [key]: event.target.value }))} className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none" placeholder={key === "option" ? "30ml / Red / Combo" : key === "sku" ? "Auto-generated if blank" : key} /></label>)}<label className="space-y-2"><div className="text-sm font-medium text-slate-600">Status</div><select value={variantDraft.status} onChange={(event) => setVariantDraft((current) => ({ ...current, status: event.target.value }))} className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none"><option>Active</option><option>Draft</option><option>Disabled</option></select></label></div><button type="button" onClick={addVariant} className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white">+ Add Variant</button><div className="overflow-x-auto rounded-2xl border border-slate-200"><table className="min-w-full text-left text-sm"><TableHead><tr>{["Variant", "SKU", "Cost", "Regular", "Sale", "Stock", "Low", "Status", "Action"].map((head) => <th key={head} className="px-4 py-3 font-medium">{head}</th>)}</tr></TableHead><tbody>{variants.map((row, rowIndex) => <tr key={row.id || row.sku} className="border-t border-slate-100 hover:bg-stone-50">{["option", "sku", "cost", "regular", "sale", "stock", "lowStock"].map((field) => <td key={field} className="px-2 py-2"><input value={row[field]} onChange={(event) => setVariants((current) => current.map((item, index) => index === rowIndex ? { ...item, [field]: event.target.value } : item))} className="w-24 rounded-lg border border-slate-200 px-2 py-1" /></td>)}<td className="px-2 py-2"><select value={row.status} onChange={(event) => setVariants((current) => current.map((item, index) => index === rowIndex ? { ...item, status: event.target.value } : item))} className="rounded-lg border border-slate-200 px-2 py-1"><option>Active</option><option>Draft</option><option>Disabled</option></select></td><td className="px-2 py-2"><button type="button" onClick={() => setVariants((current) => current.filter((_, index) => index !== rowIndex))} className="text-xs font-bold text-rose-600">Delete</button></td></tr>)}</tbody></table></div></div>}
             <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">{[[isVariantProduct ? "Variant Stock" : "Stock", previewStockQty || "0"], ["Default Sale", `৳${previewSalePrice || 0}`], ["Stock Value", `৳${((Number(previewSalePrice) || 0) * (Number(previewStockQty) || 0)).toLocaleString()}`], ["Net Profit", `৳${netProfit}`], ["Discount", `${discount}%`]].map(([label, value]) => <div key={label} className="rounded-2xl bg-stone-50 p-4"><div className="text-xs font-semibold text-slate-500">{label}</div><div className="mt-1 text-lg font-bold text-slate-900">{value}</div></div>)}</div>
           </div>
 
