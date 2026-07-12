@@ -19,6 +19,7 @@ import { bnbApiAssetUrl, bnbApiUrl } from "@/lib/bnb-api";
 
 import type { ProductRecord } from "./products-data";
 import { ProductCsvImportPanel } from "./ProductCsvImportPanel";
+import { ProductPriceStockUpdatePanel } from "./ProductPriceStockUpdatePanel";
 
 type RealProductsPageProps = {
   products?: ProductRecord[];
@@ -596,6 +597,7 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
   const [deleteMessage, setDeleteMessage] = useState("");
   const [deletingProductIds, setDeletingProductIds] = useState<string[]>([]);
   const [showCsvImport, setShowCsvImport] = useState(false);
+  const [showPriceStockUpdate, setShowPriceStockUpdate] = useState(false);
 
   const loadCatalogMeta = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -770,6 +772,13 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
               >
                 Bulk Import
               </button>
+              <button
+                className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-stone-50"
+                onClick={() => setShowPriceStockUpdate((current) => !current)}
+                type="button"
+              >
+                Price & Stock
+              </button>
               <DisabledAction>Export</DisabledAction>
               <Link
                 className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-950"
@@ -783,6 +792,12 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
             <ProductCsvImportPanel
               onClose={() => setShowCsvImport(false)}
               onImported={() => loadProducts()}
+            />
+          ) : null}
+          {showPriceStockUpdate ? (
+            <ProductPriceStockUpdatePanel
+              onApplied={() => loadProducts()}
+              onClose={() => setShowPriceStockUpdate(false)}
             />
           ) : null}
           <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-4">
