@@ -399,9 +399,8 @@ export function RealOffersDealsPage() {
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-white/85">
                   Create and edit homepage offer cards through the live local
-                  offers table. Active offers appear during their date window.
-                  Messenger sync, analytics and automation controls are coming
-                  later.
+                  offers table. Active offers appear on the homepage during
+                  their start/end date window in sort order.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -854,9 +853,10 @@ export function RealOffersDealsPage() {
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                 Save homepage offer cards and deal rows directly to the local
-                PHP/MySQL offers table. Use real routes only; blank, # and
-                unsafe links fall back to /products. Active offers are public
-                only inside their start/end date window.
+                PHP/MySQL offers table. Title, optional subtitle/discount,
+                image, link, status, dates and sort order control the homepage
+                cards. Blank, #, external and unsafe links fall back to /products.
+                Use wide 16:9 images, around 1200 x 675.
               </p>
             </div>
             <Badge tone="good">Live Save</Badge>

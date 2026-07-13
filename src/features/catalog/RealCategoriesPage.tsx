@@ -323,9 +323,10 @@ function CategoryForm({
             </h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
               This form now creates live category metadata through the local PHP
-              backend. Active categories appear on the homepage and catalog
-              discovery; inactive categories stay hidden. Use a clean slug,
-              square image URL, and lower sort order for earlier placement.
+              backend. Only active root categories appear on the homepage;
+              child categories stay in navigation and filtering. Use a clean
+              slug, square or 4:3 image at least 800px wide, and lower sort
+              order for earlier placement.
             </p>
           </div>
           {isEditing ? (

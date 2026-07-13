@@ -337,7 +337,8 @@ function ConcernForm({
               This form now creates live concern metadata through the local PHP
               backend. Active concerns appear on the homepage and concern
               routes; inactive concerns stay hidden. Use a clean slug, square
-              image URL, and lower sort order for earlier placement.
+              or 4:3 image at least 800px wide, and lower sort order for
+              earlier placement.
             </p>
           </div>
           {isEditing ? (

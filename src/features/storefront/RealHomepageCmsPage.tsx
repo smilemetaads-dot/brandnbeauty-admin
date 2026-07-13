@@ -92,10 +92,10 @@ const previewProducts = [
 
 const safetyItems = [
   "Homepage hero, offer and editor pick saves now use the local PHP/MySQL CMS endpoint.",
-  "If CMS data is missing, the storefront keeps the original static fallback content.",
+  "If CMS hero data is missing, the storefront shows a neutral visual fallback.",
   "Only active hero banners appear on the storefront; inactive and draft banners stay hidden.",
   "Use real storefront CTA routes such as /products, /category/skincare or /brand/brandnbeauty. Avoid # links.",
-  "Recommended hero images are wide JPG/WebP files around 1600 x 700 with important content centered.",
+  "Recommended hero images are wide JPG/WebP files around 1600 x 600 with mobile-safe center crop.",
   "Category, concern, brand and product-feed layouts are unchanged.",
 ];
 
@@ -745,8 +745,7 @@ export function RealHomepageCmsPage() {
                   Hero CTA / Link / Image
                   <span className="mt-1 block text-xs font-medium leading-5 text-slate-500">
                     Use a real route for the CTA. Leave CTA text blank to hide
-                    the button. Use a wide centered image to avoid mobile crop
-                    issues.
+                    the button. Use a wide centered image, approximately 1600 x 600, with mobile-safe center crop.
                   </span>
                   <div className="mt-2 grid gap-2">
                     <input
@@ -834,9 +833,7 @@ export function RealHomepageCmsPage() {
                 <label className="block text-sm font-semibold text-slate-700">
                   Offer Subtitle / Link / Image
                   <span className="mt-1 block text-xs font-medium leading-5 text-slate-500">
-                    Use a real storefront route for the offer link. Blank, #
-                    and unsafe links are saved as /products. Use Offers & Deals
-                    for start/end dates and additional offer rows.
+                    Homepage offer cards use title, subtitle, image and link. Blank, #, external and unsafe links are saved as /products. Use Offers & Deals for date windows, sort order and additional rows.
                   </span>
                   <div className="mt-2 grid gap-2">
                     <input
@@ -909,7 +906,7 @@ export function RealHomepageCmsPage() {
                 <label className="block text-sm font-semibold text-slate-700">
                   Editor Picks
                   <span className="mt-1 block text-xs font-medium leading-5 text-slate-500">
-                    Comma-separated active product IDs. Checkbox selections add or remove IDs from this field.
+                    Comma-separated active product IDs. The saved ID order controls the storefront order; invalid, inactive or deleted products will not render.
                   </span>
                   <input
                     className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#5E7F85]"
@@ -923,7 +920,7 @@ export function RealHomepageCmsPage() {
                     Active product selector
                   </div>
                   <div className="mt-2 rounded-2xl bg-white px-3 py-3 text-xs font-semibold leading-5 text-slate-600">
-                    The checklist uses active, in-stock storefront products.
+                    The checklist uses active storefront products from the live feed in the order they are selected.
                     Unknown, inactive or deleted IDs can stay saved for review,
                     but they will not render on the homepage.
                   </div>

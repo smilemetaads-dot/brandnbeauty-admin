@@ -317,8 +317,9 @@ function BrandForm({
             <p className="mt-2 text-sm leading-6 text-slate-500">
               This form now creates live brand metadata through the local PHP
               backend. Active brands appear on the homepage and brand routes;
-              inactive brands stay hidden. Use a clean slug, logo/image URL,
-              and lower sort order for earlier placement.
+              inactive brands stay hidden. Use a clean slug, centered
+              transparent PNG/WebP logo or image URL, and lower sort order for
+              earlier placement.
             </p>
           </div>
           {isEditing ? (
