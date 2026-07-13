@@ -81,22 +81,22 @@ const fallbackFooterContent: FooterContent = {
 };
 
 const trust = [
-  "100% Authentic Products",
-  "Verified Brands",
-  "Science-Based Formula",
-  "24/7 Support",
+  "Authenticity Checked",
+  "Verified Brand Listings",
+  "Ingredient-Led Routines",
+  "Support Info Available",
 ] as const;
 
 const stats = [
   ["Footer Groups", "3", "Explore, support, policies"],
   ["Footer Links", "13", "Saved links"],
   ["Trust Items", "4", "Bottom trust strip"],
-  ["Social Icons", "4", "Facebook, IG, TikTok, YouTube"],
+  ["Social Icons", "0+", "Only real URLs render"],
 ] as const;
 
 const detailPanels = [
   {
-    description: "Brand summary, support promise, copyright copy and social handles.",
+    description: "Brand name, copyright copy and verified social handles.",
     label: "Brand Block",
     status: "Live footer",
   },
@@ -115,9 +115,9 @@ const detailPanels = [
 const safetyItems = [
   "Footer links and social icons save through the local PHP/MySQL settings table.",
   "Active groups and active links appear on the storefront; inactive entries stay saved but hidden.",
-  "Blank, #, javascript/data links and placeholder social URLs render as labels or are filtered.",
-  "Only add social links after the real account URL is ready.",
-  "Newsletter block and advanced footer rules are coming later.",
+  "Blank hrefs render as labels only; #, javascript/data/vbscript links and placeholder social URLs are filtered.",
+  "Only add real internal routes or verified external URLs that are ready for shoppers.",
+  "Do not add unsupported contact, policy, newsletter or automation claims.",
 ] as const;
 
 function isUnsafeFooterHref(href: string): boolean {
@@ -687,8 +687,8 @@ export function RealFooterCmsPage() {
               <div className="mt-5 space-y-3">
                 {[
                   "Drag-and-drop footer ordering",
-                  "Newsletter block",
-                  "Footer A/B testing",
+                  "Newsletter automation",
+                  "Footer experiments",
                   "Advanced visibility rules",
                 ].map((item) => (
                   <div
