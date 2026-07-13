@@ -32,7 +32,12 @@ type OrderRecord = {
   order_status: string;
   paid_amount: number;
   payment_status: string;
+  pending_sourcing_count?: number;
+  ready_count?: number;
+  requires_sourcing?: boolean;
+  requires_sourcing_count?: number;
   source: string | null;
+  sourced_count?: number;
   stock_deducted: boolean;
   stock_restored: boolean;
   subtotal: number;
@@ -51,6 +56,11 @@ type MysqlOrderRow = {
   id?: unknown;
   payment_method?: unknown;
   payment_status?: unknown;
+  pending_sourcing_count?: unknown;
+  ready_count?: unknown;
+  requires_sourcing?: unknown;
+  requires_sourcing_count?: unknown;
+  sourced_count?: unknown;
   phone?: unknown;
   status?: unknown;
   subtotal_amount?: unknown;
@@ -66,6 +76,7 @@ type ManageOrdersResponse = {
 const MANAGE_ORDERS_ENDPOINT = bnbApiUrl("manage_orders.php");
 const ORDER_STATUS_OPTIONS = [
   "pending",
+  "pending_sourcing",
   "approved",
   "confirmed",
   "processing",
@@ -141,7 +152,12 @@ function normalizeMysqlOrder(row: MysqlOrderRow): OrderRecord {
     order_status: status,
     paid_amount: isPaymentComplete ? total : 0,
     payment_status: paymentStatus,
+    pending_sourcing_count: toNumber(row.pending_sourcing_count),
+    ready_count: toNumber(row.ready_count),
+    requires_sourcing: Boolean(row.requires_sourcing) || toNumber(row.requires_sourcing_count) > 0,
+    requires_sourcing_count: toNumber(row.requires_sourcing_count),
     source: "MySQL",
+    sourced_count: toNumber(row.sourced_count),
     stock_deducted: true,
     stock_restored: false,
     subtotal: toNumber(row.subtotal_amount),
@@ -852,9 +868,16 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
                         </div>
                       </td>
                       <td className="px-5 py-4">
-                        <Badge tone={getOrderStatusTone(order.order_status)}>
-                          {formatStatus(order.order_status)}
-                        </Badge>
+                        <div className="flex flex-col gap-2">
+                          <Badge tone={getOrderStatusTone(order.order_status)}>
+                            {formatStatus(order.order_status)}
+                          </Badge>
+                          {order.requires_sourcing ? (
+                            <Badge tone={order.pending_sourcing_count ? "warn" : "good"}>
+                              {order.pending_sourcing_count ? "Pending Sourcing" : order.ready_count ? "Ready for Packing" : "Sourced"}
+                            </Badge>
+                          ) : null}
+                        </div>
                       </td>
                       <td
                         className="px-5 py-4"
