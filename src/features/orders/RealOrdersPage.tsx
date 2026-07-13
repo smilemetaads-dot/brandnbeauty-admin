@@ -443,6 +443,7 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
   const [isLoading, setIsLoading] = useState(!initialOrders.length);
   const [orderFilter, setOrderFilter] = useState("All");
   const [priorityOnly, setPriorityOnly] = useState(false);
+  const [sourcingOnly, setSourcingOnly] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [sourceFilter, setSourceFilter] = useState("All Sources");
@@ -527,16 +528,19 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
           getRiskLabel(order) === "High" ||
           order.order_status === "new" ||
           order.order_status === "pending";
+        const matchesSourcing =
+          !sourcingOnly || Boolean(order.requires_sourcing) || order.order_status === "pending_sourcing";
 
         return (
           matchesStatus &&
           matchesZone &&
           matchesSource &&
           matchesSearch &&
-          matchesPriority
+          matchesPriority &&
+          matchesSourcing
         );
       }),
-    [orderFilter, orders, priorityOnly, searchTerm, sourceFilter, zoneFilter],
+    [orderFilter, orders, priorityOnly, searchTerm, sourceFilter, sourcingOnly, zoneFilter],
   );
   const visibleOrderIds = filteredOrders.map((order) => order.id);
   const allVisibleSelected =
@@ -554,10 +558,8 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
   const readyCourierOrders = orders.filter((order) =>
     ["ready", "not_sent"].includes(order.courier_status ?? ""),
   ).length;
-  const returnRiskOrders = orders.filter(
-    (order) =>
-      ["returned", "cancelled"].includes(order.order_status) ||
-      order.due_amount > 0,
+  const needsSourcingOrders = orders.filter(
+    (order) => Boolean(order.requires_sourcing) || order.order_status === "pending_sourcing",
   ).length;
   const confirmedOrders = orders.filter(
     (order) => order.order_status === "confirmed",
@@ -654,12 +656,12 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
             value={String(readyCourierOrders)}
           />
           <StatCard
-            active={priorityOnly}
-            helper="Watchlist"
-            icon="Risk"
-            label="Return Risk"
-            onClick={() => setPriorityOnly((current) => !current)}
-            value={String(returnRiskOrders)}
+            active={sourcingOnly}
+            helper="Procure"
+            icon="Src"
+            label="Needs Sourcing"
+            onClick={() => setSourcingOnly((current) => !current)}
+            value={String(needsSourcingOrders)}
           />
         </section>
 
@@ -713,6 +715,17 @@ export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPagePro
                 type="button"
               >
                 Priority Queue
+              </button>
+              <button
+                className={`rounded-full px-4 py-2 text-xs font-semibold ${
+                  sourcingOnly
+                    ? "bg-amber-600 text-white"
+                    : "border border-slate-200 bg-white text-slate-600"
+                }`}
+                onClick={() => setSourcingOnly((current) => !current)}
+                type="button"
+              >
+                Needs Sourcing
               </button>
               <SelectPill
                 label="Source"

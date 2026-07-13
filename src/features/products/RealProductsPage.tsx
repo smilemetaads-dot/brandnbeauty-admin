@@ -35,6 +35,9 @@ type AdminProductRow = {
   description?: unknown;
   id?: unknown;
   image_url?: unknown;
+  inventory_mode?: unknown;
+  availability_status?: unknown;
+  minimum_order_quantity?: unknown;
   name?: unknown;
   price?: unknown;
   product_name?: unknown;
@@ -58,9 +61,12 @@ type CatalogRelation = {
 
 type SearchableProductRecord = ProductRecord & {
   activeVariantCount: number;
+  availabilityStatus: "available" | "unavailable";
   categoryParent?: CatalogRelation;
+  inventoryMode: "stocked" | "on_demand";
   maxVariantPrice: number | null;
   minVariantPrice: number | null;
+  minimumOrderQuantity: number;
   productType: "single" | "variant";
   subcategory?: CatalogRelation;
   variantCount: number;
@@ -87,8 +93,13 @@ const PRODUCT_FILTERS = [
   "Out of Stock",
   "Discontinued",
   "Notify Me",
+  "Stocked",
+  "On Demand",
+  "Available",
+  "Unavailable",
 ];
 
+const BULK_INVENTORY_ENDPOINT = bnbApiUrl("bulk_inventory_mode_update.php");
 const UPDATE_PRODUCT_ENDPOINT = bnbApiUrl("update_product.php");
 const ADMIN_PRODUCTS_ENDPOINT = bnbApiUrl("admin_products.php");
 const DELETE_CATALOG_ITEM_ENDPOINT = bnbApiUrl("delete_catalog_item.php");
@@ -258,10 +269,13 @@ function normalizeAdminProduct(
     featured: false,
     id,
     image: normalizeImageUrl(toStringOrNull(product.image_url)),
+    inventoryMode: toStringOrNull(product.inventory_mode) === "on_demand" ? "on_demand" : "stocked",
     name,
     old_price: null,
     price: productType === "variant" && minVariantPrice !== null ? minVariantPrice : toNumber(product.price),
     productType,
+    availabilityStatus: toStringOrNull(product.availability_status) === "unavailable" ? "unavailable" : "available",
+    minimumOrderQuantity: Math.max(1, Math.floor(toNumber(product.minimum_order_quantity) || 1)),
     short_description: toStringOrNull(product.description),
     sku: toStringOrNull(product.sku) ?? importedSku ?? `BNB-${id.padStart(4, "0")}`,
     slug:
@@ -378,6 +392,14 @@ const getMatchesProductFilter = (product: SearchableProductRecord, filter: strin
       return product.status === "inactive";
     case "Notify Me":
       return visibility === "Visible" && product.stock <= 0;
+    case "Stocked":
+      return product.inventoryMode === "stocked";
+    case "On Demand":
+      return product.inventoryMode === "on_demand";
+    case "Available":
+      return product.availabilityStatus === "available";
+    case "Unavailable":
+      return product.availabilityStatus === "unavailable";
     case "All Products":
     default:
       return true;
@@ -473,6 +495,107 @@ function StatusControl({
         {isSaving ? "Saving..." : "Update"}
       </button>
     </form>
+  );
+}
+
+function BulkInventoryModePanel({
+  onApplied,
+  onClose,
+}: {
+  onApplied: () => Promise<void>;
+  onClose: () => void;
+}) {
+  const [isBusy, setIsBusy] = useState(false);
+  const [result, setResult] = useState<{
+    backup_path?: string | null;
+    excluded_products?: Array<{ product_id: number; product_name: string; reason: string }>;
+    matched_products?: number;
+    mode?: string;
+    on_demand_products?: number;
+    stocked_products?: number;
+    updated_products?: number;
+    updated_variants?: number;
+    variants_affected?: number;
+  } | null>(null);
+  const [message, setMessage] = useState("");
+
+  const runBulkMode = async (mode: "dry_run" | "apply") => {
+    setIsBusy(true);
+    setMessage("");
+
+    try {
+      const response = await fetch(BULK_INVENTORY_ENDPOINT, {
+        body: JSON.stringify({
+          confirmation: mode === "apply" ? "APPLY_INVENTORY_MODE_UPDATE" : undefined,
+          filters: { status: "all", product_type: "all" },
+          mode,
+          preset: "launch_inventory_modes",
+        }),
+        headers: adminAuthHeaders({ "Content-Type": "application/json" }),
+        method: "POST",
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || "Bulk inventory update failed.");
+      }
+
+      setResult(payload);
+      setMessage(mode === "apply" ? "Inventory launch setup applied." : "Dry run completed.");
+      if (mode === "apply") {
+        await onApplied();
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Bulk inventory update failed.");
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  return (
+    <div className="border-t border-slate-100 bg-white p-5">
+      <div className="rounded-[1.5rem] border border-slate-200 bg-stone-50 p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="text-sm font-bold text-slate-900">Bulk Inventory Mode Setup</div>
+            <div className="mt-1 text-sm leading-6 text-slate-600">
+              Launch preset: The Derma Plus becomes Stocked; other real brands become On Demand. Physical stock, status, price, images, mappings, and content are unchanged.
+            </div>
+          </div>
+          <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600" onClick={onClose} type="button">Close</button>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button className="rounded-2xl border border-[#5E7F85] bg-white px-4 py-3 text-sm font-semibold text-[#5E7F85] disabled:opacity-50" disabled={isBusy} onClick={() => runBulkMode("dry_run")} type="button">
+            Dry Run
+          </button>
+          <button className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50" disabled={isBusy || !result} onClick={() => runBulkMode("apply")} type="button">
+            Apply Launch Setup
+          </button>
+        </div>
+        {message ? <div className="mt-3 text-sm font-semibold text-slate-700">{message}</div> : null}
+        {result ? (
+          <div className="mt-4 grid gap-3 text-sm md:grid-cols-3">
+            <div className="rounded-2xl bg-white p-4"><div className="text-xs font-semibold text-slate-500">Matched</div><div className="mt-1 text-lg font-bold">{result.matched_products ?? 0}</div></div>
+            <div className="rounded-2xl bg-white p-4"><div className="text-xs font-semibold text-slate-500">Stocked</div><div className="mt-1 text-lg font-bold">{result.stocked_products ?? 0}</div></div>
+            <div className="rounded-2xl bg-white p-4"><div className="text-xs font-semibold text-slate-500">On Demand</div><div className="mt-1 text-lg font-bold">{result.on_demand_products ?? 0}</div></div>
+            <div className="rounded-2xl bg-white p-4"><div className="text-xs font-semibold text-slate-500">Variants Affected</div><div className="mt-1 text-lg font-bold">{result.variants_affected ?? 0}</div></div>
+            <div className="rounded-2xl bg-white p-4"><div className="text-xs font-semibold text-slate-500">Updated Products</div><div className="mt-1 text-lg font-bold">{result.updated_products ?? 0}</div></div>
+            <div className="rounded-2xl bg-white p-4"><div className="text-xs font-semibold text-slate-500">Updated Variants</div><div className="mt-1 text-lg font-bold">{result.updated_variants ?? 0}</div></div>
+          </div>
+        ) : null}
+        {result?.backup_path ? <div className="mt-3 truncate rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-slate-600">Backup: {result.backup_path}</div> : null}
+        {result?.excluded_products?.length ? (
+          <div className="mt-4 rounded-2xl bg-white p-4 text-xs text-slate-600">
+            <div className="font-bold text-slate-900">Excluded products</div>
+            <div className="mt-2 max-h-28 space-y-1 overflow-auto">
+              {result.excluded_products.slice(0, 20).map((item) => (
+                <div key={item.product_id}>{item.product_id} - {item.product_name}: {item.reason}</div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -596,6 +719,7 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
   const [activeFilter, setActiveFilter] = useState("All Products");
   const [deleteMessage, setDeleteMessage] = useState("");
   const [deletingProductIds, setDeletingProductIds] = useState<string[]>([]);
+  const [showBulkInventoryMode, setShowBulkInventoryMode] = useState(false);
   const [showCsvImport, setShowCsvImport] = useState(false);
   const [showPriceStockUpdate, setShowPriceStockUpdate] = useState(false);
 
@@ -779,6 +903,13 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
               >
                 Price & Stock
               </button>
+              <button
+                className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-stone-50"
+                onClick={() => setShowBulkInventoryMode((current) => !current)}
+                type="button"
+              >
+                Inventory Mode
+              </button>
               <DisabledAction>Export</DisabledAction>
               <Link
                 className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-950"
@@ -798,6 +929,12 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
             <ProductPriceStockUpdatePanel
               onApplied={() => loadProducts()}
               onClose={() => setShowPriceStockUpdate(false)}
+            />
+          ) : null}
+          {showBulkInventoryMode ? (
+            <BulkInventoryModePanel
+              onApplied={() => loadProducts()}
+              onClose={() => setShowBulkInventoryMode(false)}
             />
           ) : null}
           <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-4">
@@ -981,7 +1118,7 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                             {getPriceLabel(product)}
                           </div>
                           <div className="mt-1 text-xs font-semibold text-slate-500">
-                            {isVariantProduct(product) ? "Variant stock" : "Stock"} {product.stock}
+                            Physical {isVariantProduct(product) ? "variant stock" : "stock"} {product.stock}
                           </div>
                         </td>
                         <td className="px-5 py-4">
@@ -1008,6 +1145,12 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                               }
                             >
                               {getStockRuleLabel(product.status)}
+                            </AdminBadge>
+                            <AdminBadge tone={product.inventoryMode === "on_demand" ? "warn" : "brand"}>
+                              {product.inventoryMode === "on_demand" ? "On Demand" : "Stocked"}
+                            </AdminBadge>
+                            <AdminBadge tone={product.availabilityStatus === "unavailable" ? "bad" : "good"}>
+                              {product.availabilityStatus === "unavailable" ? "Unavailable" : "Available"}
                             </AdminBadge>
                           </div>
                         </td>
@@ -1128,8 +1271,14 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                         {getStockRuleLabel(selectedProduct.status)}
                       </AdminBadge>
                       <AdminBadge tone="warn">
-                        {isVariantProduct(selectedProduct) ? "Variant stock" : "Stock"}{" "}
+                        Physical {isVariantProduct(selectedProduct) ? "variant stock" : "stock"}{" "}
                         {selectedProduct.stock}
+                      </AdminBadge>
+                      <AdminBadge tone={selectedProduct.inventoryMode === "on_demand" ? "warn" : "brand"}>
+                        {selectedProduct.inventoryMode === "on_demand" ? "On Demand" : "Stocked"}
+                      </AdminBadge>
+                      <AdminBadge tone={selectedProduct.availabilityStatus === "unavailable" ? "bad" : "good"}>
+                        {selectedProduct.availabilityStatus === "unavailable" ? "Unavailable" : "Available"}
                       </AdminBadge>
                     </div>
                   </div>
@@ -1157,6 +1306,22 @@ export function RealProductsPage({ products: initialProducts = [] }: RealProduct
                     <DetailRow
                       label="Stock Rule"
                       value={getStockRuleLabel(selectedProduct.status)}
+                    />
+                    <DetailRow
+                      label="Inventory Mode"
+                      value={selectedProduct.inventoryMode === "on_demand" ? "On Demand" : "Stocked"}
+                    />
+                    <DetailRow
+                      label="Availability"
+                      value={selectedProduct.availabilityStatus === "unavailable" ? "Unavailable" : "Available"}
+                    />
+                    <DetailRow
+                      label="Minimum Order Qty"
+                      value={String(selectedProduct.minimumOrderQuantity)}
+                    />
+                    <DetailRow
+                      label="Physical Stock"
+                      value={String(selectedProduct.stock)}
                     />
                     <DetailRow
                       label="Policy"
