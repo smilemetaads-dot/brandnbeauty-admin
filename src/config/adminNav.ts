@@ -75,6 +75,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Storefront",
     items: [
       { label: "Homepage CMS", href: "/homepage-cms", status: "Live" },
+      { label: "Special Offers", href: "/offers", status: "Live" },
       { label: "Banner CMS", href: "/banners", status: "Partial" },
       { label: "Header & Navigation", href: "/navigation", status: "Live" },
       { label: "Footer CMS", href: "/footer", status: "Live" },
