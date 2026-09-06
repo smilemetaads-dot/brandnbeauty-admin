@@ -1,0 +1,28 @@
+name: Skin Analysis CI
+
+on:
+  push:
+    branches:
+      - skin-analysis-integration-v0.1
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        env:
+          NEXT_PUBLIC_BNB_API_BASE_URL: http://127.0.0.1
+        run: npm run build
