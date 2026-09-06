@@ -78,6 +78,7 @@ export const adminNavGroups: AdminNavGroup[] = [
       { label: "Header & Navigation", href: "/navigation" },
       { label: "Footer CMS", href: "/footer" },
       { label: "Reviews & Real Results", href: "/reviews" },
+      { label: "Skin Analysis", href: "/skin-analysis" },
     ],
   },
   {
