@@ -7,17 +7,31 @@ const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   "";
 
-const metricCards = [
+type MetricsSummary = {
+  total?: number;
+  success_rate?: number;
+  errors?: number;
+  retries?: number;
+  avg_latency_ms?: number | null;
+  estimated_units?: number;
+};
+
+type MetricsResponse = {
+  error?: boolean;
+  summary?: MetricsSummary;
+};
+
+const metricCards: Array<[keyof MetricsSummary, string]> = [
   ["total", "Analyses"],
   ["success_rate", "Success Rate"],
   ["errors", "Errors"],
   ["retries", "Retries"],
   ["avg_latency_ms", "Avg Latency"],
   ["estimated_units", "Units"],
-] as const;
+];
 
 export default function SkinAnalysisAdminPage() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<MetricsResponse | null>(null);
   const [range, setRange] = useState("30d");
 
   useEffect(() => {
@@ -26,7 +40,7 @@ export default function SkinAnalysisAdminPage() {
       cache: "no-store",
       credentials: "include",
     })
-      .then((r) => r.json())
+      .then((response) => response.json() as Promise<MetricsResponse>)
       .then(setData)
       .catch(() => setData({ error: true }));
   }, [range]);
@@ -41,7 +55,7 @@ export default function SkinAnalysisAdminPage() {
           <h1 className="mt-1 text-3xl font-semibold text-slate-900">Monitoring & Pilot Control</h1>
           <p className="mt-2 text-sm text-slate-500">Operational health for the controlled Skin Analysis pilot.</p>
         </div>
-        <select value={range} onChange={(e) => setRange(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm">
+        <select value={range} onChange={(event) => setRange(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm">
           <option value="7d">Last 7 days</option>
           <option value="30d">Last 30 days</option>
           <option value="90d">Last 90 days</option>
