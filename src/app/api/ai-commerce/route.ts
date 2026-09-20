@@ -14,11 +14,22 @@ async function requireAdminSession() {
 }
 
 async function backendFetch(path: string, init?: RequestInit) {
-  if (!controlKey) throw new Error("AI_COMMERCE_CONTROL_KEY_MISSING");
-
+  const adminHeaders = await serverAdminAuthHeaders();
   const headers = new Headers(init?.headers);
+
   headers.set("Content-Type", "application/json");
-  headers.set("X-Bot-Control-Key", controlKey);
+
+  if (controlKey) {
+    headers.set("X-Bot-Control-Key", controlKey);
+  }
+
+  if (adminHeaders.Authorization) {
+    headers.set("Authorization", adminHeaders.Authorization);
+  }
+
+  if (adminHeaders["X-Admin-Token"]) {
+    headers.set("X-Admin-Token", adminHeaders["X-Admin-Token"]);
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
