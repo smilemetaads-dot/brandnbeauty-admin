@@ -1,5 +1,7 @@
 const DEFAULT_BNB_API_BASE_URL =
-  "http://localhost/BrandnBeauty/brandnbeauty-backend/php";
+  process.env.NODE_ENV === "production"
+    ? "https://api.brandnbeauty.com/php"
+    : "http://localhost/BrandnBeauty/brandnbeauty-backend/php";
 
 export function getBnbApiBaseUrl() {
   return (
