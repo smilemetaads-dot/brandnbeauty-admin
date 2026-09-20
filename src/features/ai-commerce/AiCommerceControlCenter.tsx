@@ -1,51 +1,411 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-type ControlState = { desired_enabled: boolean; effective_enabled: boolean; note: string | null; updated_by: string | null; updated_at: string | null };
-type Dashboard = {
-  controls: Record<string, ControlState>;
-  metrics: Record<string, number>;
-  environment: { messenger_send_env_enabled: boolean; order_creation_env_enabled: boolean; automatic_reply_build_available: boolean };
-  safety: Record<string, boolean>;
-  queues?: { support: Array<Record<string, unknown>>; handoffs: Array<Record<string, unknown>> };
-  audit: Array<Record<string, unknown>>;
-  generated_at: string;
+type Candidate = {
+  id: number;
+  conversation_id: number | null;
+  inbound_message_id: number | null;
+  intent: string;
+  language: string;
+  response_text: string;
+  generation_status: string;
+  review_status: "pending" | "approved" | "rejected" | "sent";
+  final_response_text?: string | null;
+  inbound_text?: string | null;
+  effective_policy?: {
+    campaign_id?: string | null;
+    configured_mode?: string;
+    effective_mode?: string;
+    reason?: string;
+  };
 };
 
-const API_BASE=(process.env.NEXT_PUBLIC_BNB_API_BASE_URL || "http://localhost/BrandnBeauty/brandnbeauty-backend/php").replace(/\/$/, "");
-const TOKEN_KEY="bnb_ai_commerce_admin_token";
-const labels: Record<string,string>={
-  maintenance_mode:"Maintenance mode",
-  automatic_reply:"Automatic AI reply",
-  messenger_send:"Messenger send",
-  order_creation:"Bot order creation",
-  recommendation:"Personalized recommendation",
-  commercial_priority:"Commercial priority after eligibility",
+type DashboardData = {
+  status?: {
+    master_bot_enabled?: boolean;
+    messenger_send_effective?: boolean;
+    automatic_reply_effective?: boolean;
+    pending_review_candidates?: number;
+    sent_candidates?: number;
+  };
+  queue?: {
+    candidates?: Candidate[];
+  };
 };
 
-function Badge({on,children}:{on:boolean;children:React.ReactNode}){return <span className={`rounded-full px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.12em] ${on?"bg-emerald-50 text-emerald-700":"bg-slate-100 text-slate-500"}`}>{children}</span>}
-function Metric({label,value}:{label:string;value:number}){return <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><div className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{label}</div><div className="mt-3 text-3xl font-black text-slate-950">{value}</div></div>}
+function StatusPill({
+  children,
+  tone = "default",
+}: {
+  children: React.ReactNode;
+  tone?: "good" | "warn" | "bad" | "default";
+}) {
+  const cls = {
+    good: "bg-emerald-50 text-emerald-700",
+    warn: "bg-amber-50 text-amber-700",
+    bad: "bg-rose-50 text-rose-700",
+    default: "bg-slate-100 text-slate-600",
+  }[tone];
 
-export function AiCommerceControlCenter(){
-  const [token,setToken]=useState("");const [username,setUsername]=useState("");const [password,setPassword]=useState("");
-  const [dashboard,setDashboard]=useState<Dashboard|null>(null);const [error,setError]=useState("");const [busy,setBusy]=useState(false);
-  useEffect(()=>{setToken(window.localStorage.getItem(TOKEN_KEY)||"");},[]);
-  const load=useCallback(async(currentToken?:string)=>{const t=currentToken||token;if(!t)return;setBusy(true);setError("");try{const res=await fetch(`${API_BASE}/messenger_bot_control_center_api.php`,{headers:{Authorization:`Bearer ${t}`},cache:"no-store"});if(res.status===401){window.localStorage.removeItem(TOKEN_KEY);setToken("");throw new Error("Backend admin session expired. Sign in again.");}const json=await res.json();if(!res.ok||!json.success)throw new Error("Control Center could not be loaded.");setDashboard(json.data);}catch(e){setError(e instanceof Error?e.message:"Control Center could not be loaded.");}finally{setBusy(false)}},[token]);
-  useEffect(()=>{if(token)void load(token);},[token,load]);
-  async function signIn(e:FormEvent){e.preventDefault();setBusy(true);setError("");try{const res=await fetch(`${API_BASE}/auth.php`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"admin_login",username,password})});const json=await res.json();if(!res.ok||!json.token)throw new Error("Backend admin sign-in failed.");window.localStorage.setItem(TOKEN_KEY,json.token);setToken(json.token);setPassword("");}catch(e){setError(e instanceof Error?e.message:"Sign-in failed.");}finally{setBusy(false)}}
-  async function setControl(key:string,enabled:boolean){if(!token)return;setBusy(true);setError("");try{const res=await fetch(`${API_BASE}/messenger_bot_control_center_api.php`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},body:JSON.stringify({action:"set_control",control_key:key,enabled,confirmed:true,note:"Changed from AI Commerce Control Center"})});const json=await res.json();if(!res.ok||!json.success)throw new Error(json.message||json.error||"Control update failed.");setDashboard(json.data);}catch(e){setError(e instanceof Error?e.message:"Control update failed.");}finally{setBusy(false)}}
-  const metrics=dashboard?.metrics||{};
-  const safeMode=useMemo(()=>!dashboard?.controls?.automatic_reply?.effective_enabled && !dashboard?.controls?.messenger_send?.effective_enabled,[dashboard]);
-  if(!token){return <div className="mx-auto max-w-xl rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm"><div className="text-xs font-black uppercase tracking-[0.2em] text-[#527B86]">AI Commerce Control Center</div><h1 className="mt-2 text-2xl font-black text-slate-950">Connect backend admin control</h1><p className="mt-2 text-sm leading-6 text-slate-500">Use the existing BrandnBeauty backend admin credentials. The token stays in this browser only.</p><form className="mt-6 space-y-3" onSubmit={signIn}><input className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="Admin email / username" value={username} onChange={e=>setUsername(e.target.value)} required/><input className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="Password" type="password" value={password} onChange={e=>setPassword(e.target.value)} required/><button className="w-full rounded-2xl bg-[#527B86] px-5 py-3 text-sm font-black text-white disabled:opacity-50" disabled={busy}>{busy?"Connecting...":"Connect Control Center"}</button></form>{error?<div className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{error}</div>:null}</div>}
-  return <div className="space-y-6">
-    <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="text-xs font-black uppercase tracking-[0.2em] text-[#527B86]">Messenger AI Commerce</div><h1 className="mt-2 text-3xl font-black text-slate-950">AI Commerce Control Center</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Monitor queues, safety state and runtime controls without bypassing environment kill switches.</p></div><div className="flex items-center gap-2"><Badge on={safeMode}>{safeMode?"Safe mode":"Live-capable"}</Badge><button className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600" onClick={()=>void load()} disabled={busy}>Refresh</button><button className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-500" onClick={()=>{localStorage.removeItem(TOKEN_KEY);setToken("");setDashboard(null)}}>Disconnect</button></div></div>{error?<div className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{error}</div>:null}</section>
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"><Metric label="Conversations" value={metrics.conversations_total||0}/><Metric label="Active Handoffs" value={metrics.active_handoffs||0}/><Metric label="Open Support" value={metrics.open_support_cases||0}/><Metric label="P0/P1 Cases" value={metrics.open_p0_p1_cases||0}/><Metric label="Bot Orders" value={metrics.bot_orders_created||0}/></section>
-    <section className="grid gap-6 xl:grid-cols-[1.25fr_.75fr]">
-      <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><div className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Runtime Controls</div><h2 className="mt-1 text-xl font-black text-slate-950">Feature flags & kill switches</h2></div><Badge on={false}>Human approval first</Badge></div><div className="mt-5 divide-y divide-slate-100">{Object.entries(dashboard?.controls||{}).map(([key,state])=><div className="flex items-center justify-between gap-4 py-4" key={key}><div><div className="font-black text-slate-900">{labels[key]||key}</div><div className="mt-1 text-xs font-semibold text-slate-500">Desired: {state.desired_enabled?"ON":"OFF"} · Effective: {state.effective_enabled?"ON":"OFF"}</div></div><button className={`min-w-24 rounded-2xl px-4 py-2 text-xs font-black ${state.desired_enabled?"bg-[#527B86] text-white":"bg-slate-100 text-slate-600"}`} onClick={()=>void setControl(key,!state.desired_enabled)} disabled={busy}>{state.desired_enabled?"Turn off":"Turn on"}</button></div>)}</div></div>
-      <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"><div className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Hard Gates</div><h2 className="mt-1 text-xl font-black text-slate-950">Environment safety</h2><div className="mt-5 space-y-3 text-sm font-bold"><div className="flex justify-between rounded-2xl bg-stone-50 p-4"><span>Messenger send env</span><Badge on={!!dashboard?.environment?.messenger_send_env_enabled}>{dashboard?.environment?.messenger_send_env_enabled?"ON":"OFF"}</Badge></div><div className="flex justify-between rounded-2xl bg-stone-50 p-4"><span>Order creation env</span><Badge on={!!dashboard?.environment?.order_creation_env_enabled}>{dashboard?.environment?.order_creation_env_enabled?"ON":"OFF"}</Badge></div><div className="flex justify-between rounded-2xl bg-stone-50 p-4"><span>Automatic reply build</span><Badge on={!!dashboard?.environment?.automatic_reply_build_available}>{dashboard?.environment?.automatic_reply_build_available?"READY":"LOCKED"}</Badge></div></div><p className="mt-4 text-xs leading-5 text-slate-500">Database controls may disable features instantly, but cannot override environment kill switches.</p></div>
-    </section>
-    <section className="grid gap-6 xl:grid-cols-2">{([['Support Queue',dashboard?.queues?.support||[]],['Human Handoff Queue',dashboard?.queues?.handoffs||[]]] as const).map(([title,rows])=><div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm" key={title}><div className="flex items-center justify-between"><h2 className="text-lg font-black text-slate-950">{title}</h2><span className="text-xs font-black text-slate-400">{rows.length} visible</span></div><div className="mt-4 space-y-2">{rows.length?rows.map((row,i)=><div className="rounded-2xl bg-stone-50 p-4 text-sm" key={i}><div className="font-black text-slate-900">{String(row.title||row.reason_code||`Conversation ${row.conversation_id||""}`)}</div><div className="mt-1 text-xs font-semibold text-slate-500">Priority {String(row.priority||"-")} · {String(row.status||"-")}</div></div>):<div className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700">No active items.</div>}</div></div>)}</section>
-    <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-800">Automatic AI reply remains intentionally unavailable in Phase 11. Live Messenger sending and bot order creation also remain blocked unless both this Control Center and the environment kill switch allow them.</section>
-  </div>;
+  return (
+    <span className={"inline-flex rounded-full px-3 py-1 text-xs font-black " + cls}>
+      {children}
+    </span>
+  );
+}
+
+export function AiCommerceControlCenter() {
+  const [data, setData] = useState<DashboardData>({});
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [message, setMessage] = useState("");
+  const [edits, setEdits] = useState<Record<number, string>>({});
+  const [campaignId, setCampaignId] = useState("");
+  const [campaignMode, setCampaignMode] = useState("off");
+
+  async function load() {
+    setLoading(true);
+    setMessage("");
+    try {
+      const res = await fetch("/api/ai-commerce", { cache: "no-store" });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Could not load AI Commerce controls.");
+      }
+
+      setData({ status: json.status, queue: json.queue });
+
+      const nextEdits: Record<number, string> = {};
+      for (const candidate of json.queue?.candidates || []) {
+        nextEdits[candidate.id] =
+          candidate.final_response_text || candidate.response_text || "";
+      }
+      setEdits(nextEdits);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not load controls.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const candidates = useMemo(
+    () =>
+      (data.queue?.candidates || []).filter(
+        (item) => item.review_status !== "rejected",
+      ),
+    [data.queue?.candidates],
+  );
+
+  async function action(payload: Record<string, unknown>, id?: number) {
+    if (id) setBusyId(id);
+    setMessage("");
+
+    try {
+      const res = await fetch("/api/ai-commerce", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || json.error || "Action failed.");
+      }
+
+      setMessage("Saved successfully.");
+      await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Action failed.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const status = data.status || {};
+  const masterOn = Boolean(status.master_bot_enabled);
+
+  return (
+    <div className="space-y-5">
+      <section className="overflow-hidden rounded-2xl border border-[#d9e4e1] bg-white shadow-sm">
+        <div className="flex flex-col gap-5 bg-gradient-to-br from-[#41696f] via-[#5E7F85] to-[#9bb8b7] p-6 text-white xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/70">
+              AI Commerce
+            </div>
+            <h1 className="mt-2 text-[28px] font-black tracking-tight">
+              Messenger Control Center
+            </h1>
+            <p className="mt-2 max-w-3xl text-[12px] font-semibold leading-5 text-white/85">
+              Owner-controlled Messenger assistance. The bot may prepare replies,
+              but customer-facing sends require human approval.
+            </p>
+          </div>
+
+          <button
+            className={
+              "rounded-xl px-5 py-3 text-[10px] font-black shadow-sm transition " +
+              (masterOn
+                ? "bg-white text-[#41696f]"
+                : "bg-rose-100 text-rose-800")
+            }
+            disabled={loading}
+            onClick={() =>
+              action({
+                action: "set_global_bot",
+                enabled: !masterOn,
+                note: !masterOn
+                  ? "Owner enabled AI Commerce assist mode."
+                  : "Owner disabled AI Commerce globally.",
+              })
+            }
+            type="button"
+          >
+            {masterOn ? "Bot Assist: ON" : "Bot Assist: OFF"}
+          </button>
+        </div>
+
+        <div className="grid gap-3 border-t border-slate-100 p-5 md:grid-cols-4">
+          <div className="rounded-xl bg-stone-50 p-4">
+            <div className="text-[8px] font-bold uppercase tracking-[0.1em] text-slate-500">
+              Master Control
+            </div>
+            <div className="mt-2">
+              <StatusPill tone={masterOn ? "good" : "bad"}>
+                {masterOn ? "Enabled" : "Disabled"}
+              </StatusPill>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-stone-50 p-4">
+            <div className="text-[8px] font-bold uppercase tracking-[0.1em] text-slate-500">
+              Messenger Send
+            </div>
+            <div className="mt-2">
+              <StatusPill tone={status.messenger_send_effective ? "good" : "bad"}>
+                {status.messenger_send_effective ? "Ready" : "Blocked"}
+              </StatusPill>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-stone-50 p-4">
+            <div className="text-[8px] font-bold uppercase tracking-[0.1em] text-slate-500">
+              Auto Reply
+            </div>
+            <div className="mt-2">
+              <StatusPill tone="warn">Locked OFF</StatusPill>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-stone-50 p-4">
+            <div className="text-[8px] font-bold uppercase tracking-[0.1em] text-slate-500">
+              Pending Review
+            </div>
+            <div className="mt-1 text-2xl font-black text-slate-950">
+              {status.pending_review_candidates ?? 0}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {message ? (
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-[10px] font-bold text-slate-700">
+          {message}
+        </div>
+      ) : null}
+
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between gap-4 border-b border-slate-100 p-5">
+            <div>
+              <div className="text-[8px] font-black uppercase tracking-[0.14em] text-slate-400">
+                Reply Queue
+              </div>
+              <h2 className="mt-1 text-[18px] font-black text-slate-950">
+                Human Approval Required
+              </h2>
+            </div>
+
+            <button
+              className="rounded-xl border border-slate-200 px-4 py-2 text-[9px] font-black text-slate-600"
+              onClick={() => void load()}
+              type="button"
+            >
+              Refresh
+            </button>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {loading ? (
+              <div className="p-8 text-[10px] font-semibold text-slate-500">
+                Loading...
+              </div>
+            ) : candidates.length === 0 ? (
+              <div className="p-8 text-[10px] font-semibold text-slate-500">
+                No reply candidates are waiting.
+              </div>
+            ) : (
+              candidates.map((candidate) => (
+                <div className="space-y-4 p-5" key={candidate.id}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusPill
+                      tone={candidate.review_status === "sent" ? "good" : "warn"}
+                    >
+                      {candidate.review_status}
+                    </StatusPill>
+                    <StatusPill>{candidate.intent || "unknown intent"}</StatusPill>
+                    <StatusPill>{candidate.language || "unknown language"}</StatusPill>
+                    {candidate.effective_policy?.campaign_id ? (
+                      <StatusPill>
+                        Campaign {candidate.effective_policy.campaign_id}
+                      </StatusPill>
+                    ) : null}
+                  </div>
+
+                  <div className="rounded-xl bg-stone-50 p-4">
+                    <div className="text-[8px] font-black uppercase tracking-[0.14em] text-slate-400">
+                      Customer
+                    </div>
+                    <div className="mt-2 text-[11px] font-semibold leading-5 text-slate-800">
+                      {candidate.inbound_text || "Inbound text unavailable"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[8px] font-black uppercase tracking-[0.14em] text-slate-400">
+                      Suggested reply
+                    </label>
+                    <textarea
+                      className="mt-2 min-h-28 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-semibold leading-5 text-slate-800 outline-none focus:border-[#5E7F85] focus:ring-4 focus:ring-[#5E7F85]/10"
+                      disabled={candidate.review_status === "sent"}
+                      onChange={(event) =>
+                        setEdits((current) => ({
+                          ...current,
+                          [candidate.id]: event.target.value,
+                        }))
+                      }
+                      value={edits[candidate.id] ?? candidate.response_text ?? ""}
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    {candidate.review_status !== "sent" ? (
+                      <>
+                        <button
+                          className="rounded-xl bg-[#5E7F85] px-4 py-2.5 text-[9px] font-black text-white disabled:bg-slate-300"
+                          disabled={busyId === candidate.id}
+                          onClick={() =>
+                            action(
+                              {
+                                action: "approve_send",
+                                candidate_id: candidate.id,
+                                edited_text: edits[candidate.id],
+                              },
+                              candidate.id,
+                            )
+                          }
+                          type="button"
+                        >
+                          Approve & Send
+                        </button>
+                        <button
+                          className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-[9px] font-black text-rose-700"
+                          disabled={busyId === candidate.id}
+                          onClick={() =>
+                            action(
+                              {
+                                action: "reject_candidate",
+                                candidate_id: candidate.id,
+                              },
+                              candidate.id,
+                            )
+                          }
+                          type="button"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    ) : (
+                      <div className="text-[10px] font-bold text-emerald-700">
+                        Sent successfully.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <aside className="space-y-5">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="text-[8px] font-black uppercase tracking-[0.14em] text-slate-400">
+              Campaign Control
+            </div>
+            <h2 className="mt-1 text-[18px] font-black text-slate-950">
+              Bot Policy
+            </h2>
+            <p className="mt-2 text-[10px] leading-5 text-slate-500">
+              Disable the bot for a manual campaign, or keep it in assist mode.
+              Auto remains reserved and will not fire.
+            </p>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className="text-[9px] font-bold text-slate-700">
+                  Campaign ID
+                </label>
+                <input
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-[10px] font-semibold outline-none focus:border-[#5E7F85]"
+                  onChange={(event) => setCampaignId(event.target.value)}
+                  placeholder="Meta campaign ID"
+                  value={campaignId}
+                />
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold text-slate-700">Mode</label>
+                <select
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-[10px] font-semibold outline-none focus:border-[#5E7F85]"
+                  onChange={(event) => setCampaignMode(event.target.value)}
+                  value={campaignMode}
+                >
+                  <option value="off">OFF — manual only</option>
+                  <option value="assist">Assist — human approval</option>
+                  <option value="inherit">Inherit global control</option>
+                </select>
+              </div>
+
+              <button
+                className="w-full rounded-xl bg-slate-950 px-4 py-3 text-[9px] font-black text-white"
+                onClick={() =>
+                  action({
+                    action: "set_campaign_policy",
+                    campaign_id: campaignId.trim(),
+                    mode: campaignMode,
+                    note: "Updated from AI Commerce Control Center.",
+                  })
+                }
+                type="button"
+              >
+                Save Campaign Policy
+              </button>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+            <div className="text-[9px] font-black text-amber-800">Safety Lock</div>
+            <p className="mt-2 text-[9px] font-semibold leading-5 text-amber-700">
+              Automatic replies are disabled. Human takeover, safety flags and
+              campaign OFF policies block sends.
+            </p>
+          </section>
+        </aside>
+      </section>
+    </div>
+  );
 }
