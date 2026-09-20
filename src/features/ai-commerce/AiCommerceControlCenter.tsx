@@ -24,6 +24,12 @@ type Candidate = {
 type DashboardData = {
   status?: {
     master_bot_enabled?: boolean;
+    ai_generation_desired?: boolean;
+    ai_generation_effective?: boolean;
+    messenger_ai_env_enabled?: boolean;
+    messenger_ai_shadow_env_enabled?: boolean;
+    messenger_webhook_ai_env_enabled?: boolean;
+    openai_api_key_configured?: boolean;
     messenger_send_effective?: boolean;
     automatic_reply_effective?: boolean;
     pending_review_candidates?: number;
@@ -128,6 +134,12 @@ export function AiCommerceControlCenter() {
 
   const status = data.status || {};
   const masterOn = Boolean(status.master_bot_enabled);
+  const aiGenerationOn = Boolean(status.ai_generation_desired);
+  const aiEnvironmentReady =
+    Boolean(status.openai_api_key_configured) &&
+    Boolean(status.messenger_ai_env_enabled) &&
+    Boolean(status.messenger_ai_shadow_env_enabled) &&
+    Boolean(status.messenger_webhook_ai_env_enabled);
 
   return (
     <div className="space-y-5">
@@ -169,7 +181,7 @@ export function AiCommerceControlCenter() {
           </button>
         </div>
 
-        <div className="grid gap-3 border-t border-slate-100 p-5 md:grid-cols-4">
+        <div className="grid gap-3 border-t border-slate-100 p-5 md:grid-cols-5">
           <div className="rounded-xl bg-stone-50 p-4">
             <div className="text-[8px] font-bold uppercase tracking-[0.1em] text-slate-500">
               Master Control
@@ -189,6 +201,36 @@ export function AiCommerceControlCenter() {
               <StatusPill tone={status.messenger_send_effective ? "good" : "bad"}>
                 {status.messenger_send_effective ? "Ready" : "Blocked"}
               </StatusPill>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-stone-50 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[8px] font-bold uppercase tracking-[0.1em] text-slate-500">
+                  AI Generation
+                </div>
+                <div className="mt-2">
+                  <StatusPill tone={aiGenerationOn && aiEnvironmentReady ? "good" : aiGenerationOn ? "warn" : "default"}>
+                    {aiGenerationOn ? (aiEnvironmentReady ? "ON" : "Needs env") : "OFF"}
+                  </StatusPill>
+                </div>
+              </div>
+              <button
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[8px] font-black text-slate-600"
+                onClick={() =>
+                  action({
+                    action: "set_ai_generation",
+                    enabled: !aiGenerationOn,
+                    note: !aiGenerationOn
+                      ? "Owner enabled AI reply candidate generation."
+                      : "Owner disabled AI reply candidate generation.",
+                  })
+                }
+                type="button"
+              >
+                {aiGenerationOn ? "Turn off" : "Turn on"}
+              </button>
             </div>
           </div>
 
@@ -400,8 +442,9 @@ export function AiCommerceControlCenter() {
           <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
             <div className="text-[9px] font-black text-amber-800">Safety Lock</div>
             <p className="mt-2 text-[9px] font-semibold leading-5 text-amber-700">
-              Automatic replies are disabled. Human takeover, safety flags and
-              campaign OFF policies block sends.
+              Automatic replies are disabled. AI may draft replies only when you
+              enable AI Generation. Human takeover, safety flags and campaign OFF
+              policies block sends.
             </p>
           </section>
         </aside>
