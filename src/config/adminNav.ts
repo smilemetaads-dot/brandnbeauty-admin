@@ -111,7 +111,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     icon: "AI",
     label: "AI Commerce",
     items: [
-      { label: "Control Center", href: "/ai-commerce" },
+      { label: "Control Center", href: "/ai-commerce", status: "Live" },
     ],
   },];
 
