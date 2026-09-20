@@ -84,6 +84,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     icon: "CO",
     label: "Control",
     items: [
+      { label: "AI Commerce Control", href: "/ai-commerce" },
       { label: "Roles & Permissions", href: "/roles" },
       { label: "Settings", href: "/settings" },
     ],
