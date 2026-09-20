@@ -1,0 +1,20 @@
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import { adminAuthHeaders } from "@/lib/admin-auth";
+import { bnbApiUrl } from "@/lib/bnb-api";
+
+export type LiveOrder={orderId:number;id:string;customer:string;phone:string;email:string;address:string;city:string;subtotal:number;deliveryCharge:number;total:number;paymentMethod:string;status:string;itemCount:number;totalQuantity:number;note:string;createdAt:string;updatedAt:string};
+const rec=(v:unknown):Record<string,unknown>=>v&&typeof v==="object"?v as Record<string,unknown>:{};
+const num=(v:unknown)=>{const n=Number(v);return Number.isFinite(n)?n:0};
+const normalize=(v:unknown):LiveOrder=>{const x=rec(v),orderId=num(x.order_id??x.id);return{orderId,id:`#BNB-${orderId}`,customer:String(x.customer_name??"Guest Customer"),phone:String(x.phone??""),email:String(x.email??""),address:String(x.delivery_address??x.address??""),city:String(x.city??""),subtotal:num(x.subtotal_amount),deliveryCharge:num(x.delivery_charge),total:num(x.total_amount),paymentMethod:String(x.payment_method??"cash_on_delivery"),status:String(x.status??"pending"),itemCount:num(x.item_count),totalQuantity:num(x.total_quantity),note:String(x.order_note??""),createdAt:String(x.created_at??""),updatedAt:String(x.updated_at??"")}};
+
+export const orderStatusLabel=(status:string)=>({pending:"New",pending_sourcing:"Need sourcing",confirmed:"Confirmed",processing:"Ready to pack",packed:"Packed",shipped:"Courier sent",delivered:"Delivered",cancelled:"Cancelled",returned:"Returned"}[status]||status);
+export const orderStatusValue=(label:string)=>({New:"pending","Need sourcing":"pending_sourcing",Confirmed:"confirmed","Ready to pack":"processing",Packed:"packed","Courier sent":"shipped",Delivered:"delivered",Cancelled:"cancelled",Returned:"returned"}[label]||label.toLowerCase().replaceAll(" ","_"));
+
+export function useLiveOrders(){
+ const[orders,setOrders]=useState<LiveOrder[]>([]),[status,setStatus]=useState<"loading"|"connected"|"error">("loading"),[error,setError]=useState(""),[savingId,setSavingId]=useState<number|null>(null);
+ const refresh=useCallback(async(signal?:AbortSignal)=>{setStatus("loading");setError("");try{const response=await fetch(bnbApiUrl("manage_orders.php"),{headers:adminAuthHeaders(),cache:"no-store",signal});const payload=await response.json() as{success?:boolean;orders?:unknown[];message?:string};if(!response.ok||!payload.success)throw new Error(payload.message||"Orders API unavailable.");setOrders((payload.orders||[]).map(normalize));setStatus("connected")}catch(reason){if(signal?.aborted)return;setStatus("error");setError(reason instanceof Error?reason.message:"Orders API unavailable.")}},[]);
+ useEffect(()=>{const controller=new AbortController();void refresh(controller.signal);return()=>controller.abort()},[refresh]);
+ const updateStatus=useCallback(async(orderId:number,nextStatus:string,reason="Updated from Orders command center")=>{setSavingId(orderId);try{const response=await fetch(bnbApiUrl("update_order_status.php"),{method:"POST",headers:adminAuthHeaders({"Content-Type":"application/json"}),body:JSON.stringify({order_id:orderId,status:nextStatus,reason})});const payload=await response.json() as{success?:boolean;message?:string};if(!response.ok||!payload.success)throw new Error(payload.message||"Status update failed.");await refresh();return{ok:true,message:payload.message||"Order status updated."}}catch(reason){return{ok:false,message:reason instanceof Error?reason.message:"Status update failed."}}finally{setSavingId(null)}},[refresh]);
+ return{orders,status,error,savingId,refresh:()=>refresh(),updateStatus};
+}

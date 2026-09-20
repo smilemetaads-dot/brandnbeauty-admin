@@ -1,0 +1,5 @@
+<?php
+declare(strict_types=1);
+require_once __DIR__.'/config/db.php'; require_once __DIR__.'/product_catalog_schema.php'; require_once __DIR__.'/replenishment_engine_common.php';
+header('Content-Type: application/json; charset=utf-8'); header('X-Content-Type-Options: nosniff');
+try{$pdo=getDatabaseConnection();ensureProductCatalogSchema($pdo);ensureReplenishmentSchema($pdo);echo json_encode(['success'=>true,'module'=>'replenishment-reorder-engine','database'=>'connected','mode'=>'delivered_order_evidence','page_load_mode'=>'read_only','automatic_reminder'=>'disabled','automatic_discount'=>'disabled','automatic_cart_order'=>'disabled','seeded_signals'=>0,'schema_ready'=>true,'orders_connected'=>replenishmentTableExists($pdo,'orders'),'order_items_connected'=>replenishmentTableExists($pdo,'order_items')],JSON_UNESCAPED_SLASHES);}catch(Throwable $error){error_log('Replenishment status error: '.$error->getMessage());http_response_code(500);echo json_encode(['success'=>false,'module'=>'replenishment-reorder-engine','database'=>'unavailable'],JSON_UNESCAPED_SLASHES);}

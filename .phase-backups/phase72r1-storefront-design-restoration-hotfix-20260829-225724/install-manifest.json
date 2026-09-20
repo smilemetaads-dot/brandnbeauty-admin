@@ -1,0 +1,1152 @@
+﻿[
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\app\\page.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\app\\page.tsx",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\next.config.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\next.config.ts",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.env.example",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\.env.example",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\lib\\bnb-api.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\lib\\bnb-api.ts",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\storefront-preview\\storefront-preview-data.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\storefront-preview\\storefront-preview-data.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\storefront-preview\\StorefrontPreviewChrome.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\storefront-preview\\StorefrontPreviewChrome.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\storefront-preview\\StorefrontProductCard.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\storefront-preview\\StorefrontProductCard.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\storefront-execution\\storefront-execution-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\storefront-execution\\storefront-execution-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\storefront-execution\\LiveStorefrontExecutionWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\storefront-execution\\LiveStorefrontExecutionWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\app\\storefront-preview\\layout.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\app\\storefront-preview\\layout.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\app\\storefront-preview\\page.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\app\\storefront-preview\\page.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\app\\storefront-preview\\products\\page.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\app\\storefront-preview\\products\\page.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\app\\storefront-preview\\products\\not-found.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\app\\storefront-preview\\products\\not-found.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\app\\storefront-preview\\collections\\page.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\app\\storefront-preview\\collections\\page.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\logistics\\logistics-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\logistics\\logistics-client.ts",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\packing\\LivePackingDeskWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\packing\\LivePackingDeskWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\courier\\LiveCourierPaymentsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\courier\\LiveCourierPaymentsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\customers\\LiveCustomersWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\customers\\LiveCustomersWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\customers\\live-customers-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\customers\\live-customers-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\suppliers\\LiveSuppliersWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\suppliers\\LiveSuppliersWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\suppliers\\live-suppliers-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\suppliers\\live-suppliers-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\homepage-cms\\LiveHomepageCmsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\homepage-cms\\LiveHomepageCmsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\homepage-cms\\homepage-cms-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\homepage-cms\\homepage-cms-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\banner-cms\\LiveBannerCmsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\banner-cms\\LiveBannerCmsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\products\\LiveProductCatalogWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\products\\LiveProductCatalogWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\products\\products-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\products\\products-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\inventory\\LiveInventoryWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\inventory\\LiveInventoryWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\inventory\\inventory-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\inventory\\inventory-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\inventory-intelligence\\LiveInventoryIntelligenceWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\inventory-intelligence\\LiveInventoryIntelligenceWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\inventory-intelligence\\inventory-intelligence-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\inventory-intelligence\\inventory-intelligence-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\purchase-stock\\LivePurchaseStockWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\purchase-stock\\LivePurchaseStockWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\purchase-stock\\purchase-stock-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\purchase-stock\\purchase-stock-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\supplier-analytics\\LiveSupplierAnalyticsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\supplier-analytics\\LiveSupplierAnalyticsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\supplier-analytics\\supplier-analytics-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\supplier-analytics\\supplier-analytics-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\finance-reconciliation\\LiveFinanceReconciliationWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\finance-reconciliation\\LiveFinanceReconciliationWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\finance-reconciliation\\finance-reconciliation-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\finance-reconciliation\\finance-reconciliation-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\expenses\\LiveExpensesWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\expenses\\LiveExpensesWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\expenses\\expenses-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\expenses\\expenses-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\profitability\\LiveProfitabilityWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\profitability\\LiveProfitabilityWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\profitability\\profitability-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\profitability\\profitability-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\reports-insights\\LiveReportsInsightsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\reports-insights\\LiveReportsInsightsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\reports-insights\\reports-insights-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\reports-insights\\reports-insights-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\offers\\LiveOffersDealsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\offers\\LiveOffersDealsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\offers\\offers-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\offers\\offers-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\recommendations\\LiveProductRecommendationsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\recommendations\\LiveProductRecommendationsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\recommendations\\recommendations-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\recommendations\\recommendations-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\ingredient-intelligence\\LiveIngredientIntelligenceWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\ingredient-intelligence\\LiveIngredientIntelligenceWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\ingredient-intelligence\\ingredient-intelligence-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\ingredient-intelligence\\ingredient-intelligence-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\routine-compatibility\\LiveRoutineCompatibilityWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\routine-compatibility\\LiveRoutineCompatibilityWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\routine-compatibility\\routine-compatibility-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\routine-compatibility\\routine-compatibility-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\replenishment\\LiveReplenishmentEngineWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\replenishment\\LiveReplenishmentEngineWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\replenishment\\replenishment-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\replenishment\\replenishment-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\skin-journey\\LiveSkinJourneyWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\skin-journey\\LiveSkinJourneyWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\skin-journey\\skin-journey-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\skin-journey\\skin-journey-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\conversational-commerce\\LiveConversationalCommerceWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\conversational-commerce\\LiveConversationalCommerceWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\conversational-commerce\\conversational-commerce-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\conversational-commerce\\conversational-commerce-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\launch-verification\\LiveLaunchVerificationWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\launch-verification\\LiveLaunchVerificationWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\launch-verification\\launch-verification-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\launch-verification\\launch-verification-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\header-navigation\\LiveHeaderNavigationWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\header-navigation\\LiveHeaderNavigationWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\header-navigation\\header-navigation-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\header-navigation\\header-navigation-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\footer-cms\\LiveFooterCmsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\footer-cms\\LiveFooterCmsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\footer-cms\\footer-cms-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\footer-cms\\footer-cms-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\reviews-results\\LiveReviewsResultsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\reviews-results\\LiveReviewsResultsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\reviews-results\\reviews-results-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\reviews-results\\reviews-results-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\seo-storefront\\LiveSeoStorefrontWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\seo-storefront\\LiveSeoStorefrontWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\seo-storefront\\seo-storefront-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\seo-storefront\\seo-storefront-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\marketing-performance\\LiveMarketingPerformanceWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\marketing-performance\\LiveMarketingPerformanceWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\marketing-performance\\marketing-performance-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\marketing-performance\\marketing-performance-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\meta-ads\\LiveMetaAdsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\meta-ads\\LiveMetaAdsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\meta-ads\\meta-ads-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\meta-ads\\meta-ads-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\content-creative\\LiveContentCreativeWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\content-creative\\LiveContentCreativeWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\content-creative\\content-creative-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\content-creative\\content-creative-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\tracking-attribution\\LiveTrackingAttributionWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\tracking-attribution\\LiveTrackingAttributionWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\tracking-attribution\\tracking-attribution-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\tracking-attribution\\tracking-attribution-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\retention\\LiveRetentionAovClvWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\retention\\LiveRetentionAovClvWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\retention\\retention-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\retention\\retention-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\workflow-automation\\LiveWorkflowAutomationWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\workflow-automation\\LiveWorkflowAutomationWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\workflow-automation\\workflow-automation-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\workflow-automation\\workflow-automation-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\automation-alerts\\LiveAutomationAlertsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\automation-alerts\\LiveAutomationAlertsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\automation-alerts\\automation-alerts-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\automation-alerts\\automation-alerts-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\automation-rules\\LiveAutomationRulesWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\automation-rules\\LiveAutomationRulesWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\automation-rules\\automation-rules-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\automation-rules\\automation-rules-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\roles-permissions\\LiveRolesPermissionsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\roles-permissions\\LiveRolesPermissionsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\roles-permissions\\roles-permissions-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\roles-permissions\\roles-permissions-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\system-settings\\LiveSettingsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\system-settings\\LiveSettingsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\system-settings\\system-settings-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\system-settings\\system-settings-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\integration-control\\LiveIntegrationsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\integration-control\\LiveIntegrationsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\integration-control\\integrations-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\integration-control\\integrations-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\audit-control\\LiveAuditLogsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\audit-control\\LiveAuditLogsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\audit-control\\audit-logs-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\audit-control\\audit-logs-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\backup-restore\\LiveBackupRestoreWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\backup-restore\\LiveBackupRestoreWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\backup-restore\\backup-restore-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\backup-restore\\backup-restore-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\security-center\\LiveSecurityCenterWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\security-center\\LiveSecurityCenterWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\security-center\\security-center-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\security-center\\security-center-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\security-audit\\LiveSecurityAuditWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\security-audit\\LiveSecurityAuditWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\security-audit\\security-audit-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\security-audit\\security-audit-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\privacy-center\\LivePrivacyCenterWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\privacy-center\\LivePrivacyCenterWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\privacy-center\\privacy-center-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\privacy-center\\privacy-center-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\support-center\\LiveSupportCenterWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\support-center\\LiveSupportCenterWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\support-center\\support-center-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\support-center\\support-center-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\production-readiness\\LiveProductionReadinessWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\production-readiness\\LiveProductionReadinessWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\production-readiness\\production-readiness-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\production-readiness\\production-readiness-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\collections\\LiveCollectionsWorkspace.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\collections\\LiveCollectionsWorkspace.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\collections\\collections-client.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\collections\\collections-client.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\collections\\public-collection.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\collections\\public-collection.ts",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\features\\collections\\CollectionArtwork.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\features\\collections\\CollectionArtwork.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\app\\collections\\[slug]\\page.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\app\\collections\\[slug]\\page.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\app\\storefront-preview\\products\\[slug]\\page.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\app\\storefront-preview\\products\\[slug]\\page.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\src\\app\\storefront-preview\\collections\\[slug]\\page.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\admin\\src\\app\\storefront-preview\\collections\\[slug]\\page.tsx",
+        "Existed":  false
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-frontend\\src\\app\\products\\page.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\storefront\\src\\app\\products\\page.tsx",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-frontend\\src\\app\\products\\[slug]\\page.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\storefront\\src\\app\\products\\[slug]\\page.tsx",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-frontend\\src\\app\\products\\[slug]\\ProductDetailsClient.tsx",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\storefront\\src\\app\\products\\[slug]\\ProductDetailsClient.tsx",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-frontend\\src\\lib\\bnb-api.ts",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\storefront\\src\\lib\\bnb-api.ts",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_suppliers.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_suppliers.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_homepage_cms.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_homepage_cms.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_homepage_layout.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_homepage_layout.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\upload_homepage_media.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\upload_homepage_media.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_header_navigation.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_header_navigation.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_header_navigation.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_header_navigation.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_footer_cms.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_footer_cms.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_footer_layout.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_footer_layout.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_reviews_results.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_reviews_results.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_reviews_results.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_reviews_results.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_seo_storefront.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_seo_storefront.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_seo_storefront.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_seo_storefront.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_marketing_performance.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_marketing_performance.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_marketing_performance_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_marketing_performance_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_meta_ads.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_meta_ads.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_meta_ads_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_meta_ads_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_content_creative.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_content_creative.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_content_creative_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_content_creative_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_tracking_attribution.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_tracking_attribution.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\capture_tracking_event.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\capture_tracking_event.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_tracking_attribution_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_tracking_attribution_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_retention_aov_clv.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_retention_aov_clv.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_retention_aov_clv_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_retention_aov_clv_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_workflow_automation.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_workflow_automation.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_workflow_automation_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_workflow_automation_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_automation_alerts.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_automation_alerts.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_automation_alerts_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_automation_alerts_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_automation_rules.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_automation_rules.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_automation_rules_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_automation_rules_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_roles_permissions.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_roles_permissions.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_roles_permissions_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_roles_permissions_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_system_settings.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_system_settings.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_system_settings_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_system_settings_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_integrations.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_integrations.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_integrations_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_integrations_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_audit_logs.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_audit_logs.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_audit_logs_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_audit_logs_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_backup_restore.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_backup_restore.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_backup_restore_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_backup_restore_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_security_center.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_security_center.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_security_center_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_security_center_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_security_audit.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_security_audit.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_security_audit_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_security_audit_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\privacy_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\privacy_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_privacy_center.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_privacy_center.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_privacy_consent.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_privacy_consent.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_privacy_center_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_privacy_center_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\support_center_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\support_center_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_support_center.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_support_center.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_support_center_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_support_center_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\production_readiness_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\production_readiness_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_production_readiness.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_production_readiness.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_production_readiness_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_production_readiness_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\collection_schema.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\collection_schema.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_collections.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_collections.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\storefront_product_public.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\storefront_product_public.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\variant_schema.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\variant_schema.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_product_details.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_product_details.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_reviews.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_reviews.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_store_products.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_store_products.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_store_product.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_store_product.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_collections.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_collections.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_collection.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_collection.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\product_catalog_schema.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\product_catalog_schema.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_products.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_products.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_product_catalog_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_product_catalog_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\inventory_schema.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\inventory_schema.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_inventory.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_inventory.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_inventory_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_inventory_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\inventory_intelligence_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\inventory_intelligence_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_inventory_intelligence.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_inventory_intelligence.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_inventory_intelligence_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_inventory_intelligence_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\purchase_stock_schema.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\purchase_stock_schema.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_purchase_stock.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_purchase_stock.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_purchase_stock_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_purchase_stock_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\supplier_analytics_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\supplier_analytics_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_supplier_analytics.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_supplier_analytics.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_supplier_analytics_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_supplier_analytics_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\finance_reconciliation_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\finance_reconciliation_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_finance_reconciliation.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_finance_reconciliation.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_finance_reconciliation_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_finance_reconciliation_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\expense_management_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\expense_management_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_expenses.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_expenses.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_expenses_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_expenses_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\profitability_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\profitability_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_profitability.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_profitability.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_profitability_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_profitability_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\reports_insights_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\reports_insights_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_reports_insights.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_reports_insights.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_reports_insights_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_reports_insights_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\offers_deals_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\offers_deals_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_offers_deals.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_offers_deals.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_offers_deals.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_offers_deals.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_offers_deals_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_offers_deals_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\product_recommendations_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\product_recommendations_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_product_recommendations.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_product_recommendations.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_product_recommendations.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_product_recommendations.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_product_recommendations_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_product_recommendations_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\ingredient_intelligence_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\ingredient_intelligence_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_ingredient_intelligence.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_ingredient_intelligence.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_ingredient_intelligence.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_ingredient_intelligence.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_ingredient_intelligence_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_ingredient_intelligence_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\routine_compatibility_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\routine_compatibility_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_routine_compatibility.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_routine_compatibility.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_routine_compatibility_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_routine_compatibility_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\replenishment_engine_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\replenishment_engine_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_replenishment_engine.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_replenishment_engine.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_replenishment_engine_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_replenishment_engine_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\skin_journey_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\skin_journey_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_skin_journey.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_skin_journey.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_skin_journey_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_skin_journey_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\conversational_commerce_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\conversational_commerce_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_conversational_commerce.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_conversational_commerce.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_conversational_commerce_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_conversational_commerce_status.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\launch_verification_common.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\launch_verification_common.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\manage_launch_verification.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\manage_launch_verification.php",
+        "Existed":  true
+    },
+    {
+        "Target":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-backend\\php\\get_launch_verification_status.php",
+        "BackupPath":  "C:\\xampp\\htdocs\\BrandnBeauty\\brandnbeauty-admin\\.phase-backups\\phase72r1-storefront-design-restoration-hotfix-20260829-225724\\backend\\get_launch_verification_status.php",
+        "Existed":  true
+    }
+]

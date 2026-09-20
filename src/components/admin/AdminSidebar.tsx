@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { adminNavGroups } from "@/config/adminNav";
@@ -154,6 +154,7 @@ function StatusBadge({ status, active }: { status: AdminNavItem["status"]; activ
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [adminUser] = useState<StoredAdminUser | null>(() =>
     getStoredAdminUser(),
   );
@@ -165,6 +166,13 @@ export function AdminSidebar() {
     adminUser?.email?.trim() ||
     "Admin User";
   const adminRole = adminUser?.role?.trim() || "Admin";
+  const handleLogout = () => {
+    window.localStorage.removeItem("brandnbeauty_admin_token");
+    window.localStorage.removeItem("brandnbeauty_admin_user");
+    document.cookie = "brandnbeauty_admin_token=; path=/; max-age=0; SameSite=Lax";
+    router.replace("/login");
+    router.refresh();
+  };
   const initials = useMemo(() => {
     const cleanName = adminName.trim();
     const parts = cleanName.split(/\s+/).filter(Boolean);
@@ -175,22 +183,22 @@ export function AdminSidebar() {
   }, [adminName]);
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[20rem] bg-[#f7f5f1] px-5 py-6 lg:block">
-      <div className="flex h-full flex-col gap-5">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[19rem] bg-[#f7f5f1] px-4 py-5 lg:block">
+      <div className="flex h-full flex-col gap-4">
         <Link
           href="/dashboard"
-          className="group flex min-h-[9.5rem] flex-col justify-between rounded-[2rem] bg-[#41696f] p-5 text-white shadow-[0_18px_40px_rgba(65,105,111,0.22)] transition hover:-translate-y-0.5"
+          className="group flex min-h-[7.75rem] flex-col justify-between rounded-[1.75rem] bg-[#41696f] p-4 text-white shadow-[0_16px_34px_rgba(65,105,111,0.2)] transition hover:-translate-y-0.5"
         >
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-xs font-black uppercase tracking-[0.22em] text-white/70">
                 Admin Panel
               </div>
-              <div className="mt-3 text-2xl font-black tracking-tight">
+              <div className="mt-2 text-2xl font-black tracking-tight">
                 BrandnBeauty
               </div>
             </div>
-            <div className="grid h-11 w-11 shrink-0 grid-cols-2 gap-1 rounded-2xl bg-white/14 p-2.5 ring-1 ring-white/20">
+            <div className="grid h-10 w-10 shrink-0 grid-cols-2 gap-1 rounded-2xl bg-white/14 p-2.5 ring-1 ring-white/20">
               <span className="rounded bg-white/90" />
               <span className="rounded bg-white/60" />
               <span className="rounded bg-white/60" />
@@ -202,11 +210,11 @@ export function AdminSidebar() {
           </div>
         </Link>
 
-        <nav className="min-h-0 flex-1 overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white px-4 py-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
-          <div className="mb-4 px-2 text-[0.68rem] font-black uppercase tracking-[0.24em] text-slate-400">
+        <nav className="min-h-0 flex-1 overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white px-3 py-4 shadow-[0_16px_38px_rgba(15,23,42,0.055)]">
+          <div className="mb-3 px-2 text-[0.68rem] font-black uppercase tracking-[0.24em] text-slate-400">
             Menu
           </div>
-          <div className="h-full space-y-2 overflow-y-auto pb-7 pr-1">
+          <div className="h-full space-y-1.5 overflow-y-auto pb-6 pr-1">
             {adminNavGroups.map((group) => {
               const isGroupActive = activeGroupLabel === group.label;
 
@@ -216,7 +224,7 @@ export function AdminSidebar() {
                   open={isGroupActive || undefined}
                   key={`${group.label}-${isGroupActive ? "active" : "idle"}`}
                 >
-                  <summary className="flex cursor-pointer list-none items-center gap-3 rounded-2xl px-2.5 py-2.5 text-sm font-black text-slate-800 outline-none transition hover:bg-stone-50 [&::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center gap-3 rounded-2xl px-2.5 py-2 text-sm font-black text-slate-800 outline-none transition hover:bg-stone-50 [&::-webkit-details-marker]:hidden">
                     <span
                       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl text-[0.66rem] font-black ${
                         isGroupActive
@@ -235,13 +243,13 @@ export function AdminSidebar() {
                     </span>
                   </summary>
 
-                  <div className="mt-1 space-y-1 pb-2 pl-11">
+                  <div className="mt-1 space-y-1 pb-1.5 pl-10">
                     {group.items.map((item) => {
                       const isActive = activeHref === item.href;
 
                       return (
                         <Link
-                          className={`flex min-h-10 items-center justify-between gap-2 rounded-2xl px-4 text-sm font-bold transition ${
+                          className={`flex min-h-9 items-center justify-between gap-2 rounded-xl px-3.5 text-sm font-bold transition ${
                             isActive
                               ? "bg-[#5E7F85] text-white shadow-[0_12px_26px_rgba(94,127,133,0.22)]"
                               : "text-slate-500 hover:bg-stone-50 hover:text-[#41696f]"
@@ -261,9 +269,9 @@ export function AdminSidebar() {
           </div>
         </nav>
 
-        <div className="rounded-[2rem] border border-slate-200/80 bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85] text-sm font-black text-white shadow-sm">
+        <div className="rounded-[1.75rem] border border-slate-200/80 bg-white p-4 pb-5 shadow-[0_16px_38px_rgba(15,23,42,0.055)]">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85] text-sm font-black text-white shadow-sm">
               {initials}
             </div>
             <div className="min-w-0">
@@ -275,14 +283,23 @@ export function AdminSidebar() {
               </div>
             </div>
           </div>
-          <a
-            className="mt-4 block w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-center text-sm font-black text-slate-600 transition hover:border-[#5E7F85]/30 hover:bg-[#5E7F85]/5 hover:text-[#41696f]"
-            href={storefrontUrl}
-            rel="noopener noreferrer"
-            target={storefrontUrl === "/" ? undefined : "_blank"}
-          >
-            View Storefront
-          </a>
+          <div className="mt-4 grid gap-2.5">
+            <a
+              className="block w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-2.5 text-center text-sm font-black text-slate-600 transition hover:border-[#5E7F85]/30 hover:bg-[#5E7F85]/5 hover:text-[#41696f]"
+              href={storefrontUrl}
+              rel="noopener noreferrer"
+              target={storefrontUrl === "/" ? undefined : "_blank"}
+            >
+              View Storefront
+            </a>
+            <button
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-black text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+              onClick={handleLogout}
+              type="button"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </div>
     </aside>

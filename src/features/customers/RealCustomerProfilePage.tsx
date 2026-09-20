@@ -1,9 +1,11 @@
+﻿"use client";
+
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 
-import type { CustomerProfileRecord } from "./customers-data";
+import type { CustomerOrderSummaryRecord, CustomerProfileRecord } from "./customers-data";
 
 type RealCustomerProfilePageProps = {
   profile: CustomerProfileRecord | null;
@@ -27,9 +29,7 @@ function Badge({
   }[tone];
 
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold capitalize ${className}`}
-    >
+    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold capitalize ${className}`}>
       {children}
     </span>
   );
@@ -45,110 +45,37 @@ function Card({
   eyebrow?: string;
 }) {
   return (
-    <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-      {eyebrow ? (
-        <div className="text-sm font-medium text-slate-500">{eyebrow}</div>
-      ) : null}
-      <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-        {title}
-      </h2>
+    <section className="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm">
+      {eyebrow ? <div className="text-sm font-medium text-slate-500">{eyebrow}</div> : null}
+      <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">{title}</h2>
       <div className="mt-5">{children}</div>
     </section>
   );
 }
 
-function StatCard({
-  helper,
-  index,
-  label,
-  tone = "brand",
-  value,
-}: {
-  helper: string;
-  index: number;
-  label: string;
-  tone?: BadgeTone;
-  value: ReactNode;
-}) {
-  const icons = ["O", "T", "R", "L"];
-  const helperClassName = {
-    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
-    good: "bg-emerald-50 text-emerald-700",
-    warn: "bg-amber-50 text-amber-700",
-    bad: "bg-rose-50 text-rose-700",
-    default: "bg-stone-50 text-slate-600",
-  }[tone];
-
+function StatCard({ label, value, helper }: { label: string; value: ReactNode; helper: string }) {
   return (
-    <section className="group relative overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#5E7F85]/5 transition group-hover:bg-[#5E7F85]/10" />
-      <div className="relative flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-slate-500">{label}</div>
-          <div className="mt-3 truncate text-2xl font-black tracking-tight text-slate-950">
-            {value}
-          </div>
-        </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-sm font-black text-[#5E7F85]">
-          {icons[index % icons.length]}
-        </div>
-      </div>
-      <div
-        className={`relative mt-4 inline-flex rounded-full px-3 py-1 text-xs font-bold ${helperClassName}`}
-      >
-        {helper}
-      </div>
+    <section className="rounded-[1.25rem] border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="text-sm font-medium text-slate-500">{label}</div>
+      <div className="mt-2 text-2xl font-bold tracking-tight text-slate-950">{value}</div>
+      <p className="mt-1 text-sm text-slate-500">{helper}</p>
     </section>
   );
 }
 
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: ReactNode;
-}) {
+function DetailRow({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 text-sm">
-      <dt className="text-slate-500">{label}</dt>
-      <dd className="max-w-[65%] text-right font-bold text-slate-800">
-        {value}
-      </dd>
+    <div className="flex flex-col gap-1 border-b border-slate-100 py-3 last:border-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <dt className="text-sm text-slate-500">{label}</dt>
+      <dd className="text-sm font-semibold text-slate-800 sm:max-w-[68%] sm:text-right">{value}</dd>
     </div>
-  );
-}
-
-function DisabledButton({
-  children,
-  tone = "default",
-}: {
-  children: ReactNode;
-  tone?: BadgeTone;
-}) {
-  const className = {
-    brand: "border-[#5E7F85]/20 bg-[#5E7F85]/10 text-[#5E7F85]",
-    good: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    warn: "border-amber-200 bg-amber-50 text-amber-700",
-    bad: "border-rose-200 bg-rose-50 text-rose-700",
-    default: "border-slate-200 bg-white text-slate-500",
-  }[tone];
-
-  return (
-    <button
-      className={`rounded-2xl border px-4 py-3 text-sm font-semibold opacity-75 ${className}`}
-      disabled
-      type="button"
-    >
-      {children}
-    </button>
   );
 }
 
 function BackLink() {
   return (
     <Link
-      className="inline-flex rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
+      className="inline-flex rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#5E7F85] focus:ring-offset-2"
       href="/customers"
     >
       Back to Customers
@@ -156,23 +83,34 @@ function BackLink() {
   );
 }
 
-function getRiskTone(riskLabel: CustomerProfileRecord["riskLabel"]): BadgeTone {
-  if (riskLabel === "High Return Risk") {
-    return "bad";
+function formatMoney(value: number | null | undefined) {
+  const amount = Number(value ?? 0);
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return "Tk 0";
   }
 
-  if (riskLabel === "Due Pending") {
-    return "warn";
-  }
-
-  if (riskLabel === "Repeat Customer") {
-    return "good";
-  }
-
-  return "default";
+  return new Intl.NumberFormat("en-BD", {
+    currency: "BDT",
+    maximumFractionDigits: 0,
+    style: "currency",
+  }).format(amount).replace("BDT", "Tk");
 }
 
-function getOrderStatusTone(status: string): BadgeTone {
+function formatStatus(value: string | null | undefined) {
+  if (!value) {
+    return "Not set";
+  }
+
+  return value
+    .replaceAll("_", " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => `${word[0]?.toUpperCase() ?? ""}${word.slice(1)}`)
+    .join(" ");
+}
+
+function getOrderStatusTone(status: string | null | undefined): BadgeTone {
   if (status === "delivered") {
     return "good";
   }
@@ -181,46 +119,34 @@ function getOrderStatusTone(status: string): BadgeTone {
     return "bad";
   }
 
-  if (status === "new" || status === "processing") {
+  if (status === "pending" || status === "pending_sourcing" || status === "processing") {
     return "warn";
   }
 
   return "brand";
 }
 
-function getPaymentStatusTone(status: string): BadgeTone {
-  if (status === "paid") {
-    return "good";
-  }
-
-  if (status === "failed" || status === "refunded") {
-    return "bad";
-  }
-
-  return "warn";
-}
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-BD", {
-    currency: "BDT",
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(value);
-}
-
-function formatStatus(value: string | null) {
-  return value ? value.replaceAll("_", " ") : "not set";
-}
-
-function formatDate(value: string | null) {
+function formatDate(value: string | null | undefined) {
   if (!value) {
-    return "Not available";
+    return "Not provided";
   }
 
-  return new Intl.DateTimeFormat("en", {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Not provided";
+  }
+
+  return new Intl.DateTimeFormat("en-BD", {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(value));
+  }).format(date);
+}
+
+function formatText(value: string | null | undefined, fallback = "Not provided") {
+  const normalized = value?.trim();
+
+  return normalized || fallback;
 }
 
 function getInitials(name: string) {
@@ -235,66 +161,112 @@ function getInitials(name: string) {
 }
 
 function getLocation(profile: CustomerProfileRecord) {
-  return [profile.district, profile.area].filter(Boolean).join(" / ");
+  const parts = [profile.district, profile.area].map((part) => part?.trim()).filter(Boolean);
+
+  return parts.join(", ");
 }
 
 function getLatestOrder(profile: CustomerProfileRecord) {
   return profile.orders[0];
 }
 
-function getLoyaltyScore(profile: CustomerProfileRecord) {
-  const repeatScore = Math.min(profile.orderCount * 8, 48);
-  const spendScore = Math.min(Math.round(profile.totalSpent / 500), 32);
-  const duePenalty = profile.totalDue > 0 ? 10 : 0;
-  const returnPenalty = Math.min(profile.returnedCount * 8, 20);
-
-  return Math.max(0, Math.min(100, repeatScore + spendScore - duePenalty - returnPenalty));
+function OrderMobileCard({ order }: { order: CustomerOrderSummaryRecord }) {
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-bold text-slate-950">{order.order_number ?? `Order ${order.id}`}</div>
+          <div className="mt-1 text-xs text-slate-500">{formatDate(order.created_at)}</div>
+        </div>
+        <Badge tone={getOrderStatusTone(order.order_status)}>{formatStatus(order.order_status)}</Badge>
+      </div>
+      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">Total</dt>
+          <dd className="mt-1 font-semibold text-slate-800">{formatMoney(order.total)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">Payment</dt>
+          <dd className="mt-1 text-slate-700">{formatStatus(order.payment_status)}</dd>
+        </div>
+      </dl>
+      <Link
+        className="mt-4 inline-flex rounded-lg bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#5E7F85] focus:ring-offset-2"
+        href={`/orders/details?id=${order.id}`}
+      >
+        View Order
+      </Link>
+    </article>
+  );
 }
 
-function getSpendTrend(profile: CustomerProfileRecord) {
-  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-  const sortedOrders = profile.orders
-    .toSorted((a, b) => {
-      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+function CustomerContactCard({ profile }: { profile: CustomerProfileRecord }) {
+  const [copyState, setCopyState] = useState("Copy Phone");
+  const location = getLocation(profile);
 
-      return aTime - bTime;
-    })
-    .slice(-6);
+  async function copyPhone() {
+    try {
+      await navigator.clipboard.writeText(profile.phone);
+      setCopyState("Copied");
+      window.setTimeout(() => setCopyState("Copy Phone"), 1800);
+    } catch {
+      setCopyState("Copy failed");
+      window.setTimeout(() => setCopyState("Copy Phone"), 1800);
+    }
+  }
 
-  const values = sortedOrders.map((order) => order.total);
-  const paddedValues = [
-    ...Array(Math.max(0, 6 - values.length)).fill(0),
-    ...values,
-  ].slice(-6);
-
-  return paddedValues.map((value, index) => ({
-    label: monthLabels[index],
-    value,
-  }));
+  return (
+    <Card title="Contact Information">
+      <dl>
+        <DetailRow
+          label="Phone"
+          value={
+            <span className="inline-flex flex-wrap items-center justify-end gap-2">
+              <a className="text-[#3D676E] underline-offset-4 hover:underline" href={`tel:${profile.phone}`}>
+                {profile.phone}
+              </a>
+              <button
+                className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:border-[#5E7F85] hover:text-[#3D676E] focus:outline-none focus:ring-2 focus:ring-[#5E7F85] focus:ring-offset-2"
+                onClick={() => void copyPhone()}
+                type="button"
+              >
+                {copyState}
+              </button>
+            </span>
+          }
+        />
+        <DetailRow
+          label="Email"
+          value={
+            profile.email ? (
+              <a className="text-[#3D676E] underline-offset-4 hover:underline" href={`mailto:${profile.email}`}>
+                {profile.email}
+              </a>
+            ) : (
+              "Not provided"
+            )
+          }
+        />
+        <DetailRow label="Address" value={formatText(profile.address)} />
+        <DetailRow label="Location" value={location || "Not provided"} />
+      </dl>
+    </Card>
+  );
 }
 
-export function RealCustomerProfilePage({
-  profile,
-}: RealCustomerProfilePageProps) {
+export function RealCustomerProfilePage({ profile }: RealCustomerProfilePageProps) {
   if (!profile) {
     return (
       <AdminShell>
         <div className="space-y-6">
           <BackLink />
-          <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+          <section className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#5E7F85]">
-                  Customer Profile
-                </div>
-                <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
-                  Profile Not Found
-                </h1>
+                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#5E7F85]">Customer Profile</div>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">Profile Not Found</h1>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-                  This customer profile could not be generated from order data.
-                  Return to Customers and open a profile from an existing phone
-                  group.
+                  This customer profile could not be loaded from existing order data. Return to Customers and open a profile from an existing customer row.
                 </p>
               </div>
               <Badge tone="default">Read Only</Badge>
@@ -306,326 +278,98 @@ export function RealCustomerProfilePage({
   }
 
   const latestOrder = getLatestOrder(profile);
-  const location = getLocation(profile) || "Location not available";
-  const loyaltyScore = getLoyaltyScore(profile);
-  const spendTrend = getSpendTrend(profile);
-  const maxSpend = Math.max(...spendTrend.map((item) => item.value), 1);
+  const location = getLocation(profile);
 
   return (
     <AdminShell>
       <div className="space-y-6">
         <BackLink />
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            helper="From matching orders"
-            index={0}
-            label="Total Orders"
-            value={profile.orderCount}
-          />
-          <StatCard
-            helper="High repeat potential"
-            index={1}
-            label="Lifetime Value"
-            value={formatMoney(profile.totalSpent)}
-          />
-          <StatCard
-            helper={profile.totalDue > 0 ? `Due ${formatMoney(profile.totalDue)}` : "Low risk customer"}
-            index={2}
-            label="COD Risk Score"
-            tone={getRiskTone(profile.riskLabel)}
-            value={`${Math.max(0, 100 - loyaltyScore)}/100`}
-          />
-          <StatCard
-            helper={latestOrder?.order_number ?? "No order number"}
-            index={3}
-            label="Last Order"
-            value={formatDate(profile.lastOrderAt)}
-          />
-        </section>
-
-        <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
-          <div className="space-y-6">
-            <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-              <div className="bg-gradient-to-br from-[#5E7F85]/10 via-white to-stone-50 p-6">
-                <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                    <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.6rem] bg-[#5E7F85] text-2xl font-black text-white shadow-sm">
-                      {getInitials(profile.name)}
-                      <div className="absolute -bottom-2 -right-2 rounded-full border-4 border-white bg-white">
-                        <Badge tone={getRiskTone(profile.riskLabel)}>
-                          {profile.riskLabel}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-slate-500">
-                        Customer Identity
-                      </div>
-                      <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
-                        {profile.name}
-                      </h1>
-                      <div className="mt-1 text-sm font-semibold text-slate-500">
-                        {profile.phone} / {location}
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Badge tone={getRiskTone(profile.riskLabel)}>
-                          {profile.riskLabel}
-                        </Badge>
-                        <Badge tone="default">Read Only</Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="rounded-[1.5rem] bg-white p-4 text-center shadow-sm ring-1 ring-slate-100">
-                    <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-full border-[8px] border-stone-100">
-                      <div
-                        className="absolute inset-0 rounded-full border-[8px] border-[#5E7F85]"
-                        style={{
-                          clipPath: `inset(${100 - loyaltyScore}% 0 0 0)`,
-                        }}
-                      />
-                      <div className="text-xl font-black text-[#5E7F85]">
-                        {loyaltyScore}%
-                      </div>
-                    </div>
-                    <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                      Loyalty
-                    </div>
-                  </div>
-                </div>
+        <section className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
+          <div className="bg-gradient-to-br from-[#5E7F85]/10 via-white to-stone-50 p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85] text-xl font-black text-white shadow-sm">
+                {getInitials(profile.name)}
               </div>
-              <div className="grid gap-4 p-6 md:grid-cols-3">
-                <div className="rounded-2xl bg-stone-50 p-4">
-                  <div className="text-xs text-slate-500">First Order</div>
-                  <div className="mt-1 font-bold text-slate-900">
-                    {formatDate(profile.firstOrderAt)}
-                  </div>
-                </div>
-                <div className="rounded-2xl bg-stone-50 p-4">
-                  <div className="text-xs text-slate-500">Orders</div>
-                  <div className="mt-1 font-bold text-slate-900">
-                    {profile.orderCount}
-                  </div>
-                </div>
-                <div className="rounded-2xl bg-stone-50 p-4">
-                  <div className="text-xs text-slate-500">Spend</div>
-                  <div className="mt-1 font-bold text-slate-900">
-                    {formatMoney(profile.totalSpent)}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card eyebrow="Purchase Timeline" title="6 Order Spend Trend">
-                <div className="flex h-40 items-end gap-3 rounded-2xl bg-stone-50 p-4">
-                  {spendTrend.map((item) => (
-                    <div
-                      className="flex flex-1 flex-col items-center gap-2"
-                      key={item.label}
-                    >
-                      <div
-                        className="w-full rounded-xl bg-[#5E7F85]"
-                        style={{
-                          height: `${Math.max(8, (item.value / maxSpend) * 100)}%`,
-                        }}
-                      />
-                      <div className="text-[10px] text-slate-500">
-                        {item.label}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              <Card eyebrow="Order Insights" title="Most Purchased">
-                <div className="space-y-3">
-                  {[
-                    `${profile.deliveredCount} delivered orders`,
-                    `${profile.shippedCount} shipped orders`,
-                    `${profile.returnedCount} returned orders`,
-                  ].map((item) => (
-                    <div
-                      className="rounded-2xl bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-700"
-                      key={item}
-                    >
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </div>
-
-            <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-              <div className="flex flex-col gap-3 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <div className="text-sm font-medium text-slate-500">
-                    Order History
-                  </div>
-                  <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                    Recent Orders
-                  </h2>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge tone="brand">{profile.orders.length} orders</Badge>
-                  <DisabledButton>Export</DisabledButton>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="bg-stone-50 text-slate-500">
-                    <tr>
-                      {[
-                        "Order",
-                        "Status",
-                        "Payment",
-                        "Courier",
-                        "Total",
-                        "Due",
-                        "Created",
-                        "Action",
-                      ].map((heading) => (
-                        <th className="px-5 py-4 font-medium" key={heading}>
-                          {heading}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {profile.orders.map((order) => (
-                      <tr
-                        className="border-t border-slate-100 align-top transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85]"
-                        key={order.id}
-                      >
-                        <td className="px-5 py-4 font-black text-slate-950">
-                          {order.order_number ?? "No order number"}
-                        </td>
-                        <td className="px-5 py-4">
-                          <Badge tone={getOrderStatusTone(order.order_status)}>
-                            {formatStatus(order.order_status)}
-                          </Badge>
-                        </td>
-                        <td className="px-5 py-4">
-                          <Badge tone={getPaymentStatusTone(order.payment_status)}>
-                            {formatStatus(order.payment_status)}
-                          </Badge>
-                        </td>
-                        <td className="px-5 py-4">
-                          <Badge>{formatStatus(order.courier_status)}</Badge>
-                        </td>
-                        <td className="px-5 py-4 font-bold text-slate-800">
-                          {formatMoney(order.total)}
-                        </td>
-                        <td className="px-5 py-4 font-bold text-slate-800">
-                          {formatMoney(order.due_amount)}
-                        </td>
-                        <td className="px-5 py-4 text-slate-600">
-                          {formatDate(order.created_at)}
-                        </td>
-                        <td className="px-5 py-4">
-                          <Link
-                            className="inline-flex rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
-                            href={`/orders/details?id=${order.id}`}
-                          >
-                            Details
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <div className="grid gap-6 lg:grid-cols-3">
-              <Card eyebrow="Live Activity Feed" title="Order Activity">
-                <div className="space-y-3 text-sm">
-                  <div className="rounded-2xl bg-stone-50 px-4 py-3 font-semibold text-slate-700">
-                    Delivered orders: {profile.deliveredCount}
-                  </div>
-                  <div className="rounded-2xl bg-stone-50 px-4 py-3 font-semibold text-slate-700">
-                    Shipped orders: {profile.shippedCount}
-                  </div>
-                  <div className="rounded-2xl bg-stone-50 px-4 py-3 font-semibold text-slate-700">
-                    Last order: {formatDate(profile.lastOrderAt)}
-                  </div>
-                </div>
-              </Card>
-
-              <Card eyebrow="Tags & Notes" title="Read-Only Notes">
-                <div className="flex flex-wrap gap-2">
-                  <Badge tone={getRiskTone(profile.riskLabel)}>
-                    {profile.riskLabel}
-                  </Badge>
-                  <Badge tone={profile.totalDue > 0 ? "warn" : "good"}>
-                    {profile.totalDue > 0 ? "Due Pending" : "No Due"}
-                  </Badge>
-                  <Badge tone={profile.orderCount >= 2 ? "good" : "default"}>
-                    {profile.orderCount >= 2 ? "Repeat" : "New"}
-                  </Badge>
-                </div>
-                <p className="mt-4 rounded-xl bg-stone-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-700">
-                  Profile is generated from matching order rows by phone number.
-                  Dedicated notes, customer tags, and manual segmentation are not
-                  connected yet.
+              <div>
+                <div className="text-sm font-medium text-slate-500">Customer Profile</div>
+                <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">{profile.name}</h1>
+                <p className="mt-1 text-sm font-semibold text-slate-500">
+                  {profile.phone}{location ? ` / ${location}` : ""}
                 </p>
-              </Card>
-
-              <Card eyebrow="Risk Intelligence" title="Order Risk">
-                <dl className="space-y-3">
-                  <DetailRow
-                    label="Returned"
-                    value={profile.returnedCount}
-                  />
-                  <DetailRow
-                    label="Cancelled"
-                    value={profile.cancelledCount}
-                  />
-                  <DetailRow
-                    label="Due"
-                    value={formatMoney(profile.totalDue)}
-                  />
-                </dl>
-              </Card>
+              </div>
             </div>
           </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <StatCard helper="Orders linked to this customer." label="Total Orders" value={profile.orderCount} />
+          <StatCard helper="Real order-derived spend." label="Total Spent" value={formatMoney(profile.totalSpent)} />
+          <StatCard helper={latestOrder?.order_number ?? "No order reference"} label="Last Order" value={formatDate(profile.lastOrderAt)} />
+        </section>
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="text-sm font-medium text-slate-500">Order History</div>
+                <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">Customer Orders</h2>
+              </div>
+              <Badge tone="brand">{profile.orders.length} orders</Badge>
+            </div>
+
+            {profile.orders.length === 0 ? (
+              <div className="p-10 text-center text-sm font-medium text-slate-500">No orders found for this customer.</div>
+            ) : (
+              <>
+                <div className="grid gap-3 p-4 md:hidden">
+                  {profile.orders.map((order) => (
+                    <OrderMobileCard key={order.id} order={order} />
+                  ))}
+                </div>
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="bg-stone-50 text-slate-500">
+                      <tr>
+                        {['Order Reference', 'Date', 'Status', 'Total', 'Action'].map((heading) => (
+                          <th className="px-5 py-4 font-medium" key={heading}>{heading}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {profile.orders.map((order) => (
+                        <tr className="border-t border-slate-100 align-top transition hover:bg-stone-50" key={order.id}>
+                          <td className="px-5 py-4 font-bold text-slate-950">{order.order_number ?? `Order ${order.id}`}</td>
+                          <td className="px-5 py-4 text-slate-600">{formatDate(order.created_at)}</td>
+                          <td className="px-5 py-4">
+                            <Badge tone={getOrderStatusTone(order.order_status)}>{formatStatus(order.order_status)}</Badge>
+                          </td>
+                          <td className="px-5 py-4 font-bold text-slate-800">{formatMoney(order.total)}</td>
+                          <td className="px-5 py-4">
+                            <Link
+                              className="inline-flex rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#5E7F85] focus:ring-offset-2"
+                              href={`/orders/details?id=${order.id}`}
+                            >
+                              View Order
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </section>
 
           <div className="space-y-6">
-            <Card title="Action Center">
-              <div className="grid gap-3">
-                <DisabledButton tone="brand">
-                  Create Order - Not Connected
-                </DisabledButton>
-                <DisabledButton tone="good">
-                  WhatsApp Offer - Not Connected
-                </DisabledButton>
-                <DisabledButton>Call Customer - Not Connected</DisabledButton>
-                <DisabledButton>Upsell Combo - Not Connected</DisabledButton>
-                <DisabledButton>Recovery Offer - Not Connected</DisabledButton>
-                <DisabledButton>Export - Not Connected</DisabledButton>
-              </div>
-            </Card>
-
-            <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
-              <div className="text-sm font-bold text-amber-800">
-                AI Recommendation
-              </div>
-              <p className="mt-2 text-sm leading-6 text-amber-700">
-                Suggestions are preview-only. This page shows live order-derived
-                profile data only and does not create offers, customer notes, or
-                outreach history.
-              </p>
-            </section>
-
-            <Card eyebrow="Current Route" title="Profile Source">
-              <dl className="space-y-3">
-                <DetailRow label="Phone" value={profile.phone} />
-                <DetailRow
-                  label="Source"
-                  value="Orders grouped by normalized phone"
-                />
-                <DetailRow label="Mutation" value="Not connected" />
+            <CustomerContactCard profile={profile} />
+            <Card title="Customer Summary">
+              <dl>
+                <DetailRow label="First Order" value={formatDate(profile.firstOrderAt)} />
+                <DetailRow label="Last Order" value={formatDate(profile.lastOrderAt)} />
+                <DetailRow label="Total Orders" value={profile.orderCount} />
+                <DetailRow label="Total Spent" value={formatMoney(profile.totalSpent)} />
               </dl>
             </Card>
           </div>

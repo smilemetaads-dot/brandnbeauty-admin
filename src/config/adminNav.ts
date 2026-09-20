@@ -28,6 +28,7 @@ export const adminNavGroups: AdminNavGroup[] = [
       { label: "Categories", href: "/categories", status: "Live" },
       { label: "Concerns", href: "/concerns", status: "Live" },
       { label: "Brands", href: "/brands", status: "Live" },
+      { label: "Collections", href: "/collections", status: "Live" },
       { label: "Offers & Deals", href: "/offers", status: "Live" },
       { label: "Product Recommendations", href: "/recommendations", status: "Preview" },
       { label: "Inventory", href: "/inventory", status: "Live" },
@@ -66,6 +67,12 @@ export const adminNavGroups: AdminNavGroup[] = [
     icon: "FI",
     label: "Finance",
     items: [
+      { label: "Finance Control", href: "/finance", status: "Partial" },
+      { label: "Cash & Bank Ledger", href: "/finance/cash-ledger", status: "Partial" },
+      { label: "Payable Payments", href: "/finance/payables", status: "Partial" },
+      { label: "Month-End Close", href: "/finance/close", status: "Partial" },
+      { label: "Profit & Loss", href: "/finance/profit-loss", status: "Partial" },
+      { label: "Order Profitability", href: "/finance/profitability", status: "Partial" },
       { label: "Finance Reconciliation", href: "/finance/reconciliation", status: "Partial" },
       { label: "Reports & Insights", href: "/reports", status: "Partial" },
     ],
@@ -74,12 +81,21 @@ export const adminNavGroups: AdminNavGroup[] = [
     icon: "ST",
     label: "Storefront",
     items: [
-      { label: "Homepage CMS", href: "/homepage-cms", status: "Live" },
+      { label: "Homepage Manager", href: "/homepage-cms", status: "Live" },
       { label: "Special Offers", href: "/offers", status: "Live" },
       { label: "Banner CMS", href: "/banners", status: "Partial" },
       { label: "Header & Navigation", href: "/navigation", status: "Live" },
       { label: "Footer CMS", href: "/footer", status: "Live" },
       { label: "Reviews & Real Results", href: "/reviews", status: "Live" },
+      { label: "Skin Analysis", href: "/skin-analysis", status: "Live" },
+    ],
+  },
+  {
+    icon: "GR",
+    label: "Growth",
+    items: [
+      { label: "Marketing Performance", href: "/marketing", status: "Partial" },
+      { label: "Tracking & Attribution", href: "/tracking", status: "Partial" },
     ],
   },
   {
@@ -88,6 +104,15 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Roles & Permissions", href: "/roles", status: "Preview" },
       { label: "Settings", href: "/settings", status: "Live" },
+      { label: "Brand & Site Identity", href: "/settings/brand-site-identity", status: "Live" },
     ],
   },
-];
+  {
+    icon: "AI",
+    label: "AI Commerce",
+    items: [
+      { label: "Control Center", href: "/ai-commerce" },
+    ],
+  },];
+
+

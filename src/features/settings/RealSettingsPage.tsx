@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -346,6 +347,9 @@ export function RealSettingsPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
+              <Link className="rounded-2xl border border-[#5E7F85]/25 bg-white px-5 py-3 text-sm font-semibold text-[#5E7F85] transition hover:bg-[#f3f8f8]" href="/settings/brand-site-identity">
+                Brand & Site Identity
+              </Link>
               <DisabledButton>Reset Draft</DisabledButton>
               <button
                 className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"

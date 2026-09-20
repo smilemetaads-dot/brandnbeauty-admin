@@ -13,6 +13,7 @@ type ImportRow = {
 };
 
 type ImportResult = {
+  dry_run?: boolean;
   message?: string;
   rows?: ImportRow[];
   success?: boolean;
@@ -22,6 +23,8 @@ type ImportResult = {
     skipped?: number;
     updated?: number;
     warnings?: number;
+    would_create?: number;
+    would_update?: number;
   };
 };
 
@@ -160,6 +163,9 @@ const toneByStatus: Record<string, string> = {
   created: "bg-emerald-50 text-emerald-700",
   updated: "bg-sky-50 text-sky-700",
   variant_attached: "bg-teal-50 text-teal-700",
+  ready_create: "bg-emerald-50 text-emerald-700",
+  ready_update: "bg-sky-50 text-sky-700",
+  ready_variant: "bg-teal-50 text-teal-700",
   skipped: "bg-amber-50 text-amber-700",
   error: "bg-rose-50 text-rose-700",
 };
@@ -172,6 +178,7 @@ export function ProductCsvImportPanel({
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [updateMode, setUpdateMode] = useState(false);
+  const [readyToCommit, setReadyToCommit] = useState(false);
 
   function downloadTemplate() {
     const blob = new Blob([CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });
@@ -194,6 +201,7 @@ export function ProductCsvImportPanel({
     const body = new FormData();
     body.set("file", file);
     body.set("update_mode", updateMode ? "true" : "false");
+    body.set("dry_run", readyToCommit ? "false" : "true");
     setIsImporting(true);
     setResult(null);
 
@@ -210,6 +218,11 @@ export function ProductCsvImportPanel({
       }
 
       setResult(payload);
+      if (payload.dry_run) {
+        setReadyToCommit(Boolean(payload.success));
+      } else {
+        setReadyToCommit(false);
+      }
       if ((payload.summary?.created ?? 0) > 0 || (payload.summary?.updated ?? 0) > 0) {
         await onImported();
       }
@@ -229,9 +242,9 @@ export function ProductCsvImportPanel({
         <div>
           <h2 className="text-lg font-bold text-slate-950">Bulk Product CSV Import</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Products default to draft unless status is explicitly active. Review every
-            imported product before publishing. Variant rows are stored on the parent
-            product; PDP and checkout do not yet enforce variant-level price or stock.
+            Every file must pass a read-only dry run before database changes are allowed.
+            Products default to draft unless status is explicitly active. Variant rows
+            keep their own price, stock, SKU and image for PDP and checkout.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -282,14 +295,22 @@ export function ProductCsvImportPanel({
             accept=".csv,text/csv"
             className="mt-2 block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 file:mr-4 file:rounded-xl file:border-0 file:bg-[#5E7F85]/10 file:px-3 file:py-2 file:font-semibold file:text-[#5E7F85]"
             id="product-csv"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            onChange={(event) => {
+              setFile(event.target.files?.[0] ?? null);
+              setReadyToCommit(false);
+              setResult(null);
+            }}
             type="file"
           />
           <label className="mt-3 flex items-center gap-3 text-sm font-medium text-slate-700">
             <input
               checked={updateMode}
               className="h-4 w-4 rounded border-slate-300 text-[#5E7F85]"
-              onChange={(event) => setUpdateMode(event.target.checked)}
+              onChange={(event) => {
+                setUpdateMode(event.target.checked);
+                setReadyToCommit(false);
+                setResult(null);
+              }}
               type="checkbox"
             />
             Update products matched safely by SKU or slug
@@ -300,7 +321,9 @@ export function ProductCsvImportPanel({
           disabled={isImporting}
           type="submit"
         >
-          {isImporting ? "Importing..." : "Import CSV"}
+          {isImporting
+            ? readyToCommit ? "Importing..." : "Validating..."
+            : readyToCommit ? "Confirm & Import" : "Preview Dry Run"}
         </button>
       </form>
 
@@ -314,10 +337,12 @@ export function ProductCsvImportPanel({
             {result.message}
           </div>
           {result.summary ? (
-            <div className="mt-3 grid gap-2 text-sm sm:grid-cols-5">
+            <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-7">
               {[
                 ["Created", result.summary.created ?? 0],
                 ["Updated", result.summary.updated ?? 0],
+                ["Will Create", result.summary.would_create ?? 0],
+                ["Will Update", result.summary.would_update ?? 0],
                 ["Skipped", result.summary.skipped ?? 0],
                 ["Errors", result.summary.errors ?? 0],
                 ["Warnings", result.summary.warnings ?? 0],

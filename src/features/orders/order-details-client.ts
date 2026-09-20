@@ -1,4 +1,4 @@
-import { bnbApiUrl } from "@/lib/bnb-api";
+﻿import { bnbApiUrl } from "@/lib/bnb-api";
 import { adminAuthHeaders } from "@/lib/admin-auth";
 
 export type OrderItemRecord = {
@@ -7,6 +7,7 @@ export type OrderItemRecord = {
   order_id: string;
   product_brand: string | null;
   product_id: string | null;
+  product_image: string | null;
   product_name: string;
   product_size: string | null;
   product_sku: string | null;
@@ -14,6 +15,9 @@ export type OrderItemRecord = {
   quantity: number;
   total_price: number;
   unit_price: number;
+  variant_id: string | null;
+  variant_name: string | null;
+  variant_sku: string | null;
 };
 
 export type OrderDetailsRecord = {
@@ -80,6 +84,9 @@ type ApiOrderItem = {
   product_id?: number | string | null;
   product_name?: string | null;
   quantity?: number | string | null;
+  variant_id?: number | string | null;
+  variant_name?: string | null;
+  variant_sku?: string | null;
   sku?: string | null;
   thumbnail?: string | null;
 };
@@ -164,13 +171,20 @@ export function normalizeOrderDetails(
           item.product_id === null || item.product_id === undefined
             ? null
             : String(item.product_id),
+        product_image: item.image ?? item.thumbnail ?? null,
         product_name: item.product_name ?? "Unnamed Product",
-        product_size: null,
+        product_size: item.variant_name ?? null,
         product_sku: item.sku ?? null,
         product_slug: null,
         quantity,
         total_price: lineTotal,
         unit_price: unitPrice,
+        variant_id:
+          item.variant_id === null || item.variant_id === undefined
+            ? null
+            : String(item.variant_id),
+        variant_name: item.variant_name ?? null,
+        variant_sku: item.variant_sku ?? null,
       };
     }),
     order_number: id ? `BNB-${id.padStart(6, "0")}` : null,
@@ -224,3 +238,7 @@ export async function fetchOrderDetails(
 
   return normalizeOrderDetails(payload);
 }
+
+
+
+

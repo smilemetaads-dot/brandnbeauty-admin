@@ -1,5 +1,6 @@
 import "server-only";
 
+import { serverAdminAuthHeaders } from "@/lib/admin-auth-server";
 import { bnbApiUrl } from "@/lib/bnb-api";
 
 export type SupplierAnalyticsRecentPurchase = {
@@ -397,9 +398,16 @@ function buildProductSummaries(
 
 export async function getSupplierAnalytics(): Promise<SupplierAnalyticsData> {
   try {
+    const authHeaders = await serverAdminAuthHeaders();
     const [suppliersResponse, financeResponse] = await Promise.all([
-      fetch(bnbApiUrl("get_suppliers.php"), { cache: "no-store" }),
-      fetch(bnbApiUrl("get_finance_inventory.php"), { cache: "no-store" }),
+      fetch(bnbApiUrl("get_suppliers.php"), {
+        cache: "no-store",
+        headers: authHeaders,
+      }),
+      fetch(bnbApiUrl("get_finance_inventory.php"), {
+        cache: "no-store",
+        headers: authHeaders,
+      }),
     ]);
     const [suppliersPayload, financePayload] = await Promise.all([
       suppliersResponse.json() as Promise<SuppliersResponse>,

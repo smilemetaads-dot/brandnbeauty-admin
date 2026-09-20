@@ -1,0 +1,10 @@
+import {adminAuthHeaders} from "@/lib/admin-auth";
+import {bnbApiUrl} from "@/lib/bnb-api";
+export type Gate={detail?:string;key:string;label:string;state:"blocked"|"pass"};
+export type Signal={consent_state:string;current_price:number;customer_reference:string;cycle_days:number;due_in_days:number;gates:Gate[];image:string;last_delivered_at:string;last_order_reference:string;latest_action:{created_at:string;name:string}|null;product_id:string;product_name:string;purchases:number;ready_for_outreach:boolean;routine_state:string;signal_key:string;sku:string;stage:"due_now"|"due_soon"|"paused"|"watch";stock:number};
+export type State={controls:{due_lead_days:number;minimum_delivered_cycles:number;outreach_cooldown_days:number};generated_at:string;quality:{consent_connected:boolean;order_items_connected:boolean;orders_connected:boolean;privacy_boundary:string;products_connected:boolean;routine_connected:boolean};signals:Signal[];summary:{blocked:number;due_now:number;due_soon:number;observed:number;ready:number}};
+const endpoint=bnbApiUrl("manage_replenishment_engine.php");
+async function call(body?:Record<string,unknown>,signal?:AbortSignal):Promise<State>{const response=await fetch(endpoint,body?{body:JSON.stringify(body),headers:adminAuthHeaders({"Content-Type":"application/json"}),method:"POST",signal}:{cache:"no-store",headers:adminAuthHeaders(),signal});const data=await response.json().catch(()=>({})) as State&{message?:string;success?:boolean};if(!response.ok||data.success===false)throw new Error(data.message||"Replenishment evidence is temporarily unavailable.");return data}
+export const fetchReplenishment=(signal?:AbortSignal)=>call(undefined,signal);
+export const saveControls=(values:{actor:string;cooldown:number;cycles:number;due:number;reason:string})=>call({action:"save_controls",actor:values.actor,confirmed:true,due_lead_days:values.due,minimum_delivered_cycles:values.cycles,outreach_cooldown_days:values.cooldown,reason:values.reason});
+export const recordReview=(key:string,name:"close"|"hold"|"snooze",actor:string,reason:string)=>call({action:"record_action",action_name:name,actor,confirmed:true,reason,signal_key:key});

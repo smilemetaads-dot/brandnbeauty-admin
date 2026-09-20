@@ -1,5 +1,5 @@
-import { RealProductsPage } from "@/features/products/RealProductsPage";
+import { ExactProductsPage } from "@/features/products/ExactProductsPage";
 
 export default function ProductsPage() {
-  return <RealProductsPage />;
+  return <ExactProductsPage />;
 }

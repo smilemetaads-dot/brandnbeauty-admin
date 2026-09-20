@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import type { FormEvent, ReactNode } from "react";
+import Image from "next/image";
+import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -17,45 +18,6 @@ type RealCategoriesPageProps = {
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
-type HierarchyPreview = {
-  children: number;
-  name: string;
-  productLabel: string;
-  slug: string;
-  sub: string[];
-};
-
-const hierarchyBlueprints: HierarchyPreview[] = [
-  {
-    children: 5,
-    name: "Skincare",
-    productLabel: "Products preview",
-    slug: "skincare",
-    sub: ["Face Wash", "Serum", "Moisturizer", "Sunscreen", "Toner"],
-  },
-  {
-    children: 4,
-    name: "Hair Care",
-    productLabel: "Products preview",
-    slug: "hair-care",
-    sub: ["Shampoo", "Hair Mask", "Hair Serum", "Scalp Care"],
-  },
-  {
-    children: 3,
-    name: "Body Care",
-    productLabel: "Products preview",
-    slug: "body-care",
-    sub: ["Body Wash", "Lotion", "Scrub"],
-  },
-  {
-    children: 4,
-    name: "Makeup",
-    productLabel: "Products preview",
-    slug: "makeup",
-    sub: ["Lip", "Face", "Eye", "Brushes"],
-  },
-];
-
 const inputClassName =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15";
 
@@ -64,6 +26,9 @@ const labelClassName = "text-sm font-semibold text-slate-700";
 const CATEGORIES_ENDPOINT = bnbApiUrl("get_categories.php?include_inactive=1");
 const MANAGE_CATALOG_META_ENDPOINT = bnbApiUrl("manage_catalog_meta.php");
 const DELETE_CATALOG_ITEM_ENDPOINT = bnbApiUrl("delete_catalog_item.php");
+const UPLOAD_MEDIA_ENDPOINT = bnbApiUrl("upload_media.php");
+const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 function toNumber(value: unknown) {
   const numberValue = Number(value);
@@ -139,7 +104,7 @@ function normalizeCategory(value: unknown): CategoryRecord | null {
     created_at: toStringOrNull(category.created_at),
     featured: Boolean(category.featured),
     id,
-    image: toStringOrNull(category.image),
+    image: toStringOrNull(category.image) ?? toStringOrNull(category.image_path) ?? toStringOrNull(category.image_url),
     meta_description: toStringOrNull(category.meta_description),
     meta_title: toStringOrNull(category.meta_title),
     name,
@@ -156,31 +121,13 @@ function normalizeCategory(value: unknown): CategoryRecord | null {
 }
 
 const getStatusLabel = (status: string | null) =>
-  status === "inactive" ? "Draft" : "Active";
+  status === "inactive" ? "Hidden" : "Visible";
 
 const getVisibilityLabel = (status: string | null) =>
   status === "inactive" ? "Hidden" : "Visible";
 
 const getStatusTone = (status: string | null): BadgeTone =>
   status === "inactive" ? "warn" : "good";
-
-const getSeoScore = (category: CategoryRecord) => {
-  let score = 50;
-
-  if (category.meta_title) {
-    score += 20;
-  }
-
-  if (category.meta_description) {
-    score += 20;
-  }
-
-  if (category.slug) {
-    score += 10;
-  }
-
-  return score;
-};
 
 function Badge({
   children,
@@ -249,33 +196,120 @@ function StatCard({
   );
 }
 
+
+type UploadState = { isUploading: boolean; message: string; ok: boolean };
+
+async function uploadTaxonomyMedia(file: File): Promise<string> {
+  if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
+    throw new Error("Only JPG, PNG, and WebP images are supported.");
+  }
+
+  if (file.size <= 0 || file.size > MAX_IMAGE_BYTES) {
+    throw new Error("Image must be greater than 0 bytes and no larger than 5MB.");
+  }
+
+  const body = new FormData();
+  body.append("image", file);
+
+  const response = await fetch(UPLOAD_MEDIA_ENDPOINT, {
+    body,
+    headers: adminAuthHeaders(),
+    method: "POST",
+  });
+  const payload = await response.json().catch(() => null) as { image_url?: string; message?: string; success?: boolean } | null;
+
+  if (!response.ok || payload?.success === false || !payload?.image_url) {
+    throw new Error(payload?.message || "Image upload failed.");
+  }
+
+  return payload.image_url;
+}
+
+function TaxonomyMediaField({
+  emptyText,
+  helper,
+  imageAlt,
+  isPending,
+  onChange,
+  onUpload,
+  removeLabel,
+  title,
+  uploadLabel,
+  uploadState,
+  value,
+}: {
+  emptyText: string;
+  helper: string;
+  imageAlt: string;
+  isPending: boolean;
+  onChange: (value: string) => void;
+  onUpload: (file: File) => Promise<void>;
+  removeLabel: string;
+  title: string;
+  uploadLabel: string;
+  uploadState: UploadState;
+  value: string;
+}) {
+  return (
+    <div className="space-y-3 rounded-2xl border border-slate-200 bg-stone-50 p-4 md:col-span-2">
+      <input name="image" type="hidden" value={value} />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className={labelClassName}>{title}</div>
+          <p className="mt-1 text-xs font-medium leading-5 text-slate-500">{helper}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <label className={`inline-flex cursor-pointer rounded-2xl px-4 py-2.5 text-xs font-bold ${uploadState.isUploading || isPending ? "bg-slate-100 text-slate-400" : "bg-[#5E7F85]/10 text-[#5E7F85] hover:bg-[#5E7F85]/15"}`}>
+            <input
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              disabled={uploadState.isUploading || isPending}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) void onUpload(file);
+              }}
+              type="file"
+            />
+            {uploadState.isUploading ? "Uploading..." : value ? `Replace ${uploadLabel}` : `Upload ${uploadLabel}`}
+          </label>
+          <button
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!value || uploadState.isUploading || isPending}
+            onClick={() => onChange("")}
+            type="button"
+          >
+            {removeLabel}
+          </button>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-dashed border-slate-200 bg-white">
+        {value ? (
+          <Image alt={imageAlt} className="h-40 w-full object-contain p-3" height={160} src={value} unoptimized width={320} />
+        ) : (
+          <div className="flex h-40 items-center justify-center px-4 text-center text-sm font-semibold text-slate-500">{emptyText}</div>
+        )}
+      </div>
+
+      {uploadState.message ? (
+        <p className={`text-sm font-semibold ${uploadState.ok ? "text-emerald-700" : "text-rose-700"}`}>{uploadState.message}</p>
+      ) : null}
+
+      <details className="rounded-2xl border border-slate-200 bg-white p-3">
+        <summary className="cursor-pointer text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Advanced Details</summary>
+        <div className="mt-3 break-all rounded-xl bg-stone-50 px-3 py-2 text-xs font-semibold text-slate-600">
+          {value || "No uploaded URL assigned."}
+        </div>
+      </details>
+    </div>
+  );
+}
 function TableHead({ children }: { children: ReactNode }) {
   return (
     <thead className="bg-stone-50 text-xs uppercase tracking-[0.12em] text-slate-500">
       {children}
     </thead>
-  );
-}
-
-function DisabledButton({
-  children,
-  className = "",
-  title = "Not connected yet",
-}: {
-  children: ReactNode;
-  className?: string;
-  title?: string;
-}) {
-  return (
-    <button
-      aria-label={title}
-      className={`cursor-not-allowed rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-400 ${className}`}
-      disabled
-      title={title}
-      type="button"
-    >
-      {children}
-    </button>
   );
 }
 
@@ -298,6 +332,23 @@ function CategoryForm({
   const [name, setName] = useState(editingCategory?.name ?? "");
   const [slug, setSlug] = useState(editingCategory?.slug ?? "");
   const [slugEdited, setSlugEdited] = useState(false);
+  const [imageUrl, setImageUrl] = useState(editingCategory?.image ?? "");
+  const [uploadState, setUploadState] = useState<UploadState>({ isUploading: false, message: "", ok: false });
+
+  async function handleMediaUpload(file: File) {
+    setUploadState({ isUploading: true, message: "Uploading image...", ok: false });
+    try {
+      const uploadedUrl = await uploadTaxonomyMedia(file);
+      setImageUrl(uploadedUrl);
+      setUploadState({ isUploading: false, message: "Image uploaded. Save changes to publish it.", ok: true });
+    } catch (error) {
+      setUploadState({
+        isUploading: false,
+        message: error instanceof Error ? error.message : "Image upload failed.",
+        ok: false,
+      });
+    }
+  }
   const invalidParentIds = editingCategory
     ? getDescendantIds(categories, editingCategory.id)
     : new Set<string>();
@@ -322,11 +373,7 @@ function CategoryForm({
               {isEditing ? `Edit ${editingCategory?.name}` : "Add Category"}
             </h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              This form now creates live category metadata through the local PHP
-              backend. Only active root categories appear on the homepage;
-              child categories stay in navigation and filtering. Use a clean
-              slug, square or 4:3 image at least 800px wide, and lower sort
-              order for earlier placement.
+              Visible root categories appear in the homepage Shop by Category section. Child categories are used for navigation and filtering.
             </p>
           </div>
           {isEditing ? (
@@ -351,7 +398,7 @@ function CategoryForm({
           <input name="id" type="hidden" value={editingCategory?.id ?? ""} />
 
           <label className={labelClassName}>
-            Name
+            Category Name
             <input
               className={inputClassName}
               name="name"
@@ -383,7 +430,7 @@ function CategoryForm({
           </label>
 
           <label className={labelClassName}>
-            Parent
+            Parent Category
             <select
               className={inputClassName}
               defaultValue={editingCategory?.parent_id ?? ""}
@@ -407,7 +454,7 @@ function CategoryForm({
           <label className={labelClassName}>
             Visibility
             <span className="mt-1 block text-xs font-medium text-slate-500">
-              Active means visible on storefront sections; inactive hides it.
+              Visible categories appear publicly where allowed. Hidden categories stay saved but are not shown publicly.
             </span>
             <select
               className={inputClassName}
@@ -433,50 +480,51 @@ function CategoryForm({
             />
           </label>
 
-          <label className={labelClassName}>
-            Banner Status
-            <input
-              className={`${inputClassName} cursor-not-allowed bg-stone-50 text-slate-500`}
-              disabled
-              placeholder={editingCategory?.image ? "Ready" : "Needs Image"}
-              type="text"
-            />
-          </label>
+                    <TaxonomyMediaField
+            emptyText="No category image uploaded."
+            helper="Used in Shop by Category cards on the homepage. Recommended size: square image, preferably 1000 × 1000 px."
+            imageAlt={editingCategory?.name ? `${editingCategory.name} image` : "Category Image preview"}
+            isPending={isPending}
+            onChange={(value) => {
+              setImageUrl(value);
+              setUploadState(value ? uploadState : { isUploading: false, message: "Image removed from this category. Save changes to publish it.", ok: true });
+            }}
+            onUpload={handleMediaUpload}
+            removeLabel="Remove Image"
+            title="Category Image"
+            uploadLabel="Image"
+            uploadState={uploadState}
+            value={imageUrl}
+          />
 
-          <label className={labelClassName}>
-            Image URL
-            <span className="mt-1 block text-xs font-medium text-slate-500">
-              Use a square JPG, PNG, or WEBP. Blank is allowed and shows the category name.
-            </span>
-            <input
-              className={inputClassName}
-              defaultValue={editingCategory?.image ?? ""}
-              name="image"
-              placeholder="https://..."
-              type="text"
-            />
-          </label>
+          <details className="rounded-2xl border border-slate-200 bg-stone-50 p-4 md:col-span-2">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+              Optional SEO
+            </summary>
+            <div className="mt-4 space-y-4">
+              <label className={labelClassName}>
+                SEO Title
+                <input
+                  className={inputClassName}
+                  defaultValue={editingCategory?.meta_title ?? ""}
+                  name="metaTitle"
+                  placeholder="Optional title for search results"
+                  type="text"
+                />
+              </label>
 
-          <label className={`${labelClassName} md:col-span-2`}>
-            SEO Title
-            <input
-              className={inputClassName}
-              defaultValue={editingCategory?.meta_title ?? ""}
-              name="metaTitle"
-              placeholder="Category price in Bangladesh | BrandnBeauty"
-              type="text"
-            />
-          </label>
-
-          <label className={`${labelClassName} md:col-span-2`}>
-            Meta Description
-            <textarea
-              className={`${inputClassName} h-24 resize-y`}
-              defaultValue={editingCategory?.meta_description ?? ""}
-              name="metaDescription"
-              placeholder="Write SEO meta description..."
-            />
-          </label>
+              <label className={labelClassName}>
+                Meta Description
+                <textarea
+                  className={inputClassName}
+                  defaultValue={editingCategory?.meta_description ?? ""}
+                  name="metaDescription"
+                  placeholder="Write a short search summary"
+                  rows={3}
+                />
+              </label>
+            </div>
+          </details>
 
           <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
             <input
@@ -645,8 +693,8 @@ export function RealCategoriesPage({
     }
   }
 
-  async function handleDeleteCategory(categoryId: string) {
-    if (!window.confirm("Delete this category?")) {
+  async function handleHideCategory(categoryId: string) {
+    if (!window.confirm("Hide this category?\n\nThis category will no longer appear publicly. Existing product relationships will remain unchanged.")) {
       return;
     }
 
@@ -670,7 +718,7 @@ export function RealCategoriesPage({
       } | null;
 
       if (!response.ok || !result?.success) {
-        throw new Error(result?.message ?? "Category could not be deleted.");
+        throw new Error(result?.message ?? "Category could not be hidden.");
       }
 
       setCategories((current) => current.filter((category) => category.id !== categoryId));
@@ -679,12 +727,12 @@ export function RealCategoriesPage({
           ? categories.find((category) => category.id !== categoryId)?.id ?? ""
           : current,
       );
-      setFormState({ ok: true, message: result.message ?? "Item deleted successfully" });
+      setFormState({ ok: true, message: result.message ?? "Category hidden successfully" });
     } catch (error) {
       setFormState({
         ok: false,
         message:
-          error instanceof Error ? error.message : "Category could not be deleted.",
+          error instanceof Error ? error.message : "Category could not be hidden.",
       });
     } finally {
       setDeletingCategoryIds((current) => current.filter((id) => id !== categoryId));
@@ -699,18 +747,6 @@ export function RealCategoriesPage({
   const visibleCount = categories.filter(
     (category) => category.status !== "inactive",
   ).length;
-  const needsWork = categories.filter(
-    (category) =>
-      getSeoScore(category) < 75 ||
-      !category.image ||
-      category.status === "inactive",
-  ).length;
-  const avgSeo = categories.length
-    ? Math.round(
-        categories.reduce((sum, category) => sum + getSeoScore(category), 0) /
-          categories.length,
-      )
-    : 0;
   const categoryById = useMemo(
     () => new Map(categories.map((category) => [category.id, category])),
     [categories],
@@ -768,23 +804,6 @@ export function RealCategoriesPage({
       return left.name.localeCompare(right.name);
     });
   }, [categories, categoryById, categorySort, parentFilter]);
-  const hierarchyRows = useMemo(
-    () =>
-      hierarchyBlueprints.map((blueprint) => {
-        const liveCategory = categories.find(
-          (category) =>
-            category.slug === blueprint.slug ||
-            category.name.toLowerCase() === blueprint.name.toLowerCase(),
-        );
-
-        return { blueprint, liveCategory };
-      }),
-    [categories],
-  );
-  const selectedPreview =
-    hierarchyRows.find(
-      ({ liveCategory }) => liveCategory?.id === selectedCategory?.id,
-    )?.blueprint ?? hierarchyBlueprints[0];
   const showForm = showAddForm || Boolean(editingCategory);
 
   return (
@@ -809,51 +828,29 @@ export function RealCategoriesPage({
                 Catalog Taxonomy
               </div>
               <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
-                Categories Control Room
+                Categories
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                Manage parent category, subcategory, storefront menu, filter
-                structure, SEO landing pages and banner visibility from one
-                clean place.
+                Visible root categories appear in the homepage Shop by Category section. Child categories are used for navigation and filtering.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <DisabledButton title="Import categories is not connected yet">
-                Import
-              </DisabledButton>
-              <DisabledButton
-                className="border-[#5E7F85]/30 bg-[#5E7F85]/5 text-[#5E7F85]/50"
-                title="Subcategory creation is not connected yet"
-              >
-                Add Subcategory
-              </DisabledButton>
-              <button
-                className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white"
-                onClick={() => setShowAddForm(true)}
-                type="button"
-              >
-                Add Category
-              </button>
-            </div>
+            <button
+              className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white"
+              onClick={() => setShowAddForm(true)}
+              type="button"
+            >
+              Add Category
+            </button>
           </div>
-          <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-4">
+          <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-3">
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Visible: <b className="text-[#5E7F85]">{visibleCount}</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Products mapped:{" "}
-              <b className="text-slate-900">
-                {categories.reduce(
-                  (sum, category) => sum + (category.product_count ?? 0),
-                  0,
-                )}
-              </b>
+              Total categories: <b className="text-slate-900">{categories.length}</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Avg SEO score: <b className="text-emerald-700">{avgSeo}/100</b>
-            </div>
-            <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Needs work: <b className="text-amber-700">{needsWork}</b>
+              Direct product mappings: <b className="text-slate-900">{categories.reduce((sum, category) => sum + (category.product_count ?? 0), 0)}</b>
             </div>
           </div>
         </div>
@@ -872,72 +869,15 @@ export function RealCategoriesPage({
               ),
               "Product discovery",
             ],
-            ["SEO Needs Work", String(needsWork), "Review banner/meta"],
+            ["Root Categories", String(rootCategories.length), "Homepage cards"],
           ].map((item, index) => (
             <StatCard
-              active={item[0] === "SEO Needs Work"}
+              active={item[0] === "Root Categories"}
               index={index}
               item={item as [string, string, string]}
               key={item[0]}
             />
           ))}
-        </div>
-
-        <div className="rounded-[2rem] border border-[#5E7F85]/15 bg-[#5E7F85]/5 p-5 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="text-sm font-bold text-slate-900">
-                Category Hierarchy
-              </div>
-              <div className="mt-1 text-sm leading-6 text-slate-600">
-                Parent category er niche subcategory thakbe. Product add/edit
-                page e ei structure thekei category and subcategory select hobe.
-              </div>
-            </div>
-            <DisabledButton
-              className="w-fit bg-[#5E7F85]/10 text-[#5E7F85]/50"
-              title="New subcategory is not connected yet"
-            >
-              + New Subcategory
-            </DisabledButton>
-          </div>
-          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {hierarchyRows.map(({ blueprint, liveCategory }) => (
-              <div
-                className="rounded-[1.5rem] border border-slate-200 bg-white p-4"
-                key={blueprint.slug}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-bold text-slate-900">
-                      {liveCategory?.name ?? blueprint.name}
-                    </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {blueprint.productLabel} - {blueprint.children} sub
-                    </div>
-                  </div>
-                  <Badge tone={getStatusTone(liveCategory?.status ?? null)}>
-                    {getVisibilityLabel(liveCategory?.status ?? null)}
-                  </Badge>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {blueprint.sub.map((item) => (
-                    <span
-                      className="rounded-full bg-stone-50 px-3 py-2 text-xs font-bold text-slate-600"
-                      key={item}
-                    >
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-            {categories.length === 0 ? (
-              <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-white p-6 text-sm font-medium text-slate-500">
-                Live categories will appear here after creation.
-              </div>
-            ) : null}
-          </div>
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
@@ -946,37 +886,15 @@ export function RealCategoriesPage({
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <div className="text-sm font-medium text-slate-500">
-                    Storefront Discovery
+                    Category Directory
                   </div>
                   <h2 className="mt-1 text-xl font-bold tracking-tight">
-                    Category Master List
+                    Category List
                   </h2>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <span className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600">
-                    Parent View
-                  </span>
-                  <DisabledButton
-                    className="bg-[#5E7F85]/10 text-[#5E7F85]/50"
-                    title="Bulk visibility update is not connected yet"
-                  >
-                    Bulk Visibility
-                  </DisabledButton>
                 </div>
               </div>
               <div className="mt-5 grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
-                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
-                  <div className="relative">
-                    <input
-                      className="w-full cursor-not-allowed rounded-2xl border border-slate-300 bg-stone-50 px-4 py-3 pl-10 text-sm text-slate-500 outline-none"
-                      disabled
-                      placeholder="Search category / slug / parent..."
-                      type="search"
-                    />
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                      Search
-                    </span>
-                  </div>
+                <div className="grid gap-3 md:grid-cols-[220px]">
                   <select
                     className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15"
                     onChange={(event) => setParentFilter(event.target.value)}
@@ -1002,22 +920,6 @@ export function RealCategoriesPage({
                     <option value="priority">Priority sort</option>
                     <option value="name">Name sort</option>
                   </select>
-                  {["All", "Active", "Draft", "Visible", "Hidden", "Header"].map(
-                    (item) => (
-                      <button
-                        className={`cursor-not-allowed rounded-full px-4 py-2 text-xs font-semibold ${
-                          item === "All"
-                            ? "bg-[#5E7F85] text-white"
-                            : "border border-slate-200 bg-white text-slate-400"
-                        }`}
-                        disabled
-                        key={item}
-                        type="button"
-                      >
-                        {item}
-                      </button>
-                    ),
-                  )}
                 </div>
               </div>
             </div>
@@ -1030,11 +932,9 @@ export function RealCategoriesPage({
                       "Category",
                       "Slug",
                       "Parent",
-                      "Products",
-                      "Menu",
-                      "SEO",
-                      "Banner",
-                      "Status",
+                      "Direct Products",
+                      "Image",
+                      "Visibility",
                       "Action",
                     ].map((head) => (
                       <th className="px-5 py-4 font-medium" key={head}>
@@ -1093,34 +993,8 @@ export function RealCategoriesPage({
                             {category.product_count ?? 0}
                           </td>
                           <td className="px-5 py-4">
-                            <Badge
-                              tone={
-                                category.status === "inactive"
-                                  ? "default"
-                                  : "brand"
-                              }
-                            >
-                              {category.status === "inactive"
-                                ? "Not in Menu"
-                                : "Header"}
-                            </Badge>
-                          </td>
-                          <td className="px-5 py-4">
-                            <Badge
-                              tone={
-                                getSeoScore(category) >= 80
-                                  ? "good"
-                                  : getSeoScore(category) >= 70
-                                    ? "warn"
-                                    : "bad"
-                              }
-                            >
-                              {getSeoScore(category)}/100
-                            </Badge>
-                          </td>
-                          <td className="px-5 py-4">
                             <Badge tone={category.image ? "good" : "warn"}>
-                              {category.image ? "Ready" : "Needs Image"}
+                              {category.image ? "Image Set" : "No Image"}
                             </Badge>
                           </td>
                           <td className="px-5 py-4">
@@ -1148,13 +1022,15 @@ export function RealCategoriesPage({
                               </button>
                               <button
                                 className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                disabled={deletingCategoryIds.includes(category.id)}
-                                onClick={() => handleDeleteCategory(category.id)}
+                                disabled={deletingCategoryIds.includes(category.id) || category.status === "inactive"}
+                                onClick={() => handleHideCategory(category.id)}
                                 type="button"
                               >
                                 {deletingCategoryIds.includes(category.id)
-                                  ? "Deleting..."
-                                  : "Delete"}
+                                  ? "Hiding..."
+                                  : category.status === "inactive"
+                                    ? "Hidden"
+                                    : "Hide"}
                               </button>
                             </div>
                           </td>
@@ -1165,7 +1041,7 @@ export function RealCategoriesPage({
                     <tr>
                       <td
                         className="px-5 py-14 text-center text-sm text-slate-500"
-                        colSpan={9}
+                        colSpan={7}
                       >
                         No categories found for this parent filter.
                       </td>
@@ -1196,43 +1072,6 @@ export function RealCategoriesPage({
                       {getVisibilityLabel(selectedCategory.status)}
                     </Badge>
                   </div>
-                  <div className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-stone-50 p-4">
-                    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#5E7F85] via-[#6f949a] to-[#d9e5e1] p-5 text-white shadow-sm">
-                      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/15" />
-                      <div className="absolute -bottom-12 left-1/2 h-36 w-36 rounded-full bg-white/10" />
-                      <div className="relative">
-                        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/75">
-                          Storefront Landing
-                        </div>
-                        <div className="mt-3 text-2xl font-black tracking-tight">
-                          {selectedCategory.name}
-                        </div>
-                        <div className="mt-2 max-w-[240px] text-xs font-medium leading-5 text-white/85">
-                          {selectedCategory.meta_description ??
-                            "Authentic beauty products mapped with SEO, banner and menu visibility."}
-                        </div>
-                        <div className="mt-5 flex flex-wrap gap-2">
-                          <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold">
-                            /category/{selectedCategory.slug}
-                          </span>
-                          <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold">
-                            Product mapping preview
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Badge tone="brand">
-                        SEO {getSeoScore(selectedCategory)}/100
-                      </Badge>
-                      <Badge tone={selectedCategory.image ? "good" : "warn"}>
-                        {selectedCategory.image ? "Ready" : "Needs Image"}
-                      </Badge>
-                      <Badge tone="default">
-                        {selectedCategory.product_count ?? 0} Products
-                      </Badge>
-                    </div>
-                  </div>
                   <div className="mt-5 space-y-3 text-sm">
                     {[
                       ["Parent", getParentName(selectedCategory, categoryById)],
@@ -1242,15 +1081,8 @@ export function RealCategoriesPage({
                           ? "Child category"
                           : "Root category",
                       ],
-                      [
-                        "Menu Visibility",
-                        selectedCategory.status === "inactive"
-                          ? "Not in Menu"
-                          : "Header",
-                      ],
                       ["Display Priority", selectedCategory.sort_order ?? 0],
                       ["Products", selectedCategory.product_count ?? 0],
-                      ["Sub Items", selectedPreview.sub.length],
                       ["Status", getStatusLabel(selectedCategory.status)],
                     ].map(([label, value]) => (
                       <div
@@ -1269,60 +1101,20 @@ export function RealCategoriesPage({
                     >
                       Edit Category
                     </Link>
-                    <DisabledButton title="SEO settings are not connected yet">
-                      SEO Settings
-                    </DisabledButton>
-                    <DisabledButton title="Banner upload is not connected yet">
-                      Upload Banner
-                    </DisabledButton>
                   </div>
                 </>
               ) : (
                 <div className="rounded-3xl border border-dashed border-slate-300 bg-stone-50 p-6 text-center text-sm font-medium text-slate-500">
-                  Category preview appears here after live categories are added.
+                  Category details appear here after live categories are added.
                 </div>
               )}
             </div>
-
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="text-sm font-medium text-slate-500">
-                Mapped Discovery
+            <div className="rounded-[2rem] border border-[#5E7F85]/20 bg-[#5E7F85]/5 p-6 shadow-sm">
+              <div className="text-sm font-bold text-slate-900">
+                Homepage Visibility
               </div>
-              <h3 className="mt-1 text-xl font-bold tracking-tight">
-                Sub Items / Filters
-              </h3>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {[
-                  ...selectedPreview.sub,
-                ].map((item) => (
-                  <span
-                    className="rounded-full bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85]"
-                    key={item}
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-5 border-t border-slate-100 pt-5">
-                <div className="text-sm font-medium text-slate-500">
-                  Product Mapping
-                </div>
-                <div className="mt-3 rounded-2xl bg-stone-50 px-4 py-4 text-xs font-semibold leading-5 text-slate-600">
-                  Products mapped to this category are counted from the live
-                  database. Individual product mapping is managed from product
-                  create/edit screens.
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
-              <div className="text-sm font-bold text-amber-800">
-                SEO + Storefront Note
-              </div>
-              <div className="mt-2 text-sm leading-6 text-amber-700">
-                Active categories are visible on storefront sections. Keep slug
-                and image clean, use sort order for placement, and set inactive
-                before saving unfinished rows.
+              <div className="mt-2 text-sm leading-6 text-slate-600">
+                Visible root categories appear in the homepage Shop by Category section. Child categories are used for navigation and filtering.
               </div>
             </div>
           </div>

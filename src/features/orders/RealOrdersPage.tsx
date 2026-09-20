@@ -1,1121 +1,679 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 import { adminAuthHeaders } from "@/lib/admin-auth";
 import { bnbApiUrl } from "@/lib/bnb-api";
 
-type RealOrdersPageProps = {
-  orders?: OrderRecord[];
-};
-
-type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
-
 type OrderRecord = {
-  area: string | null;
-  courier_name: string | null;
-  courier_status: string | null;
-  courier_tracking_id: string | null;
-  created_at: string | null;
-  customer_name: string;
-  customer_phone: string;
-  delivery_charge: number;
-  delivery_zone: string | null;
-  discount: number;
-  district: string | null;
-  due_amount: number;
+  area?: string;
+  created_at?: string;
+  customer_address?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  delivery_charge?: number;
+  delivery_zone?: string;
+  district?: string;
   id: string;
-  order_number: string | null;
+  item_count?: number;
+  notes?: string;
+  order_number?: string;
   order_status: string;
-  paid_amount: number;
-  payment_status: string;
-  pending_sourcing_count?: number;
-  ready_count?: number;
-  requires_sourcing?: boolean;
-  requires_sourcing_count?: number;
-  source: string | null;
-  sourced_count?: number;
-  stock_deducted: boolean;
-  stock_restored: boolean;
-  subtotal: number;
-  total: number;
-  updated_at: string | null;
+  payment_method?: string;
+  payment_status?: string;
+  sourcing_item_count?: number;
+  status_updated_at?: string;
+  stock_deducted?: boolean;
+  stock_restored?: boolean;
+  subtotal?: number;
+  total_amount?: number;
+  total_quantity?: number;
 };
 
 type MysqlOrderRow = {
-  address?: unknown;
-  city?: unknown;
-  created_at?: unknown;
-  customer_name?: unknown;
-  delivery_address?: unknown;
-  delivery_charge?: unknown;
-  email?: unknown;
   id?: unknown;
+  order_id?: unknown;
+  customer_name?: unknown;
+  customer_phone?: unknown;
+  phone?: unknown;
+  total_amount?: unknown;
+  subtotal?: unknown;
+  delivery_charge?: unknown;
+  delivery_zone?: unknown;
+  area?: unknown;
+  district?: unknown;
+  customer_address?: unknown;
+  address?: unknown;
   payment_method?: unknown;
   payment_status?: unknown;
-  pending_sourcing_count?: unknown;
-  ready_count?: unknown;
-  requires_sourcing?: unknown;
-  requires_sourcing_count?: unknown;
-  sourced_count?: unknown;
-  phone?: unknown;
   status?: unknown;
-  subtotal_amount?: unknown;
-  total_amount?: unknown;
-  updated_at?: unknown;
+  order_status?: unknown;
+  created_at?: unknown;
+  status_updated_at?: unknown;
+  notes?: unknown;
+  item_count?: unknown;
+  total_quantity?: unknown;
+  sourcing_item_count?: unknown;
 };
 
-type ManageOrdersResponse = {
-  orders?: unknown;
+type ApiResponse = {
   success?: boolean;
+  data?: unknown;
+  orders?: unknown;
+  message?: string;
+  error?: string;
 };
+
+type BadgeTone = "neutral" | "brand" | "good" | "warn" | "bad";
 
 const MANAGE_ORDERS_ENDPOINT = bnbApiUrl("manage_orders.php");
-const ORDER_STATUS_OPTIONS = [
-  "pending",
-  "pending_sourcing",
-  "approved",
-  "confirmed",
-  "processing",
-  "packing",
-  "packed",
-  "ready_to_ship",
-  "shipped",
-  "delivered",
-  "cancelled",
-  "returned",
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: "New Order",
+  pending_sourcing: "Pending Sourcing",
+  confirmed: "Confirmed",
+  processing: "Processing",
+  packed: "Packed",
+  shipped: "Shipped",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+  returned: "Returned",
+};
+
+const STATUS_FILTERS = [
+  { label: "All Orders", value: "all" },
+  { label: "New Orders", value: "pending" },
+  { label: "Confirmed", value: "confirmed" },
+  { label: "Processing", value: "processing" },
+  { label: "Packed", value: "packed" },
+  { label: "Shipped", value: "shipped" },
+  { label: "Delivered", value: "delivered" },
+  { label: "Pending Sourcing", value: "pending_sourcing" },
+  { label: "Cancelled", value: "cancelled" },
+  { label: "Returned", value: "returned" },
 ];
 
-function toNumber(value: unknown) {
-  const numberValue = Number(value);
+const DATE_FILTERS = [
+  { label: "All Time", value: "all" },
+  { label: "Today", value: "today" },
+  { label: "Last 7 Days", value: "7d" },
+  { label: "Last 30 Days", value: "30d" },
+];
 
-  return Number.isFinite(numberValue) ? numberValue : 0;
+const ZONE_FILTERS = [
+  { label: "All Zones", value: "all" },
+  { label: "Dhaka City", value: "dhaka_city" },
+  { label: "Dhaka Sub Area", value: "dhaka_sub_area" },
+  { label: "Outside Dhaka", value: "outside_dhaka" },
+];
+
+const NEXT_STATUS_ACTIONS: Record<string, { label: string; nextStatus: string }> = {
+  pending: { label: "Confirm", nextStatus: "confirmed" },
+  pending_sourcing: { label: "Confirm", nextStatus: "confirmed" },
+  confirmed: { label: "Start Processing", nextStatus: "processing" },
+  processing: { label: "Mark Packed", nextStatus: "packed" },
+  packed: { label: "Mark Shipped", nextStatus: "shipped" },
+  shipped: { label: "Mark Delivered", nextStatus: "delivered" },
+};
+
+function toStringValue(value: unknown): string {
+  return value === null || value === undefined ? "" : String(value);
 }
 
-function toStringOrNull(value: unknown) {
-  return typeof value === "string" && value.trim().length > 0
-    ? value
-    : null;
-}
-
-function normalizeOrderStatus(value: unknown) {
-  const status = String(value ?? "pending").trim().toLowerCase();
-
-  return status || "pending";
-}
-
-function normalizePaymentStatus(value: unknown, orderStatus: string) {
-  const paymentStatus = String(value ?? "").trim().toLowerCase();
-
-  if (!paymentStatus || paymentStatus === "not_set") {
-    return orderStatus === "delivered" ? "paid" : "cod_pending";
+function toNumberValue(value: unknown): number | undefined {
+  if (value === null || value === undefined || value === "") {
+    return undefined;
   }
 
-  if (paymentStatus === "cash_on_delivery") {
-    return orderStatus === "delivered" ? "paid" : "cod_pending";
-  }
-
-  return paymentStatus;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
 }
 
 function normalizeMysqlOrder(row: MysqlOrderRow): OrderRecord {
-  const id = String(row.id ?? "");
-  const total = toNumber(row.total_amount);
-  const createdAt = toStringOrNull(row.created_at);
-  const status = normalizeOrderStatus(row.status);
-  const paymentStatus = normalizePaymentStatus(
-    row.payment_status ?? row.payment_method,
-    status,
-  );
-  const isPaymentComplete = ["paid", "completed", "success", "successful"].includes(
-    paymentStatus,
-  );
+  const id = toStringValue(row.id || row.order_id);
 
   return {
-    area: toStringOrNull(row.address ?? row.delivery_address),
-    courier_name: null,
-    courier_status: status === "delivered" ? "delivered" : "not_sent",
-    courier_tracking_id: null,
-    created_at: createdAt,
-    customer_name: String(row.customer_name ?? "Unknown customer"),
-    customer_phone: String(row.phone ?? ""),
-    delivery_charge: toNumber(row.delivery_charge),
-    delivery_zone: toStringOrNull(row.city),
-    district: toStringOrNull(row.city),
-    discount: 0,
-    due_amount: isPaymentComplete ? 0 : total,
+    area: toStringValue(row.area),
+    created_at: toStringValue(row.created_at),
+    customer_address: toStringValue(row.customer_address || row.address),
+    customer_name: toStringValue(row.customer_name) || "Customer",
+    customer_phone: toStringValue(row.customer_phone || row.phone),
+    delivery_charge: toNumberValue(row.delivery_charge),
+    delivery_zone: toStringValue(row.delivery_zone),
+    district: toStringValue(row.district),
     id,
-    order_number: id ? `BNB-${id.padStart(6, "0")}` : null,
-    order_status: status,
-    paid_amount: isPaymentComplete ? total : 0,
-    payment_status: paymentStatus,
-    pending_sourcing_count: toNumber(row.pending_sourcing_count),
-    ready_count: toNumber(row.ready_count),
-    requires_sourcing: Boolean(row.requires_sourcing) || toNumber(row.requires_sourcing_count) > 0,
-    requires_sourcing_count: toNumber(row.requires_sourcing_count),
-    source: "MySQL",
-    sourced_count: toNumber(row.sourced_count),
-    stock_deducted: true,
-    stock_restored: false,
-    subtotal: toNumber(row.subtotal_amount),
-    total,
-    updated_at: toStringOrNull(row.updated_at) ?? createdAt,
+    item_count: toNumberValue(row.item_count),
+    notes: toStringValue(row.notes),
+    order_number: toStringValue(row.order_id || row.id),
+    order_status: toStringValue(row.order_status || row.status || "pending"),
+    payment_method: toStringValue(row.payment_method || "cod"),
+    payment_status: toStringValue(row.payment_status || "pending"),
+    sourcing_item_count: toNumberValue(row.sourcing_item_count),
+    status_updated_at: toStringValue(row.status_updated_at),
+    subtotal: toNumberValue(row.subtotal),
+    total_amount: toNumberValue(row.total_amount),
+    total_quantity: toNumberValue(row.total_quantity),
   };
 }
 
-function normalizeMysqlOrders(payload: unknown) {
-  const rows =
-    Array.isArray(payload)
-      ? payload
-      : Array.isArray((payload as ManageOrdersResponse | null)?.orders)
-        ? ((payload as ManageOrdersResponse).orders as unknown[])
-        : [];
-
-  return rows
-    ? rows.map((row) => normalizeMysqlOrder(row as MysqlOrderRow))
-    : [];
+function extractOrders(response: ApiResponse): OrderRecord[] {
+  const payload = Array.isArray(response.data) ? response.data : Array.isArray(response.orders) ? response.orders : [];
+  return payload.map((row) => normalizeMysqlOrder(row as MysqlOrderRow)).filter((order) => order.id);
 }
 
-function Badge({
-  children,
-  tone = "default",
-}: {
-  children: ReactNode;
-  tone?: BadgeTone;
-}) {
-  const className = {
-    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
-    good: "bg-emerald-50 text-emerald-700",
-    warn: "bg-amber-50 text-amber-700",
-    bad: "bg-rose-50 text-rose-700",
-    default: "bg-slate-100 text-slate-600",
-  }[tone];
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold capitalize ${className}`}
-    >
-      {children}
-    </span>
-  );
-}
-
-function StatCard({
-  active = false,
-  helper,
-  icon,
-  label,
-  onClick,
-  value,
-}: {
-  active?: boolean;
-  helper: string;
-  icon: string;
-  label: string;
-  onClick?: () => void;
-  value: string;
-}) {
-  const trendTone =
-    helper.toLowerCase().includes("need") ||
-    helper.toLowerCase().includes("watch")
-      ? "bg-amber-50 text-amber-600"
-      : "bg-emerald-50 text-emerald-700";
-
-  return (
-    <button
-      className={`group relative w-full overflow-hidden rounded-[1.7rem] border bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-        active ? "border-[#5E7F85] ring-2 ring-[#5E7F85]/15" : "border-slate-200"
-      }`}
-      onClick={onClick}
-      type="button"
-    >
-      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#5E7F85]/5 transition group-hover:bg-[#5E7F85]/10" />
-      <div className="relative flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="text-sm font-medium text-slate-500">{label}</div>
-          <div className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
-            {value}
-          </div>
-        </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-xs font-black text-[#5E7F85] transition group-hover:bg-[#5E7F85] group-hover:text-white">
-          {icon}
-        </div>
-      </div>
-      <div
-        className={`relative mt-4 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${trendTone}`}
-      >
-        {helper}
-      </div>
-    </button>
-  );
-}
-
-function DisabledButton({
-  children,
-  primary = false,
-}: {
-  children: ReactNode;
-  primary?: boolean;
-}) {
-  return (
-    <button
-      className={
-        primary
-          ? "rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white opacity-60"
-          : "rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-400"
-      }
-      disabled
-      type="button"
-    >
-      {children}
-    </button>
-  );
-}
-
-function SelectPill({
-  compact = false,
-  label,
-  onChange,
-  options,
-  value,
-}: {
-  compact?: boolean;
-  label: string;
-  onChange: (value: string) => void;
-  options: string[];
-  value: string;
-}) {
-  return (
-    <label
-      className={`flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-500 shadow-sm ${
-        compact ? "min-w-[118px]" : "min-w-[142px]"
-      }`}
-    >
-      <span className="sr-only">{label}</span>
-      <select
-        className="w-full bg-transparent text-xs font-bold text-slate-600 outline-none"
-        onChange={(event) => onChange(event.target.value)}
-        value={value}
-      >
-        {options.map((option) => (
-          <option key={option}>{option}</option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function QuickActionButton({ children }: { children: ReactNode }) {
-  return (
-    <button
-      className="group flex w-full items-center justify-between rounded-2xl bg-stone-50 p-4 text-left text-sm font-semibold text-slate-400"
-      disabled
-      type="button"
-    >
-      <span>{children}</span>
-      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-xs font-bold text-slate-400">
-        N/C
-      </span>
-    </button>
-  );
-}
-
-function getOrderStatusTone(status: string): BadgeTone {
-  if (status === "delivered" || status === "packed") return "good";
-  if (status === "cancelled" || status === "returned") return "bad";
-  if (status === "new" || status === "pending" || status === "processing") {
-    return "warn";
-  }
-  return "brand";
-}
-
-function getRiskLabel(order: OrderRecord) {
-  if (order.order_status === "cancelled" || order.order_status === "returned") {
-    return "High";
+function formatMoney(value?: number): string {
+  if (!Number.isFinite(value)) {
+    return "Tk 0";
   }
 
-  if (
-    order.due_amount > 0 ||
-    order.order_status === "new" ||
-    order.order_status === "pending"
-  ) {
-    return "Medium";
-  }
-
-  return "Low";
-}
-
-function getRiskTone(order: OrderRecord): BadgeTone {
-  const risk = getRiskLabel(order);
-  if (risk === "High") return "bad";
-  if (risk === "Medium") return "warn";
-  return "good";
-}
-
-function getRiskReasons(order: OrderRecord) {
-  const reasons = [];
-
-  if (order.order_status === "cancelled" || order.order_status === "returned") {
-    reasons.push("Return or cancellation state");
-  }
-
-  if (order.due_amount > 0) {
-    reasons.push(`Due ${formatMoney(order.due_amount)}`);
-  }
-
-  if (order.order_status === "new" || order.order_status === "pending") {
-    reasons.push("New order needs confirmation");
-  }
-
-  return reasons.length ? reasons : ["No visible risk flags"];
-}
-
-function getRowClassName(order: OrderRecord) {
-  if (order.order_status === "cancelled" || order.order_status === "returned") {
-    return "bg-rose-50/35";
-  }
-
-  if (order.order_status === "new" || order.order_status === "pending") {
-    return "bg-amber-50/35";
-  }
-
-  if (order.courier_status === "delivered") {
-    return "bg-emerald-50/35";
-  }
-
-  return "bg-white";
-}
-
-function formatStatus(value: string | null) {
-  return value ? value.replaceAll("_", " ") : "not set";
-}
-
-function formatMoney(value: number) {
   return new Intl.NumberFormat("en-BD", {
     currency: "BDT",
     maximumFractionDigits: 0,
     style: "currency",
-  }).format(value);
+  }).format(value || 0);
 }
 
-function formatDate(value: string | null) {
-  if (!value) return "Not available";
+function formatDate(value?: string): string {
+  if (!value) {
+    return "Date unavailable";
+  }
 
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "Date unavailable";
+  }
+
+  return parsed.toLocaleString("en-BD", {
+    day: "2-digit",
+    hour: "numeric",
+    minute: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
-function formatLocation(order: OrderRecord) {
-  const area = order.area ?? "No area";
-  const district = order.district ?? "No district";
-  return `${district} / ${area}`;
+function formatStatus(status?: string): string {
+  if (!status) {
+    return "Unknown";
+  }
+
+  return STATUS_LABELS[status] || status.replace(/_/g, " ");
 }
 
-function getZoneFilterValue(order: OrderRecord) {
-  return order.district === "Dhaka" ? "Dhaka" : "Outside Dhaka";
+function statusTone(status?: string): BadgeTone {
+  switch (status) {
+    case "pending":
+    case "pending_sourcing":
+      return "warn";
+    case "confirmed":
+    case "processing":
+    case "packed":
+    case "shipped":
+      return "brand";
+    case "delivered":
+      return "good";
+    case "cancelled":
+    case "returned":
+      return "bad";
+    default:
+      return "neutral";
+  }
 }
 
-function getSearchText(order: OrderRecord) {
+function formatPayment(order: OrderRecord): string {
+  const method = `${order.payment_method || ""} ${order.payment_status || ""}`.toLowerCase();
+  if (method.includes("paid")) {
+    return "COD Paid";
+  }
+
+  return "Cash on Delivery";
+}
+
+function getDeliveryLabel(order: OrderRecord): string {
+  return order.delivery_zone || order.area || order.district || "Delivery area unavailable";
+}
+
+function getZoneValue(order: OrderRecord): string {
+  const label = getDeliveryLabel(order).toLowerCase();
+
+  if (label.includes("sub")) {
+    return "dhaka_sub_area";
+  }
+
+  if (label.includes("outside")) {
+    return "outside_dhaka";
+  }
+
+  if (label.includes("dhaka")) {
+    return "dhaka_city";
+  }
+
+  return "all";
+}
+
+function getItemSummary(order: OrderRecord): string {
+  const lines = order.item_count || 0;
+  const quantity = order.total_quantity || 0;
+
+  if (!lines && !quantity) {
+    return "Items unavailable";
+  }
+
+  const lineLabel = lines === 1 ? "1 item line" : `${lines || 1} item lines`;
+  return quantity ? `${lineLabel}, Qty ${quantity}` : lineLabel;
+}
+
+function matchesDateFilter(order: OrderRecord, filter: string): boolean {
+  if (filter === "all") {
+    return true;
+  }
+
+  if (!order.created_at) {
+    return false;
+  }
+
+  const created = new Date(order.created_at).getTime();
+  if (Number.isNaN(created)) {
+    return false;
+  }
+
+  const now = new Date();
+
+  if (filter === "today") {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return created >= start;
+  }
+
+  const days = filter === "7d" ? 7 : 30;
+  return created >= now.getTime() - days * 24 * 60 * 60 * 1000;
+}
+
+function getSearchText(order: OrderRecord): string {
   return [
+    order.id,
     order.order_number,
     order.customer_name,
     order.customer_phone,
-    order.source,
-    order.district,
-    order.area,
-    order.delivery_zone,
-    order.order_status,
-    order.payment_status,
-    order.courier_status,
+    order.customer_address,
+    getDeliveryLabel(order),
+    formatStatus(order.order_status),
   ]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
 }
 
-export function RealOrdersPage({ orders: initialOrders = [] }: RealOrdersPageProps) {
-  const [orders, setOrders] = useState<OrderRecord[]>(initialOrders);
-  const [isLoading, setIsLoading] = useState(!initialOrders.length);
-  const [orderFilter, setOrderFilter] = useState("All");
-  const [priorityOnly, setPriorityOnly] = useState(false);
-  const [sourcingOnly, setSourcingOnly] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
-  const [sourceFilter, setSourceFilter] = useState("All Sources");
-  const [updatingOrderIds, setUpdatingOrderIds] = useState<string[]>([]);
-  const [zoneFilter, setZoneFilter] = useState("All Zones");
-  const [previewOrderId, setPreviewOrderId] = useState(orders[0]?.id ?? "");
+function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: BadgeTone }) {
+  const toneClass: Record<BadgeTone, string> = {
+    bad: "border-red-200 bg-red-50 text-red-700",
+    brand: "border-teal-200 bg-teal-50 text-teal-700",
+    good: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    neutral: "border-slate-200 bg-slate-50 text-slate-600",
+    warn: "border-amber-200 bg-amber-50 text-amber-700",
+  };
 
-  const loadOrders = useCallback(async (signal?: AbortSignal) => {
+  return <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${toneClass[tone]}`}>{children}</span>;
+}
+
+function StatCard({
+  active,
+  label,
+  onClick,
+  value,
+}: {
+  active?: boolean;
+  label: string;
+  onClick?: () => void;
+  value: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-2xl border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500 ${
+        active ? "border-teal-300 ring-2 ring-teal-100" : "border-slate-200"
+      }`}
+    >
+      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+      <strong className="mt-2 block text-2xl font-bold text-slate-900">{value}</strong>
+    </button>
+  );
+}
+
+function SelectPill({
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  label: string;
+  onChange: (value: string) => void;
+  options: { label: string; value: string }[];
+  value: string;
+}) {
+  return (
+    <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+      {label}
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="min-h-10 rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold normal-case tracking-normal text-slate-700 shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function NextStatusButton({
+  onUpdate,
+  order,
+  updating,
+}: {
+  onUpdate: (orderId: string, status: string) => void;
+  order: OrderRecord;
+  updating: boolean;
+}) {
+  const action = NEXT_STATUS_ACTIONS[order.order_status];
+
+  if (!action) {
+    return <span className="text-xs font-medium text-slate-400">No list action</span>;
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={updating}
+      onClick={() => onUpdate(order.id, action.nextStatus)}
+      className="rounded-full border border-teal-200 px-3 py-2 text-xs font-semibold text-teal-700 transition hover:bg-teal-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {updating ? "Updating..." : action.label}
+    </button>
+  );
+}
+
+export function RealOrdersPage() {
+  const [orders, setOrders] = useState<OrderRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [zoneFilter, setZoneFilter] = useState("all");
+  const [updatingOrderIds, setUpdatingOrderIds] = useState<string[]>([]);
+  const [actionMessage, setActionMessage] = useState("");
+
+  const loadOrders = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    setActionMessage("");
+
     try {
-      setIsLoading(true);
       const response = await fetch(MANAGE_ORDERS_ENDPOINT, {
-        cache: "no-store",
         headers: adminAuthHeaders(),
-        signal,
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to load orders from PHP endpoint.");
+      const payload = (await response.json()) as ApiResponse;
+
+      if (!response.ok || payload.success === false) {
+        throw new Error(payload.message || payload.error || "Orders could not be loaded.");
       }
 
-      const payload = (await response.json()) as unknown;
-      const nextOrders = normalizeMysqlOrders(payload);
-
-      setOrders(nextOrders);
-      setPreviewOrderId((current) => current || nextOrders[0]?.id || "");
+      setOrders(extractOrders(payload));
     } catch (error) {
-      if (!signal?.aborted) {
-        console.error("Admin orders could not be loaded.", error);
-        setOrders([]);
-      }
+      console.error("Failed to load orders", error);
+      setLoadError(true);
+      setOrders([]);
     } finally {
-      if (!signal?.aborted) {
-        setIsLoading(false);
-      }
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
+    const loadTimer = window.setTimeout(() => {
+      void loadOrders();
+    }, 0);
 
-    void Promise.resolve().then(() => loadOrders(controller.signal));
-
-    return () => {
-      controller.abort();
-    };
+    return () => window.clearTimeout(loadTimer);
   }, [loadOrders]);
 
-  const sourceOptions = useMemo(
-    () => [
-      "All Sources",
-      ...Array.from(
-        new Set(
-          orders
-            .map((order) => order.source)
-            .filter((source): source is string => Boolean(source)),
-        ),
-      ),
-    ],
+  const filteredOrders = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    return orders.filter((order) => {
+      const matchesSearch = !query || getSearchText(order).includes(query);
+      const matchesStatus = statusFilter === "all" || order.order_status === statusFilter;
+      const matchesDate = matchesDateFilter(order, dateFilter);
+      const matchesZone = zoneFilter === "all" || getZoneValue(order) === zoneFilter;
+      return matchesSearch && matchesStatus && matchesDate && matchesZone;
+    });
+  }, [dateFilter, orders, searchTerm, statusFilter, zoneFilter]);
+
+  const stats = useMemo(
+    () => ({
+      all: orders.length,
+      delivered: orders.filter((order) => order.order_status === "delivered").length,
+      inProgress: orders.filter((order) => ["confirmed", "processing", "packed", "shipped"].includes(order.order_status)).length,
+      newOrders: orders.filter((order) => ["pending", "pending_sourcing"].includes(order.order_status)).length,
+    }),
     [orders],
   );
-  const statusOptions = useMemo(
-    () => [
-      "All",
-      ...Array.from(new Set(orders.map((order) => formatStatus(order.order_status)))),
-    ],
-    [orders],
-  );
-  const filteredOrders = useMemo(
-    () =>
-      orders.filter((order) => {
-        const currentStatus = formatStatus(order.order_status);
-        const matchesStatus = orderFilter === "All" || currentStatus === orderFilter;
-        const matchesZone =
-          zoneFilter === "All Zones" || getZoneFilterValue(order) === zoneFilter;
-        const matchesSource =
-          sourceFilter === "All Sources" || order.source === sourceFilter;
-        const matchesSearch =
-          searchTerm.trim() === "" ||
-          getSearchText(order).includes(searchTerm.trim().toLowerCase());
-        const matchesPriority =
-          !priorityOnly ||
-          getRiskLabel(order) === "High" ||
-          order.order_status === "new" ||
-          order.order_status === "pending";
-        const matchesSourcing =
-          !sourcingOnly || Boolean(order.requires_sourcing) || order.order_status === "pending_sourcing";
-
-        return (
-          matchesStatus &&
-          matchesZone &&
-          matchesSource &&
-          matchesSearch &&
-          matchesPriority &&
-          matchesSourcing
-        );
-      }),
-    [orderFilter, orders, priorityOnly, searchTerm, sourceFilter, sourcingOnly, zoneFilter],
-  );
-  const visibleOrderIds = filteredOrders.map((order) => order.id);
-  const allVisibleSelected =
-    visibleOrderIds.length > 0 &&
-    visibleOrderIds.every((id) => selectedOrderIds.includes(id));
-  const previewOrder =
-    filteredOrders.find((order) => order.id === previewOrderId) ??
-    filteredOrders[0] ??
-    null;
-
-  const totalOrders = orders.length;
-  const pendingConfirmOrders = orders.filter((order) =>
-    ["new", "pending", "processing"].includes(order.order_status),
-  ).length;
-  const readyCourierOrders = orders.filter((order) =>
-    ["ready", "not_sent"].includes(order.courier_status ?? ""),
-  ).length;
-  const needsSourcingOrders = orders.filter(
-    (order) => Boolean(order.requires_sourcing) || order.order_status === "pending_sourcing",
-  ).length;
-  const confirmedOrders = orders.filter(
-    (order) => order.order_status === "confirmed",
-  ).length;
-  const deliveredOrders = orders.filter(
-    (order) => order.order_status === "delivered",
-  ).length;
-  const totalDue = orders.reduce((sum, order) => sum + order.due_amount, 0);
-  const selectedCodTotal = orders
-    .filter((order) => selectedOrderIds.includes(order.id))
-    .reduce((sum, order) => sum + order.total, 0);
-
-  function toggleOrder(orderId: string) {
-    setSelectedOrderIds((current) =>
-      current.includes(orderId)
-        ? current.filter((id) => id !== orderId)
-        : [...current, orderId],
-    );
-  }
-
-  function toggleAllVisible() {
-    setSelectedOrderIds((current) =>
-      allVisibleSelected
-        ? current.filter((id) => !visibleOrderIds.includes(id))
-        : Array.from(new Set([...current, ...visibleOrderIds])),
-    );
-  }
 
   async function handleStatusChange(orderId: string, nextStatus: string) {
-    setUpdatingOrderIds((current) => Array.from(new Set([...current, orderId])));
+    setUpdatingOrderIds((current) => [...current, orderId]);
+    setActionMessage("");
 
     try {
       const response = await fetch(MANAGE_ORDERS_ENDPOINT, {
-        body: JSON.stringify({
-          order_id: orderId,
-          status: nextStatus,
-        }),
-        headers: adminAuthHeaders({
+        body: JSON.stringify({ id: orderId, order_status: nextStatus }),
+        headers: {
           "Content-Type": "application/json",
-        }),
-        method: "POST",
+          ...adminAuthHeaders(),
+        },
+        method: "PUT",
       });
-      const payload = (await response.json().catch(() => null)) as {
-        message?: string;
-        success?: boolean;
-      } | null;
 
-      if (!response.ok || !payload?.success) {
-        throw new Error(payload?.message ?? "Order status update failed.");
+      const payload = (await response.json()) as ApiResponse;
+
+      if (!response.ok || payload.success === false) {
+        throw new Error(payload.message || payload.error || "Status could not be updated.");
       }
 
+      setActionMessage("Order status updated.");
       await loadOrders();
     } catch (error) {
-      console.error("Order status could not be updated.", error);
+      const message = error instanceof Error ? error.message : "Status could not be updated.";
+      setActionMessage(message);
     } finally {
       setUpdatingOrderIds((current) => current.filter((id) => id !== orderId));
     }
   }
 
+  const emptyMessage = orders.length === 0 ? "No orders found." : "No orders match these filters.";
+
   return (
     <AdminShell>
       <div className="space-y-6">
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            active={!priorityOnly && orderFilter === "All"}
-            helper="Live intake"
-            icon="#"
-            label="Today Orders"
-            onClick={() => {
-              setPriorityOnly(false);
-              setOrderFilter("All");
-            }}
-            value={String(totalOrders)}
-          />
-          <StatCard
-            active={orderFilter === "pending"}
-            helper="Need action"
-            icon="!"
-            label="Pending Confirm"
-            onClick={() => {
-              setOrderFilter("pending");
-              setPriorityOnly(false);
-            }}
-            value={String(pendingConfirmOrders)}
-          />
-          <StatCard
-            helper="Dispatch now"
-            icon="Go"
-            label="Ready Courier"
-            onClick={() => {
-              setPriorityOnly(false);
-              setZoneFilter("All Zones");
-            }}
-            value={String(readyCourierOrders)}
-          />
-          <StatCard
-            active={sourcingOnly}
-            helper="Procure"
-            icon="Src"
-            label="Needs Sourcing"
-            onClick={() => setSourcingOnly((current) => !current)}
-            value={String(needsSourcingOrders)}
-          />
-        </section>
+        <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-teal-600">Orders</p>
+            <h1 className="mt-1 text-2xl font-bold text-slate-950">Order Management</h1>
+            <p className="mt-1 max-w-2xl text-sm text-slate-500">
+              Review customer orders, filter the queue, and move orders through the safe fulfillment steps.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadOrders()}
+            className="inline-flex items-center justify-center rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+          >
+            Refresh Orders
+          </button>
+        </div>
 
-        <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 p-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="flex flex-col gap-2">
-                <h1 className="text-xl font-bold tracking-tight text-slate-950">
-                  Orders Command Center
-                </h1>
-                <p className="max-w-3xl text-sm leading-6 text-slate-500">
-                  Live MySQL order board with source-style filters, risk
-                  badges, customer blocks, status updates, and safe detail links.
-                  Bulk actions, invoice printing and courier upload are coming
-                  later. Row detail links and status updates remain live.
-                </p>
-              </div>
-              <Badge tone="brand">Live Orders</Badge>
-            </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard active={statusFilter === "all"} label="All Orders" value={stats.all} onClick={() => setStatusFilter("all")} />
+          <StatCard active={statusFilter === "pending"} label="New Orders" value={stats.newOrders} onClick={() => setStatusFilter("pending")} />
+          <StatCard label="In Progress" value={stats.inProgress} onClick={() => setStatusFilter("processing")} />
+          <StatCard active={statusFilter === "delivered"} label="Delivered" value={stats.delivered} onClick={() => setStatusFilter("delivered")} />
+        </div>
 
-            <div className="mt-5 grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
-              <div className="relative max-w-lg">
+        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 p-4">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+              <label className="flex flex-1 flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Search Orders
                 <input
-                  className="w-full rounded-2xl border border-slate-300 bg-stone-50 px-4 py-3 pl-10 text-sm outline-none placeholder:text-slate-400 focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15"
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search order, customer, phone..."
-                  type="text"
+                  type="search"
                   value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search by order, customer or phone"
+                  className="min-h-11 rounded-full border border-slate-200 px-4 text-sm font-medium normal-case tracking-normal text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100"
                 />
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">
-                  S
-                </span>
-              </div>
-              <div className="flex flex-wrap justify-start gap-2 xl:justify-end">
-                <DisabledButton>Add order coming later</DisabledButton>
-                <DisabledButton>Export coming later</DisabledButton>
-                <DisabledButton>Bulk confirm coming later</DisabledButton>
-                <DisabledButton>Print invoice coming later</DisabledButton>
-                <DisabledButton primary>Courier upload coming later</DisabledButton>
+              </label>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <SelectPill label="Status" value={statusFilter} onChange={setStatusFilter} options={STATUS_FILTERS} />
+                <SelectPill label="Date" value={dateFilter} onChange={setDateFilter} options={DATE_FILTERS} />
+                <SelectPill label="Delivery Zone" value={zoneFilter} onChange={setZoneFilter} options={ZONE_FILTERS} />
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <button
-                className={`rounded-full px-4 py-2 text-xs font-semibold ${
-                  priorityOnly
-                    ? "bg-rose-600 text-white"
-                    : "border border-slate-200 bg-white text-slate-600"
-                }`}
-                onClick={() => setPriorityOnly((current) => !current)}
-                type="button"
-              >
-                Priority Queue
-              </button>
-              <button
-                className={`rounded-full px-4 py-2 text-xs font-semibold ${
-                  sourcingOnly
-                    ? "bg-amber-600 text-white"
-                    : "border border-slate-200 bg-white text-slate-600"
-                }`}
-                onClick={() => setSourcingOnly((current) => !current)}
-                type="button"
-              >
-                Needs Sourcing
-              </button>
-              <SelectPill
-                label="Source"
-                onChange={setSourceFilter}
-                options={sourceOptions}
-                value={sourceFilter}
-              />
-              <SelectPill
-                label="Status"
-                onChange={setOrderFilter}
-                options={statusOptions}
-                value={orderFilter}
-              />
-              <SelectPill
-                compact
-                label="Zone"
-                onChange={setZoneFilter}
-                options={["All Zones", "Dhaka", "Outside Dhaka"]}
-                value={zoneFilter}
-              />
-            </div>
+            {actionMessage ? (
+              <p className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700">{actionMessage}</p>
+            ) : null}
           </div>
 
-          {selectedOrderIds.length > 0 ? (
-            <div className="border-b border-slate-100 bg-[#5E7F85]/5 px-6 py-4 text-sm font-semibold text-[#5E7F85]">
-              {selectedOrderIds.length} order selected - bulk confirm, print
-              and courier controls are coming later.
+          {loading ? (
+            <div className="p-10 text-center text-sm font-semibold text-slate-500">Loading orders...</div>
+          ) : loadError ? (
+            <div className="p-10 text-center">
+              <p className="text-sm font-semibold text-red-600">Orders could not be loaded. Please try again.</p>
+              <button
+                type="button"
+                onClick={() => void loadOrders()}
+                className="mt-4 rounded-full bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+              >
+                Try Again
+              </button>
             </div>
-          ) : null}
-
-          {isLoading ? (
-            <div className="px-5 py-12 text-center text-sm text-slate-500">
-              Loading live orders from local MySQL...
-            </div>
-          ) : filteredOrders.length ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="sticky top-0 z-10 bg-stone-50 text-slate-500">
-                  <tr>
-                    <th className="px-5 py-4 font-medium">
-                      <input
-                        checked={allVisibleSelected}
-                        className="h-4 w-4 rounded border-slate-300"
-                        onChange={toggleAllVisible}
-                        type="checkbox"
-                      />
-                    </th>
-                    {[
-                      "Order",
-                      "Customer",
-                      "Source",
-                      "Amount",
-                      "Payment",
-                      "Delivery Address",
-                      "Risk",
-                      "Status",
-                      "Courier",
-                      "Quick Status",
-                      "Action",
-                    ].map((heading) => (
-                      <th className="px-5 py-4 font-medium" key={heading}>
-                        {heading}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredOrders.map((order) => (
-                    <tr
-                      className={`cursor-pointer border-t border-slate-100 transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${getRowClassName(
-                        order,
-                      )}`}
-                      key={order.id}
-                      onClick={() => setPreviewOrderId(order.id)}
-                    >
-                      <td
-                        className="px-5 py-4"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <input
-                          checked={selectedOrderIds.includes(order.id)}
-                          className="h-4 w-4 rounded border-slate-300"
-                          onChange={() => toggleOrder(order.id)}
-                          type="checkbox"
-                        />
-                      </td>
-                      <td className="px-5 py-4 font-semibold text-slate-900">
-                        {order.order_number ?? "No number"}
-                        <div className="mt-1 text-xs font-semibold text-slate-400">
-                          {formatDate(order.created_at)}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="font-semibold text-slate-800">
-                              {order.customer_name}
-                            </div>
-                            <div className="text-xs text-slate-500">
-                              {order.customer_phone}
-                            </div>
-                          </div>
-                          <button
-                            className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-300"
-                            disabled
-                            type="button"
-                          >
-                            WA
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-slate-600">
-                        {order.source ?? "Unknown"}
-                      </td>
-                      <td className="px-5 py-4 font-semibold text-slate-900">
-                        {formatMoney(order.total)}
-                        <div className="mt-1 text-xs text-slate-500">
-                          Due {formatMoney(order.due_amount)}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <Badge
-                          tone={
-                            order.payment_status === "paid" ? "good" : "warn"
-                          }
-                        >
-                          {formatStatus(order.payment_status)}
-                        </Badge>
-                      </td>
-                      <td className="px-5 py-4 text-slate-600">
-                        <div className="max-w-[260px] font-semibold text-slate-700">
-                          {order.area ?? "No address"}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {order.district ?? order.delivery_zone ?? "No zone"}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="group relative inline-flex">
-                          <Badge tone={getRiskTone(order)}>
-                            {getRiskLabel(order)}
-                          </Badge>
-                          <div className="pointer-events-none absolute left-0 top-full z-30 mt-2 hidden w-64 rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-600 shadow-xl group-hover:block">
-                            <div className="font-bold text-slate-900">
-                              Live risk signals
-                            </div>
-                            <div className="mt-2 space-y-1">
-                              {getRiskReasons(order).map((reason) => (
-                                <div key={reason}>- {reason}</div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex flex-col gap-2">
-                          <Badge tone={getOrderStatusTone(order.order_status)}>
-                            {formatStatus(order.order_status)}
-                          </Badge>
-                          {order.requires_sourcing ? (
-                            <Badge tone={order.pending_sourcing_count ? "warn" : "good"}>
-                              {order.pending_sourcing_count ? "Pending Sourcing" : order.ready_count ? "Ready for Packing" : "Sourced"}
-                            </Badge>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td
-                        className="px-5 py-4"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <select
-                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400 outline-none"
-                          disabled
-                          value={formatStatus(order.courier_status)}
-                        >
-                          <option>{formatStatus(order.courier_status)}</option>
-                        </select>
-                      </td>
-                      <td
-                        className="px-5 py-4"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <select
-                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400 outline-none"
-                          disabled={updatingOrderIds.includes(order.id)}
-                          onChange={(event) =>
-                            handleStatusChange(order.id, event.target.value)
-                          }
-                          value={order.order_status}
-                        >
-                          {ORDER_STATUS_OPTIONS.map((status) => (
-                            <option key={status} value={status}>
-                              {formatStatus(status)}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex flex-wrap gap-2">
-                          <Link
-                            className="inline-flex rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
-                            href={`/orders/details?id=${order.id}`}
-                          >
-                            Open
-                          </Link>
-                          <button
-                            className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-                            disabled={
-                              updatingOrderIds.includes(order.id) ||
-                              !["pending", "new"].includes(order.order_status)
-                            }
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void handleStatusChange(order.id, "approved");
-                            }}
-                            type="button"
-                          >
-                            Approve
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="p-10 text-center text-sm font-semibold text-slate-500">{emptyMessage}</div>
           ) : (
-            <div className="px-5 py-12 text-center text-sm text-slate-500">
-              No orders found. Try changing filters.
-            </div>
-          )}
-        </section>
-
-        <section className="grid gap-6 xl:grid-cols-[1fr_380px]">
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold tracking-tight text-slate-950">
-              Ops Drawer
-            </h2>
-            {previewOrder ? (
-              <div className="mt-5 space-y-4 text-sm">
-                <div className="rounded-2xl bg-stone-50 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="font-bold text-slate-900">
-                        {previewOrder.order_number ?? "No number"}
-                      </div>
-                      <div className="mt-1 font-semibold text-slate-700">
-                        {previewOrder.customer_name}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500">
-                        {previewOrder.customer_phone}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge tone={getRiskTone(previewOrder)}>
-                        {getRiskLabel(previewOrder)}
-                      </Badge>
-                      <div className="mt-2 text-xs font-semibold text-slate-500">
-                        Derived from live status and due
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid gap-3 rounded-2xl bg-stone-50 p-4 sm:grid-cols-2">
-                  <div>
-                    <div className="text-xs text-slate-500">Zone</div>
-                    <div className="font-semibold text-slate-800">
-                      {formatLocation(previewOrder)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500">Amount</div>
-                    <div className="font-semibold text-slate-800">
-                      {formatMoney(previewOrder.total)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500">Source</div>
-                    <div className="font-semibold text-slate-800">
-                      {previewOrder.source ?? "Unknown"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500">Courier</div>
-                    <div className="font-semibold text-slate-800">
-                      {formatStatus(previewOrder.courier_status)}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl bg-stone-50 p-4">
-                  <div className="text-xs text-slate-500">Status Sync</div>
-                  <div className="mt-1 font-semibold text-slate-800">
-                    Order {formatStatus(previewOrder.order_status)} / Payment{" "}
-                    {formatStatus(previewOrder.payment_status)}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl bg-rose-50/60 p-4">
-                  <div className="text-xs font-bold uppercase tracking-[0.14em] text-rose-500">
-                    Risk Reasons
-                  </div>
-                  <div className="mt-2 grid gap-1 text-xs text-rose-700">
-                    {getRiskReasons(previewOrder).map((reason) => (
-                      <div key={reason}>- {reason}</div>
+            <>
+              <div className="hidden overflow-x-auto lg:block">
+                <table className="min-w-full divide-y divide-slate-200 text-sm">
+                  <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Order</th>
+                      <th className="px-4 py-3">Customer</th>
+                      <th className="px-4 py-3">Items</th>
+                      <th className="px-4 py-3">Delivery</th>
+                      <th className="px-4 py-3">Total</th>
+                      <th className="px-4 py-3">Payment</th>
+                      <th className="px-4 py-3">Date</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Next Step</th>
+                      <th className="px-4 py-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredOrders.map((order) => (
+                      <tr key={order.id} className="align-top transition hover:bg-slate-50">
+                        <td className="px-4 py-4">
+                          <p className="font-bold text-slate-950">#{order.order_number || order.id}</p>
+                          <p className="mt-1 text-xs text-slate-500">ID {order.id}</p>
+                        </td>
+                        <td className="px-4 py-4">
+                          <p className="font-semibold text-slate-900">{order.customer_name || "Customer"}</p>
+                          <p className="mt-1 text-xs text-slate-500">{order.customer_phone || "Phone unavailable"}</p>
+                        </td>
+                        <td className="px-4 py-4 text-slate-600">{getItemSummary(order)}</td>
+                        <td className="px-4 py-4">
+                          <p className="font-semibold text-slate-700">{getDeliveryLabel(order)}</p>
+                          {order.customer_address ? <p className="mt-1 line-clamp-2 max-w-56 text-xs text-slate-500">{order.customer_address}</p> : null}
+                        </td>
+                        <td className="px-4 py-4 font-bold text-slate-950">{formatMoney(order.total_amount)}</td>
+                        <td className="px-4 py-4 text-slate-600">{formatPayment(order)}</td>
+                        <td className="px-4 py-4 text-slate-600">{formatDate(order.created_at)}</td>
+                        <td className="px-4 py-4">
+                          <Badge tone={statusTone(order.order_status)}>{formatStatus(order.order_status)}</Badge>
+                        </td>
+                        <td className="px-4 py-4">
+                          <NextStatusButton
+                            order={order}
+                            updating={updatingOrderIds.includes(order.id)}
+                            onUpdate={(orderId, nextStatus) => void handleStatusChange(orderId, nextStatus)}
+                          />
+                        </td>
+                        <td className="px-4 py-4">
+                          <Link
+                            href={`/orders/${order.id}`}
+                            className="inline-flex rounded-full bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+                          >
+                            View Order
+                          </Link>
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                </div>
+                  </tbody>
+                </table>
+              </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <button
-                    className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-400"
-                    disabled
-                    type="button"
-                  >
-                    Call Now
-                  </button>
-                  <button
-                    className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-300"
-                    disabled
-                    type="button"
-                  >
-                    WhatsApp
-                  </button>
-                  <button
-                    className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white opacity-60"
-                    disabled
-                    type="button"
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-400"
-                    disabled
-                    type="button"
-                  >
-                    Print
-                  </button>
-                  <Link
-                    className="rounded-2xl border border-[#5E7F85]/30 bg-[#5E7F85]/10 px-4 py-3 text-center text-sm font-semibold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white sm:col-span-2"
-                    href={`/orders/details?id=${previewOrder.id}`}
-                  >
-                    Open Full Details
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-5 rounded-2xl bg-stone-50 p-6 text-sm text-slate-500">
-                Click any order row to open quick action drawer.
-              </div>
-            )}
-          </div>
+              <div className="grid gap-3 p-4 lg:hidden">
+                {filteredOrders.map((order) => (
+                  <article key={order.id} className="rounded-2xl border border-slate-200 p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-slate-950">#{order.order_number || order.id}</p>
+                        <p className="mt-1 text-xs text-slate-500">{formatDate(order.created_at)}</p>
+                      </div>
+                      <Badge tone={statusTone(order.order_status)}>{formatStatus(order.order_status)}</Badge>
+                    </div>
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold tracking-tight text-slate-950">
-              Quick Actions
-            </h2>
-            <div className="mt-3 rounded-2xl bg-stone-50 p-3 text-xs font-semibold text-slate-500">
-              Selected: {selectedOrderIds.length} - Visible: {filteredOrders.length}
-            </div>
-            <div className="mt-5 space-y-3">
-              {["Bulk confirm coming later", "Mark packed coming later", "Print invoices coming later", "Courier upload coming later"].map(
-                (item) => (
-                  <QuickActionButton key={item}>{item}</QuickActionButton>
-                ),
-              )}
-            </div>
+                    <div className="mt-4 grid gap-3 text-sm text-slate-600">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Customer</p>
+                        <p className="font-semibold text-slate-900">{order.customer_name || "Customer"}</p>
+                        <p>{order.customer_phone || "Phone unavailable"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Delivery</p>
+                        <p>{getDeliveryLabel(order)}</p>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span>{getItemSummary(order)}</span>
+                        <strong className="text-base text-slate-950">{formatMoney(order.total_amount)}</strong>
+                      </div>
+                    </div>
 
-            <div className="mt-5 grid gap-3 rounded-2xl bg-stone-50 p-4 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Selected COD</span>
-                <b className="text-slate-900">{formatMoney(selectedCodTotal)}</b>
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <NextStatusButton
+                        order={order}
+                        updating={updatingOrderIds.includes(order.id)}
+                        onUpdate={(orderId, nextStatus) => void handleStatusChange(orderId, nextStatus)}
+                      />
+                      <Link
+                        href={`/orders/${order.id}`}
+                        className="inline-flex rounded-full bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+                      >
+                        View Order
+                      </Link>
+                    </div>
+                  </article>
+                ))}
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Confirmed</span>
-                <b className="text-slate-900">{confirmedOrders}</b>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Delivered</span>
-                <b className="text-slate-900">{deliveredOrders}</b>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Total Due</span>
-                <b className="text-slate-900">{formatMoney(totalDue)}</b>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
         </section>
       </div>
     </AdminShell>
   );
 }
+

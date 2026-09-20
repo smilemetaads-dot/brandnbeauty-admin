@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import type { FormEvent, ReactNode } from "react";
+import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -18,15 +18,6 @@ type RealBrandsPageProps = {
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
-type BrandPreview = {
-  banner: string;
-  id: string;
-  logo: string;
-  origin: string;
-  products: string;
-  type: string;
-};
-
 const inputClassName =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15";
 
@@ -35,6 +26,9 @@ const labelClassName = "text-sm font-semibold text-slate-700";
 const BRANDS_ENDPOINT = bnbApiUrl("get_brands.php?include_inactive=1");
 const MANAGE_CATALOG_META_ENDPOINT = bnbApiUrl("manage_catalog_meta.php");
 const DELETE_CATALOG_ITEM_ENDPOINT = bnbApiUrl("delete_catalog_item.php");
+const UPLOAD_MEDIA_ENDPOINT = bnbApiUrl("upload_media.php");
+const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 function toNumber(value: unknown) {
   const numberValue = Number(value);
@@ -89,81 +83,11 @@ function normalizeBrand(value: unknown): BrandRecord | null {
   };
 }
 
-const brandPreviews: Record<string, BrandPreview> = {
-  cosrx: {
-    banner: "Ready",
-    id: "cosrx",
-    logo: "Ready",
-    origin: "South Korea",
-    products: "Preview",
-    type: "Official",
-  },
-  "some-by-mi": {
-    banner: "Needs Banner",
-    id: "some-by-mi",
-    logo: "Ready",
-    origin: "South Korea",
-    products: "Preview",
-    type: "Imported",
-  },
-  "the-derma-plus": {
-    banner: "Ready",
-    id: "the-derma-plus",
-    logo: "Ready",
-    origin: "Bangladesh",
-    products: "Preview",
-    type: "Owned",
-  },
-  "beauty-of-joseon": {
-    banner: "Draft",
-    id: "beauty-of-joseon",
-    logo: "Missing",
-    origin: "South Korea",
-    products: "Preview",
-    type: "Imported",
-  },
-  simple: {
-    banner: "Missing",
-    id: "simple",
-    logo: "Needs Logo",
-    origin: "UK",
-    products: "Preview",
-    type: "Imported",
-  },
-};
-
-const defaultBrandPreview: BrandPreview = {
-  banner: "Ready",
-  id: "cosrx",
-  logo: "Ready",
-  origin: "Brand origin preview",
-  products: "Preview",
-  type: "Imported",
-};
-
 const getStatusLabel = (status: string | null) =>
-  status === "inactive" ? "Hidden" : "Active";
+  status === "inactive" ? "Hidden" : "Visible";
 
 const getStatusTone = (status: string | null): BadgeTone =>
-  status === "inactive" ? "bad" : "good";
-
-const getSeoScore = (brand: BrandRecord) => {
-  let score = 50;
-
-  if (brand.meta_title) {
-    score += 20;
-  }
-
-  if (brand.meta_description) {
-    score += 20;
-  }
-
-  if (brand.slug) {
-    score += 10;
-  }
-
-  return score;
-};
+  status === "inactive" ? "warn" : "good";
 
 function Badge({
   children,
@@ -232,6 +156,115 @@ function StatCard({
   );
 }
 
+
+type UploadState = { isUploading: boolean; message: string; ok: boolean };
+
+async function uploadTaxonomyMedia(file: File): Promise<string> {
+  if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
+    throw new Error("Only JPG, PNG, and WebP images are supported.");
+  }
+
+  if (file.size <= 0 || file.size > MAX_IMAGE_BYTES) {
+    throw new Error("Image must be greater than 0 bytes and no larger than 5MB.");
+  }
+
+  const body = new FormData();
+  body.append("image", file);
+
+  const response = await fetch(UPLOAD_MEDIA_ENDPOINT, {
+    body,
+    headers: adminAuthHeaders(),
+    method: "POST",
+  });
+  const payload = await response.json().catch(() => null) as { image_url?: string; message?: string; success?: boolean } | null;
+
+  if (!response.ok || payload?.success === false || !payload?.image_url) {
+    throw new Error(payload?.message || "Image upload failed.");
+  }
+
+  return payload.image_url;
+}
+
+function TaxonomyMediaField({
+  emptyText,
+  helper,
+  imageAlt,
+  isPending,
+  onChange,
+  onUpload,
+  removeLabel,
+  title,
+  uploadLabel,
+  uploadState,
+  value,
+}: {
+  emptyText: string;
+  helper: string;
+  imageAlt: string;
+  isPending: boolean;
+  onChange: (value: string) => void;
+  onUpload: (file: File) => Promise<void>;
+  removeLabel: string;
+  title: string;
+  uploadLabel: string;
+  uploadState: UploadState;
+  value: string;
+}) {
+  return (
+    <div className="space-y-3 rounded-2xl border border-slate-200 bg-stone-50 p-4 md:col-span-2">
+      <input name="image" type="hidden" value={value} />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className={labelClassName}>{title}</div>
+          <p className="mt-1 text-xs font-medium leading-5 text-slate-500">{helper}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <label className={`inline-flex cursor-pointer rounded-2xl px-4 py-2.5 text-xs font-bold ${uploadState.isUploading || isPending ? "bg-slate-100 text-slate-400" : "bg-[#5E7F85]/10 text-[#5E7F85] hover:bg-[#5E7F85]/15"}`}>
+            <input
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              disabled={uploadState.isUploading || isPending}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) void onUpload(file);
+              }}
+              type="file"
+            />
+            {uploadState.isUploading ? "Uploading..." : value ? `Replace ${uploadLabel}` : `Upload ${uploadLabel}`}
+          </label>
+          <button
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!value || uploadState.isUploading || isPending}
+            onClick={() => onChange("")}
+            type="button"
+          >
+            {removeLabel}
+          </button>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-dashed border-slate-200 bg-white">
+        {value ? (
+          <Image alt={imageAlt} className="h-40 w-full object-contain p-3" height={160} src={value} unoptimized width={320} />
+        ) : (
+          <div className="flex h-40 items-center justify-center px-4 text-center text-sm font-semibold text-slate-500">{emptyText}</div>
+        )}
+      </div>
+
+      {uploadState.message ? (
+        <p className={`text-sm font-semibold ${uploadState.ok ? "text-emerald-700" : "text-rose-700"}`}>{uploadState.message}</p>
+      ) : null}
+
+      <details className="rounded-2xl border border-slate-200 bg-white p-3">
+        <summary className="cursor-pointer text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Advanced Details</summary>
+        <div className="mt-3 break-all rounded-xl bg-stone-50 px-3 py-2 text-xs font-semibold text-slate-600">
+          {value || "No uploaded URL assigned."}
+        </div>
+      </details>
+    </div>
+  );
+}
 function TableHead({ children }: { children: ReactNode }) {
   return (
     <thead className="bg-stone-50 text-xs uppercase tracking-[0.12em] text-slate-500">
@@ -240,41 +273,6 @@ function TableHead({ children }: { children: ReactNode }) {
   );
 }
 
-function DisabledButton({
-  children,
-  className = "",
-  title = "Not connected yet",
-}: {
-  children: ReactNode;
-  className?: string;
-  title?: string;
-}) {
-  return (
-    <button
-      aria-label={title}
-      className={`cursor-not-allowed rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-400 ${className}`}
-      disabled
-      title={title}
-      type="button"
-    >
-      {children}
-    </button>
-  );
-}
-
-function getPreviewForBrand(brand: BrandRecord | null): BrandPreview {
-  if (!brand) {
-    return defaultBrandPreview;
-  }
-
-  const preview = brandPreviews[brand.slug] ?? defaultBrandPreview;
-
-  return {
-    ...preview,
-    origin: brand.origin_country ?? preview.origin,
-    type: brand.brand_type ?? preview.type,
-  };
-}
 
 function BrandForm({
   editingBrand,
@@ -290,10 +288,26 @@ function BrandForm({
   onClose: () => void;
 }) {
   const isEditing = Boolean(editingBrand);
-  const preview = getPreviewForBrand(editingBrand);
   const [name, setName] = useState(editingBrand?.name ?? "");
   const [slug, setSlug] = useState(editingBrand?.slug ?? "");
   const [slugEdited, setSlugEdited] = useState(false);
+  const [imageUrl, setImageUrl] = useState(editingBrand?.image ?? "");
+  const [uploadState, setUploadState] = useState<UploadState>({ isUploading: false, message: "", ok: false });
+
+  async function handleMediaUpload(file: File) {
+    setUploadState({ isUploading: true, message: "Uploading logo...", ok: false });
+    try {
+      const uploadedUrl = await uploadTaxonomyMedia(file);
+      setImageUrl(uploadedUrl);
+      setUploadState({ isUploading: false, message: "Logo uploaded. Save changes to publish it.", ok: true });
+    } catch (error) {
+      setUploadState({
+        isUploading: false,
+        message: error instanceof Error ? error.message : "Logo upload failed.",
+        ok: false,
+      });
+    }
+  }
 
   function handleNameChange(value: string) {
     setName(value);
@@ -315,11 +329,7 @@ function BrandForm({
               {isEditing ? `Edit ${editingBrand?.name}` : "Add Brand"}
             </h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              This form now creates live brand metadata through the local PHP
-              backend. Active brands appear on the homepage and brand routes;
-              inactive brands stay hidden. Use a clean slug, centered
-              transparent PNG/WebP logo or image URL, and lower sort order for
-              earlier placement.
+              Visible brands appear in the homepage Featured Brands section and brand browsing pages.
             </p>
           </div>
           {isEditing ? (
@@ -379,9 +389,7 @@ function BrandForm({
             Brand Type
             <select
               className={inputClassName}
-              defaultValue={
-                editingBrand?.brand_type ?? (editingBrand ? preview.type : "")
-              }
+              defaultValue={editingBrand?.brand_type ?? ""}
               name="brandType"
             >
               <option value="">Select type</option>
@@ -397,9 +405,7 @@ function BrandForm({
             Origin Country
             <input
               className={inputClassName}
-              defaultValue={
-                editingBrand?.origin_country ?? (editingBrand ? preview.origin : "")
-              }
+              defaultValue={editingBrand?.origin_country ?? ""}
               name="originCountry"
               placeholder="South Korea"
               type="text"
@@ -409,7 +415,7 @@ function BrandForm({
           <label className={labelClassName}>
             Storefront Visibility
             <span className="mt-1 block text-xs font-medium text-slate-500">
-              Active means visible on storefront sections; inactive hides it.
+              Visible brands appear publicly where allowed. Hidden brands stay saved but are not shown publicly.
             </span>
             <select
               className={inputClassName}
@@ -435,50 +441,51 @@ function BrandForm({
             />
           </label>
 
-          <label className={labelClassName}>
-            Image URL
-            <span className="mt-1 block text-xs font-medium text-slate-500">
-              Use a logo or square image. Blank is allowed and shows the brand name.
-            </span>
-            <input
-              className={inputClassName}
-              defaultValue={editingBrand?.image ?? ""}
-              name="image"
-              placeholder="https://..."
-              type="text"
-            />
-          </label>
+                    <TaxonomyMediaField
+            emptyText="No brand logo uploaded."
+            helper="Used in Featured Brands cards on the homepage. Recommended: square transparent PNG/WebP when possible. Prefer a 1000 × 1000 px canvas with the logo centered and enough padding."
+            imageAlt={editingBrand?.name ? `${editingBrand.name} logo` : "Brand Logo preview"}
+            isPending={isPending}
+            onChange={(value) => {
+              setImageUrl(value);
+              setUploadState(value ? uploadState : { isUploading: false, message: "Logo removed from this brand. Save changes to publish it.", ok: true });
+            }}
+            onUpload={handleMediaUpload}
+            removeLabel="Remove Logo"
+            title="Brand Logo"
+            uploadLabel="Logo"
+            uploadState={uploadState}
+            value={imageUrl}
+          />
 
-          <label className={labelClassName}>
-            Banner Status
-            <input
-              className={`${inputClassName} cursor-not-allowed bg-stone-50 text-slate-500`}
-              disabled
-              placeholder={editingBrand?.image ? "Ready" : "Needs Banner"}
-              type="text"
-            />
-          </label>
+          <details className="rounded-2xl border border-slate-200 bg-stone-50 p-4 md:col-span-2">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+              Optional SEO
+            </summary>
+            <div className="mt-4 space-y-4">
+              <label className={labelClassName}>
+                SEO Title
+                <input
+                  className={inputClassName}
+                  defaultValue={editingBrand?.meta_title ?? ""}
+                  name="metaTitle"
+                  placeholder="Optional title for search results"
+                  type="text"
+                />
+              </label>
 
-          <label className={`${labelClassName} md:col-span-2`}>
-            SEO Title
-            <input
-              className={inputClassName}
-              defaultValue={editingBrand?.meta_title ?? ""}
-              name="metaTitle"
-              placeholder="Brand Products Price in Bangladesh | BrandnBeauty"
-              type="text"
-            />
-          </label>
-
-          <label className={`${labelClassName} md:col-span-2`}>
-            Meta Description
-            <textarea
-              className={`${inputClassName} h-24 resize-y`}
-              defaultValue={editingBrand?.meta_description ?? ""}
-              name="metaDescription"
-              placeholder="Write brand landing meta description..."
-            />
-          </label>
+              <label className={labelClassName}>
+                Meta Description
+                <textarea
+                  className={inputClassName}
+                  defaultValue={editingBrand?.meta_description ?? ""}
+                  name="metaDescription"
+                  placeholder="Write a short search summary"
+                  rows={3}
+                />
+              </label>
+            </div>
+          </details>
 
           <label className="flex items-center justify-between rounded-2xl bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-700">
             Homepage Featured
@@ -644,8 +651,8 @@ export function RealBrandsPage({
     }
   }
 
-  async function handleDeleteBrand(brandId: string) {
-    if (!window.confirm("Delete this brand?")) {
+  async function handleHideBrand(brandId: string) {
+    if (!window.confirm("Hide this brand?\n\nThis brand will no longer appear publicly. Existing product relationships will remain unchanged.")) {
       return;
     }
 
@@ -669,20 +676,19 @@ export function RealBrandsPage({
       } | null;
 
       if (!response.ok || !result?.success) {
-        throw new Error(result?.message ?? "Brand could not be deleted.");
+        throw new Error(result?.message ?? "Brand could not be hidden.");
       }
 
-      setBrands((current) => current.filter((brand) => brand.id !== brandId));
-      setSelectedBrandId((current) =>
-        current === brandId
-          ? brands.find((brand) => brand.id !== brandId)?.id ?? ""
-          : current,
+      setBrands((current) =>
+        current.map((brand) =>
+          brand.id === brandId ? { ...brand, status: "inactive" } : brand,
+        ),
       );
-      setFormState({ ok: true, message: result.message ?? "Item deleted successfully" });
+      setFormState({ ok: true, message: result.message ?? "Brand hidden successfully" });
     } catch (error) {
       setFormState({
         ok: false,
-        message: error instanceof Error ? error.message : "Brand could not be deleted.",
+        message: error instanceof Error ? error.message : "Brand could not be hidden.",
       });
     } finally {
       setDeletingBrandIds((current) => current.filter((id) => id !== brandId));
@@ -691,27 +697,21 @@ export function RealBrandsPage({
 
   const editingBrand =
     brands.find((brand) => brand.id === editBrandId) ?? null;
-  const featuredCount = brands.filter((brand) => brand.featured).length;
-  const needsSeoCount = brands.filter((brand) => getSeoScore(brand) < 75).length;
   const filteredBrands = useMemo(() => {
     return brands.filter((brand) => {
       const query = search.toLowerCase();
-      const preview = getPreviewForBrand(brand);
       const productCount = brand.product_count ?? 0;
       const matchesSearch =
         !query ||
-        `${brand.name} ${brand.slug} ${brand.status ?? ""} ${preview.type} ${preview.origin} ${productCount}`
+        `${brand.name} ${brand.slug} ${brand.status ?? ""} ${brand.brand_type ?? ""} ${brand.origin_country ?? ""} ${productCount}`
           .toLowerCase()
           .includes(query);
       const matchesFilter =
         filter === "All" ||
         (filter === "Featured" && brand.featured) ||
-        (filter === "Active" && brand.status !== "inactive") ||
         (filter === "Visible" && brand.status !== "inactive") ||
         (filter === "Hidden" && brand.status === "inactive") ||
-        (filter === "Needs Work" && getSeoScore(brand) < 75) ||
-        (filter === "Image Ready" && Boolean(brand.image)) ||
-        preview.type === filter;
+        brand.brand_type === filter;
 
       return matchesSearch && matchesFilter;
     });
@@ -722,9 +722,8 @@ export function RealBrandsPage({
     filteredBrands[0] ??
     brands[0] ??
     null;
-  const selectedPreview = getPreviewForBrand(selectedBrand);
-  const topBrand = brands[0] ?? null;
   const visibleBrandCount = brands.filter((brand) => brand.status !== "inactive").length;
+  const hiddenBrandCount = brands.filter((brand) => brand.status === "inactive").length;
   const mappedProductCount = brands.reduce(
     (sum, brand) => sum + (brand.product_count ?? 0),
     0,
@@ -756,17 +755,10 @@ export function RealBrandsPage({
                 Brands Control Room
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                Manage brand landing pages, logo/banner assets, SEO health,
-                homepage featured brands and live product mapping.
+                Manage brand names, logos, visibility, display order and live product mapping.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DisabledButton title="Import brands is not connected yet">
-                Import
-              </DisabledButton>
-              <DisabledButton title="Export brands is not connected yet">
-                Export
-              </DisabledButton>
               <button
                 className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white"
                 onClick={() => setShowAddForm(true)}
@@ -785,24 +777,23 @@ export function RealBrandsPage({
               Visible brands: <b className="text-slate-900">{visibleBrandCount}</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Top brand:{" "}
-              <b className="text-emerald-700">{topBrand?.name ?? "Review"}</b>
+              Hidden brands: <b className="text-amber-700">{hiddenBrandCount}</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Needs work: <b className="text-amber-700">{needsSeoCount}</b>
+              Total brands: <b className="text-slate-900">{brands.length}</b>
             </div>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
-            ["Active Brands", String(visibleBrandCount), "Storefront visible"],
-            ["First by Sort", topBrand?.name ?? "Review", "Homepage ordering"],
-            ["Featured Brands", String(featuredCount), "Homepage visible"],
-            ["Mapped Products", String(mappedProductCount), "Product mapping"],
+            ["Visible", String(visibleBrandCount), "Shown publicly"],
+            ["Hidden", String(hiddenBrandCount), "Saved but not shown"],
+            ["Total Brands", String(brands.length), "Saved brand pages"],
+            ["Products", String(mappedProductCount), "Mapped products"],
           ].map((item, index) => (
             <StatCard
-              active={item[0] === "Active Brands" || item[0] === "First by Sort"}
+              active={item[0] === "Visible"}
               index={index}
               item={item as [string, string, string]}
               key={item[0]}
@@ -822,14 +813,10 @@ export function RealBrandsPage({
                     <Badge tone="brand">Live CMS</Badge>
                   </div>
                   <p className="mt-2 text-sm text-slate-500">
-                    Control brand visibility, SEO readiness, product mapping
-                    and homepage ordering.
+                    Control brand visibility, product mapping and homepage ordering.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <DisabledButton title="Bulk featured update is not connected yet">
-                    Bulk Featured
-                  </DisabledButton>
                   <button
                     className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white"
                     onClick={() => setShowAddForm(true)}
@@ -839,58 +826,8 @@ export function RealBrandsPage({
                   </button>
                 </div>
               </div>
-              <div className="mt-5 w-full overflow-visible rounded-[1.6rem] border border-[#5E7F85]/15 bg-gradient-to-br from-[#5E7F85]/5 via-white to-stone-50 p-4 shadow-sm">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div>
-                    <div className="text-xs font-bold uppercase tracking-[0.14em] text-[#5E7F85]">
-                      Homepage Visibility
-                    </div>
-                    <div className="mt-1 text-sm font-semibold text-slate-700">
-                      Active brands are public
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-start gap-3 xl:items-end">
-                    <div className="flex flex-wrap gap-2">
-                      {["All", "Featured", "Active", "Hidden"].map((item) => (
-                        <button
-                          className={`cursor-not-allowed rounded-full px-4 py-2 text-xs font-semibold transition ${
-                            item === "Active"
-                              ? "bg-[#5E7F85] text-white shadow-sm"
-                              : "border border-slate-200 bg-white text-slate-400"
-                          }`}
-                          disabled
-                          key={item}
-                          type="button"
-                        >
-                          {item}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      <DisabledButton
-                        className="inline-flex min-w-[150px] items-center justify-center gap-2 text-slate-700"
-                        title="Use each brand form to edit sort order"
-                      >
-                        <span>Sort order</span>
-                      </DisabledButton>
-                      <DisabledButton
-                        className="inline-flex min-w-[150px] items-center justify-center gap-2 text-slate-700"
-                        title="Use status to control homepage visibility"
-                      >
-                        <span>Status</span>
-                      </DisabledButton>
-                      <DisabledButton
-                        className="bg-[#5E7F85]/10 text-[#5E7F85]/50"
-                        title="Use the search and filters below"
-                      >
-                        Apply Filter
-                      </DisabledButton>
-                      <DisabledButton title="Clear search manually">
-                        Reset
-                      </DisabledButton>
-                    </div>
-                  </div>
-                </div>
+              <div className="mt-5 rounded-[1.6rem] border border-[#5E7F85]/15 bg-[#5E7F85]/5 p-4 text-sm leading-6 text-slate-600">
+                Visible brands appear in the homepage Featured Brands section and brand browsing pages.
               </div>
               <div className="mt-5 grid gap-3 xl:grid-cols-[minmax(320px,1fr)_auto] xl:items-center">
                 <div className="relative w-full">
@@ -906,16 +843,7 @@ export function RealBrandsPage({
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {[
-                    "All",
-                    "Featured",
-                    "Active",
-                    "Owned",
-                    "Imported",
-                    "Official",
-                    "Hidden",
-                    "Needs Work",
-                  ].map((item) => (
+                  {["All", "Featured", "Owned", "Imported", "Official", "Visible", "Hidden"].map((item) => (
                     <button
                       className={`rounded-full px-4 py-2 text-xs font-semibold ${
                         filter === item
@@ -940,12 +868,11 @@ export function RealBrandsPage({
                     {[
                       "Brand",
                       "Type",
+                      "Origin",
                       "Products",
                       "Sort",
-                      "Homepage",
-                      "SEO",
-                      "Assets",
-                      "Status",
+                      "Logo",
+                      "Visibility",
                       "Action",
                     ].map((head) => (
                         <th className="px-3 py-4 font-medium 2xl:px-5" key={head}>
@@ -956,15 +883,12 @@ export function RealBrandsPage({
                 </TableHead>
                 <tbody>
                   {filteredBrands.length > 0 ? (
-                    filteredBrands.map((brand) => {
-                      const preview = getPreviewForBrand(brand);
-
-                      return (
+                    filteredBrands.map((brand) => (
                         <tr
                           className={`cursor-pointer border-t border-slate-100 transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${
                             selectedBrand?.id === brand.id
                               ? "bg-[#5E7F85]/5 shadow-[inset_3px_0_0_#5E7F85]"
-                              : getSeoScore(brand) < 75
+                              : brand.status === "inactive"
                                 ? "bg-amber-50/25"
                                 : "bg-white"
                           }`}
@@ -998,23 +922,18 @@ export function RealBrandsPage({
                                   {brand.name}
                                 </div>
                                 <div className="max-w-[190px] truncate text-xs text-slate-500">
-                                  /brand/{brand.slug} - {preview.origin}
+                                  /brand/{brand.slug}
                                 </div>
                               </div>
                             </div>
                           </td>
                           <td className="px-3 py-4 2xl:px-5">
-                            <Badge
-                              tone={
-                                preview.type === "Owned"
-                                  ? "brand"
-                                  : preview.type === "Official"
-                                    ? "good"
-                                    : "default"
-                              }
-                            >
-                              {preview.type}
+                            <Badge tone={brand.brand_type ? "brand" : "default"}>
+                              {brand.brand_type || "Not set"}
                             </Badge>
+                          </td>
+                          <td className="px-3 py-4 text-xs font-semibold text-slate-500 2xl:px-5">
+                            {brand.origin_country || "Not provided"}
                           </td>
                           <td className="px-3 py-4 font-semibold text-slate-500 2xl:px-5">
                             {brand.product_count ?? 0}
@@ -1028,38 +947,9 @@ export function RealBrandsPage({
                             </div>
                           </td>
                           <td className="px-3 py-4 2xl:px-5">
-                            <div className="text-xs font-bold text-[#5E7F85]">
-                              {brand.status === "inactive" ? "Hidden" : "Visible"}
-                            </div>
-                          </td>
-                          <td className="px-3 py-4 2xl:px-5">
-                            <Badge
-                              tone={
-                                getSeoScore(brand) >= 80
-                                  ? "good"
-                                  : getSeoScore(brand) >= 70
-                                    ? "warn"
-                                    : "bad"
-                              }
-                            >
-                              {getSeoScore(brand)}/100
+                            <Badge tone={brand.image ? "good" : "default"}>
+                              {brand.image ? "Logo Set" : "No Logo"}
                             </Badge>
-                          </td>
-                          <td className="px-3 py-4 2xl:px-5">
-                            <div className="flex flex-wrap gap-1">
-                              <Badge tone={brand.image ? "good" : "warn"}>
-                                Logo
-                              </Badge>
-                              <Badge
-                                tone={
-                                  brand.image || preview.banner === "Ready"
-                                    ? "good"
-                                    : "warn"
-                                }
-                              >
-                                Banner
-                              </Badge>
-                            </div>
                           </td>
                           <td className="px-3 py-4 2xl:px-5">
                             <Badge tone={getStatusTone(brand.status)}>
@@ -1086,24 +976,25 @@ export function RealBrandsPage({
                               </button>
                               <button
                                 className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                disabled={deletingBrandIds.includes(brand.id)}
-                                onClick={() => handleDeleteBrand(brand.id)}
+                                disabled={deletingBrandIds.includes(brand.id) || brand.status === "inactive"}
+                                onClick={() => handleHideBrand(brand.id)}
                                 type="button"
                               >
                                 {deletingBrandIds.includes(brand.id)
-                                  ? "Deleting..."
-                                  : "Delete"}
+                                  ? "Hiding..."
+                                  : brand.status === "inactive"
+                                    ? "Hidden"
+                                    : "Hide"}
                               </button>
                             </div>
                           </td>
                         </tr>
-                      );
-                    })
+                    ))
                   ) : (
                     <tr>
                       <td
                         className="px-5 py-14 text-center text-sm text-slate-500"
-                        colSpan={9}
+                        colSpan={8}
                       >
                         No brands found.
                       </td>
@@ -1121,7 +1012,7 @@ export function RealBrandsPage({
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-sm font-medium text-slate-500">
-                        Brand Page Preview
+                        Selected Brand
                       </div>
                       <h3 className="mt-1 text-xl font-bold tracking-tight">
                         {selectedBrand.name}
@@ -1134,63 +1025,13 @@ export function RealBrandsPage({
                       {selectedBrand.featured ? "Featured" : "Normal"}
                     </Badge>
                   </div>
-                  <div className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-stone-50 p-4">
-                    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#5E7F85] via-[#6f949a] to-[#d9e5e1] p-5 text-white shadow-sm">
-                      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/15" />
-                      <div className="absolute -bottom-10 left-1/2 h-32 w-32 rounded-full bg-white/10" />
-                      <div className="relative">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 text-lg font-black">
-                          {selectedBrand.image ? (
-                            <Image
-                              alt=""
-                              className="h-full w-full rounded-2xl object-cover"
-                              height={64}
-                              src={selectedBrand.image}
-                              unoptimized
-                              width={64}
-                            />
-                          ) : (
-                            selectedBrand.name.slice(0, 2).toUpperCase()
-                          )}
-                        </div>
-                        <div className="mt-4 text-[10px] font-bold uppercase tracking-[0.2em] text-white/75">
-                          Featured Brand
-                        </div>
-                        <div className="mt-2 text-3xl font-black tracking-tight">
-                          {selectedBrand.name}
-                        </div>
-                        <div className="mt-2 text-sm text-white/85">
-                          {selectedBrand.meta_description ??
-                            "Authentic products - COD - Fast delivery"}
-                        </div>
-                        <div className="mt-5 flex flex-wrap gap-2">
-                          <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold">
-                            {selectedBrand.product_count ?? 0} Products
-                          </span>
-                          <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold">
-                            {selectedPreview.origin}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Badge tone="brand">
-                        SEO {getSeoScore(selectedBrand)}/100
-                      </Badge>
-                      <Badge tone={selectedBrand.image ? "good" : "warn"}>
-                        {selectedBrand.image ? "Logo Ready" : selectedPreview.logo}
-                      </Badge>
-                      <Badge tone={selectedBrand.image ? "good" : "warn"}>
-                        {selectedBrand.image ? "Banner Ready" : selectedPreview.banner}
-                      </Badge>
-                    </div>
-                  </div>
                   <div className="mt-5 grid grid-cols-2 gap-3">
                     {[
                       ["Products", selectedBrand.product_count ?? 0],
                       ["Status", getStatusLabel(selectedBrand.status)],
                       ["Sort", selectedBrand.sort_order ?? 0],
-                      ["Homepage", selectedBrand.status === "inactive" ? "Hidden" : "Visible"],
+                      ["Origin", selectedBrand.origin_country ?? "Not provided"],
+                      ["Type", selectedBrand.brand_type ?? "Not set"],
                     ].map(([label, value]) => (
                       <div className="rounded-2xl bg-stone-50 p-4" key={label}>
                         <div className="text-xs text-slate-500">{label}</div>
@@ -1207,112 +1048,30 @@ export function RealBrandsPage({
                     >
                       Edit Brand
                     </Link>
-                    <DisabledButton title="SEO settings are not connected yet">
-                      SEO Settings
-                    </DisabledButton>
-                    <DisabledButton title="Logo and banner upload is not connected yet">
-                      Upload Logo / Banner
-                    </DisabledButton>
                   </div>
                 </>
               ) : (
                 <div className="rounded-3xl border border-dashed border-slate-300 bg-stone-50 p-6 text-center text-sm font-medium text-slate-500">
-                  Brand preview appears here after live brands are added.
+                  Select or add a brand to view details.
                 </div>
               )}
             </div>
 
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
               <div className="text-sm font-medium text-slate-500">
-                Product Mapping
+                Homepage Visibility
               </div>
               <h3 className="mt-1 text-xl font-bold tracking-tight">
-                Brand Product Links
+                Featured Brands
               </h3>
-              <div className="mt-4 rounded-2xl bg-stone-50 px-4 py-4 text-xs font-semibold leading-5 text-slate-600">
-                Products mapped to this brand are counted from the live
-                database. Product-level brand mapping is managed from product
-                create/edit screens.
-              </div>
-              <div className="mt-5 rounded-2xl border border-[#5E7F85]/15 bg-[#5E7F85]/5 p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-semibold text-slate-600">
-                    Homepage status
-                  </span>
-                  <b className="text-[#5E7F85]">
-                    {selectedBrand?.status === "inactive" ? "Hidden" : "Visible"}
-                  </b>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                Visible brands appear in the homepage Featured Brands section and brand browsing pages. Product-level brand mapping is managed from product create/edit screens.
+              </p>
+              {selectedBrand ? (
+                <div className="mt-5 rounded-2xl bg-stone-50 px-4 py-4 text-sm font-semibold text-slate-600">
+                  {selectedBrand.product_count ?? 0} Products mapped
                 </div>
-                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-white">
-                  <div className="h-full w-1/2 rounded-full bg-[#5E7F85]" />
-                </div>
-                <div className="mt-2 text-xs font-semibold text-slate-500">
-                  Active brands appear in public storefront metadata responses.
-                </div>
-              </div>
-              <div className="mt-5 grid gap-2 sm:grid-cols-2">
-                <DisabledButton title="Product mapping is not connected yet">
-                  Map Products
-                </DisabledButton>
-                <DisabledButton
-                  className="bg-[#5E7F85]/10 text-[#5E7F85]/50"
-                  title="Featured ordering is not connected yet"
-                >
-                  Featured Order
-                </DisabledButton>
-              </div>
-            </div>
-
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="text-sm font-medium text-slate-500">
-                Brand SEO Ranking
-              </div>
-              <h3 className="mt-1 text-xl font-bold tracking-tight">
-                SEO Readiness
-              </h3>
-              <div className="mt-4 space-y-3">
-                {[...brands]
-                  .sort((a, b) => getSeoScore(b) - getSeoScore(a))
-                  .slice(0, 5)
-                  .map((brand, index) => (
-                    <button
-                      className={`w-full rounded-2xl px-4 py-3 text-left text-xs transition ${
-                        selectedBrand?.id === brand.id
-                          ? "bg-[#5E7F85]/10 ring-2 ring-[#5E7F85]/15"
-                          : "bg-stone-50 hover:bg-stone-100"
-                      }`}
-                      key={brand.id}
-                      onClick={() => setSelectedBrandId(brand.id)}
-                      type="button"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-bold text-slate-800">
-                          #{index + 1} {brand.name}
-                        </span>
-                        <span className="font-black text-[#5E7F85]">
-                          {getSeoScore(brand)}/100
-                        </span>
-                      </div>
-                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
-                        <div
-                          className="h-full rounded-full bg-[#5E7F85]"
-                          style={{ width: `${getSeoScore(brand)}%` }}
-                        />
-                      </div>
-                    </button>
-                  ))}
-              </div>
-            </div>
-
-            <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
-              <div className="text-sm font-bold text-amber-800">
-                SEO + Storefront Note
-              </div>
-              <div className="mt-2 text-sm leading-6 text-amber-700">
-                Active brands are visible on storefront sections. Keep slug
-                and logo clean, use sort order for placement, and set inactive
-                before saving unfinished rows.
-              </div>
+              ) : null}
             </div>
           </div>
         </div>

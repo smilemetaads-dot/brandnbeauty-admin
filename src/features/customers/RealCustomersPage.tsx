@@ -9,15 +9,10 @@ import { bnbApiUrl } from "@/lib/bnb-api";
 
 import type { CustomerSummaryRecord } from "./customers-data";
 
-type RealCustomersPageProps = {
-  customers?: CustomerSummaryRecord[];
-};
-
 type ApiCustomerRecord = {
-  created_at?: string | null;
+  id?: string | number | null;
   customer_name?: string | null;
   email?: string | null;
-  id?: string | number | null;
   last_city?: string | null;
   last_delivery_address?: string | null;
   last_known_address?: string | null;
@@ -32,154 +27,80 @@ type ApiCustomerRecord = {
 };
 
 type CustomersApiResponse = {
-  customers?: unknown;
   success?: boolean;
+  data?: ApiCustomerRecord[];
+  customers?: ApiCustomerRecord[];
+  message?: string;
 };
 
-const CUSTOMERS_ENDPOINT = bnbApiUrl("get_customers.php");
+type RealCustomersPageProps = {
+  customers?: CustomerSummaryRecord[];
+};
 
-type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
+const currencyFormatter = new Intl.NumberFormat("en-BD", {
+  currency: "BDT",
+  maximumFractionDigits: 0,
+  style: "currency",
+});
 
-function Badge({
-  children,
-  tone = "default",
-}: {
-  children: ReactNode;
-  tone?: BadgeTone;
-}) {
-  const className = {
-    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
-    good: "bg-emerald-50 text-emerald-700",
-    warn: "bg-amber-50 text-amber-700",
-    bad: "bg-rose-50 text-rose-700",
-    default: "bg-slate-100 text-slate-600",
-  }[tone];
+function formatMoney(value: number | string | null | undefined) {
+  const amount = Number(value ?? 0);
 
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${className}`}
-    >
-      {children}
-    </span>
-  );
-}
-
-function StatCard({
-  helper,
-  index,
-  label,
-  tone = "brand",
-  value,
-}: {
-  helper: string;
-  index: number;
-  label: string;
-  tone?: BadgeTone;
-  value: ReactNode;
-}) {
-  const icons = ["C", "R", "D", "!"];
-  const helperClassName = {
-    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
-    good: "bg-emerald-50 text-emerald-700",
-    warn: "bg-amber-50 text-amber-700",
-    bad: "bg-rose-50 text-rose-700",
-    default: "bg-stone-50 text-slate-600",
-  }[tone];
-
-  return (
-    <section className="group relative overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#5E7F85]/5 transition group-hover:bg-[#5E7F85]/10" />
-      <div className="relative flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-slate-500">{label}</div>
-          <div className="mt-3 truncate text-2xl font-black tracking-tight text-slate-950">
-            {value}
-          </div>
-        </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-sm font-black text-[#5E7F85]">
-          {icons[index % icons.length]}
-        </div>
-      </div>
-      <div
-        className={`relative mt-4 inline-flex rounded-full px-3 py-1 text-xs font-bold ${helperClassName}`}
-      >
-        {helper}
-      </div>
-    </section>
-  );
-}
-
-function DisabledButton({
-  children,
-  tone = "default",
-}: {
-  children: ReactNode;
-  tone?: BadgeTone;
-}) {
-  const className = {
-    brand: "border-[#5E7F85]/20 bg-[#5E7F85]/10 text-[#5E7F85]",
-    good: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    warn: "border-amber-200 bg-amber-50 text-amber-700",
-    bad: "border-rose-200 bg-rose-50 text-rose-700",
-    default: "border-slate-200 bg-white text-slate-500",
-  }[tone];
-
-  return (
-    <button
-      className={`rounded-2xl border px-4 py-3 text-sm font-semibold opacity-75 ${className}`}
-      disabled
-      type="button"
-    >
-      {children}
-    </button>
-  );
-}
-
-function getRiskTone(riskLabel: CustomerSummaryRecord["riskLabel"]): BadgeTone {
-  if (riskLabel === "High Return Risk") {
-    return "bad";
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return "Tk 0";
   }
 
-  if (riskLabel === "Due Pending") {
-    return "warn";
-  }
-
-  if (riskLabel === "Repeat Customer") {
-    return "good";
-  }
-
-  return "default";
+  return currencyFormatter.format(amount).replace("BDT", "Tk");
 }
 
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-BD", {
-    currency: "BDT",
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(value);
+function formatText(value: string | null | undefined, fallback = "Not available") {
+  const normalized = value?.trim();
+
+  return normalized || fallback;
 }
 
-function formatStatus(value: string | null) {
-  return value ? value.replaceAll("_", " ") : "not set";
-}
-
-function formatText(value: string | null) {
-  return value || "Not available";
-}
-
-function formatDate(value: string | null) {
+function formatDate(value: string | null | undefined) {
   if (!value) {
-    return "Not available";
+    return "No orders yet";
   }
 
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "No orders yet";
+  }
+
+  return date.toLocaleDateString("en-BD", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function formatLocation(customer: CustomerSummaryRecord) {
-  return `${customer.district ?? "No district"} / ${customer.area ?? "No area"}`;
+  const parts = [customer.area, customer.district]
+    .map((part) => part?.trim())
+    .filter(Boolean);
+
+  if (parts.length > 0) {
+    return parts.join(", ");
+  }
+
+  return formatText(customer.address, "No location saved");
+}
+
+function normalizeBangladeshSearchPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+
+  if (/^01\d{9}$/.test(digits)) {
+    return digits;
+  }
+
+  if (/^8801\d{9}$/.test(digits)) {
+    return `0${digits.slice(3)}`;
+  }
+
+  return digits;
 }
 
 function normalizeCustomer(customer: ApiCustomerRecord): CustomerSummaryRecord {
@@ -187,16 +108,15 @@ function normalizeCustomer(customer: ApiCustomerRecord): CustomerSummaryRecord {
   const totalSpend = Number(customer.lifetime_value ?? customer.total_spend ?? 0);
   const orderCount = Number.isFinite(totalOrders) ? totalOrders : 0;
   const status = customer.status?.trim() || (orderCount >= 2 ? "repeat" : "new");
-  const totalSpent = Number.isFinite(totalSpend) ? totalSpend : 0;
-  const createdAt = customer.latest_order_at ?? customer.created_at ?? null;
+  const createdAt = customer.latest_order_at ?? null;
   const phone = customer.phone_number?.trim() || customer.phone?.trim() || "Not available";
 
   return {
     address: customer.last_delivery_address ?? customer.last_known_address ?? null,
     area: null,
     cancelledCount: 0,
-    deliveredCount: status.toLowerCase() === "active" ? orderCount : 0,
-    delivery_zone: customer.last_city ?? null,
+    deliveredCount: status === "delivered" ? 1 : 0,
+    delivery_zone: null,
     district: customer.last_city ?? null,
     email: customer.email ?? null,
     lastOrderAt: createdAt,
@@ -208,43 +128,30 @@ function normalizeCustomer(customer: ApiCustomerRecord): CustomerSummaryRecord {
     phone,
     recentOrders: [],
     returnedCount: 0,
-    riskLabel: orderCount >= 2 ? "Repeat Customer" : "New Customer",
+    riskLabel: "New Customer",
     totalDue: 0,
-    totalSpent,
+    totalSpent: Number.isFinite(totalSpend) ? totalSpend : 0,
   };
 }
 
-function getTableSegment(customer: CustomerSummaryRecord) {
-  if (customer.returnedCount >= 2) {
-    return "High Return Risk";
-  }
-
-  if (customer.totalDue > 0) {
-    return "Due Pending";
-  }
-
-  if (customer.orderCount >= 2) {
-    return "Repeat Customer";
-  }
-
-  return "New Customer";
+function StatCard({ helper, icon, label, value }: { helper: string; icon: string; label: string; value: ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+          <div className="mt-2 text-2xl font-bold tracking-tight text-slate-950">{value}</div>
+          <p className="mt-1 text-sm text-slate-500">{helper}</p>
+        </div>
+        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-sm font-bold text-[#3D676E]">
+          {icon}
+        </span>
+      </div>
+    </section>
+  );
 }
 
-function getFilterSegment(customer: CustomerSummaryRecord) {
-  if (customer.totalSpent >= 5000 || customer.orderCount >= 5) {
-    return "VIP";
-  }
-
-  return getTableSegment(customer);
-}
-
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: ReactNode;
-}) {
+function DetailRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 text-sm">
       <span className="text-slate-500">{label}</span>
@@ -253,377 +160,258 @@ function DetailRow({
   );
 }
 
-function CustomerProfilePanel({
-  customer,
-}: {
-  customer: CustomerSummaryRecord | undefined;
-}) {
+function CustomerQuickView({ customer }: { customer: CustomerSummaryRecord | undefined }) {
   if (!customer) {
     return (
-      <aside className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="text-sm font-medium text-slate-500">
-          Customer Profile
-        </div>
-        <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-          No customer selected
-        </h3>
-        <p className="mt-3 text-sm leading-6 text-slate-500">
-          Customer profiles will appear here after orders are available.
+      <aside className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="text-sm font-medium text-slate-500">Customer details</div>
+        <h3 className="mt-2 text-lg font-bold text-slate-950">Select a customer</h3>
+        <p className="mt-2 text-sm leading-6 text-slate-500">
+          Choose a customer from the directory to see contact details and the latest order link.
         </p>
       </aside>
     );
   }
 
   return (
-    <aside className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="text-sm font-medium text-slate-500">
-            Customer Profile
-          </div>
-          <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-            {customer.name}
-          </h3>
-          <div className="mt-1 text-sm font-semibold text-slate-500">
-            {customer.phone}
-          </div>
-        </div>
-        <Badge tone={getRiskTone(customer.riskLabel)}>
-          {getTableSegment(customer)}
-        </Badge>
+    <aside className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div>
+        <p className="text-sm font-medium text-slate-500">Customer details</p>
+        <h3 className="mt-2 text-xl font-bold text-slate-950">{customer.name}</h3>
+        <p className="mt-1 text-sm text-slate-500">{customer.phone}</p>
       </div>
 
       <dl className="mt-5 space-y-3">
-        <DetailRow label="Orders" value={customer.orderCount} />
-        <DetailRow
-          label="Lifetime Value"
-          value={formatMoney(customer.totalSpent)}
-        />
-        <DetailRow label="Total Due" value={formatMoney(customer.totalDue)} />
+        <DetailRow label="Email" value={formatText(customer.email)} />
+        <DetailRow label="Address" value={formatText(customer.address)} />
         <DetailRow label="Location" value={formatLocation(customer)} />
+        <DetailRow label="Total Orders" value={customer.orderCount} />
+        <DetailRow label="Total Spent" value={formatMoney(customer.totalSpent)} />
         <DetailRow label="Last Order" value={formatDate(customer.lastOrderAt)} />
       </dl>
 
-      <div className="mt-5 grid gap-3">
-        <Link
-          className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:opacity-90"
-          href={`/customers/profile?phone=${encodeURIComponent(customer.phone)}`}
-        >
-          Open Profile
+      <div className="mt-6 grid gap-3">
+        <Link className="inline-flex items-center justify-center rounded-xl bg-[#5E7F85] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#4A6F75] focus:outline-none focus:ring-2 focus:ring-[#5E7F85] focus:ring-offset-2" href={`/customers/profile?phone=${encodeURIComponent(customer.phone)}`}>
+          View Full Profile
         </Link>
-        <Link
-          className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-stone-50"
-          href={`/orders/details?id=${customer.lastOrderId}`}
-        >
-          Last Order Details
-        </Link>
-        <DisabledButton tone="good">WhatsApp offer coming later</DisabledButton>
-        <DisabledButton>Call customer coming later</DisabledButton>
-      </div>
-
-      <div className="mt-5 rounded-2xl bg-stone-50 p-4">
-        <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
-          Recent Orders
-        </div>
-        <div className="mt-3 space-y-2">
-          {customer.recentOrders.map((order) => (
-            <div
-              className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-xs"
-              key={order.id}
-            >
-              <div className="min-w-0">
-                <div className="truncate font-bold text-slate-900">
-                  {order.order_number ?? "No order number"}
-                </div>
-                <div className="text-slate-500">
-                  {formatStatus(order.order_status)}
-                </div>
-              </div>
-              <b className="shrink-0 text-slate-800">{formatMoney(order.total)}</b>
-            </div>
-          ))}
-        </div>
+        {customer.lastOrderId ? (
+          <Link className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#5E7F85] hover:text-[#3D676E] focus:outline-none focus:ring-2 focus:ring-[#5E7F85] focus:ring-offset-2" href={`/orders/details?id=${customer.lastOrderId}`}>
+            View Latest Order
+          </Link>
+        ) : null}
       </div>
     </aside>
   );
 }
 
-export function RealCustomersPage({
-  customers: initialCustomers = [],
-}: RealCustomersPageProps) {
+function CustomerMobileCard({
+  customer,
+  onSelect,
+}: {
+  customer: CustomerSummaryRecord;
+  onSelect: () => void;
+}) {
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <button
+        className="block w-full text-left focus:outline-none focus:ring-2 focus:ring-[#5E7F85] focus:ring-offset-2"
+        onClick={onSelect}
+        type="button"
+      >
+        <div className="font-semibold text-slate-950">{customer.name}</div>
+        <div className="mt-1 text-sm font-medium text-slate-700">{customer.phone}</div>
+        {customer.email ? <div className="mt-1 text-xs text-slate-500">{customer.email}</div> : null}
+      </button>
+
+      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">Orders</dt>
+          <dd className="mt-1 font-semibold text-slate-800">{customer.orderCount}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">Total Spent</dt>
+          <dd className="mt-1 font-semibold text-slate-800">{formatMoney(customer.totalSpent)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">Last Order</dt>
+          <dd className="mt-1 text-slate-700">{formatDate(customer.lastOrderAt)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">Location</dt>
+          <dd className="mt-1 text-slate-700">{formatLocation(customer)}</dd>
+        </div>
+      </dl>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link className="inline-flex rounded-lg bg-[#5E7F85] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#4A6F75] focus:outline-none focus:ring-2 focus:ring-[#5E7F85] focus:ring-offset-2" href={`/customers/profile?phone=${encodeURIComponent(customer.phone)}`}>
+          View Profile
+        </Link>
+        {customer.lastOrderId ? (
+          <Link className="inline-flex rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-[#5E7F85] hover:text-[#3D676E] focus:outline-none focus:ring-2 focus:ring-[#5E7F85] focus:ring-offset-2" href={`/orders/details?id=${customer.lastOrderId}`}>
+            Latest Order
+          </Link>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+export function RealCustomersPage({ customers: initialCustomers = [] }: RealCustomersPageProps) {
   const [customers, setCustomers] = useState<CustomerSummaryRecord[]>(initialCustomers);
-  const [isLoading, setIsLoading] = useState(!initialCustomers.length);
   const [query, setQuery] = useState("");
-  const [activeSegment, setActiveSegment] = useState("All");
+  const [selectedPhone, setSelectedPhone] = useState<string>(initialCustomers[0]?.phone ?? "");
+  const [isLoading, setIsLoading] = useState(initialCustomers.length === 0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  async function loadCustomers() {
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch(bnbApiUrl("get_customers.php"), {
+        cache: "no-store",
+        headers: adminAuthHeaders(),
+      });
+      const payload = (await response.json()) as CustomersApiResponse;
+
+      if (!response.ok || payload.success === false) {
+        throw new Error(payload.message || "Customer list request failed.");
+      }
+
+      const rawCustomers = Array.isArray(payload.data) ? payload.data : Array.isArray(payload.customers) ? payload.customers : [];
+      const normalizedCustomers = rawCustomers.map(normalizeCustomer);
+
+      setCustomers(normalizedCustomers);
+      setSelectedPhone((current) => current || normalizedCustomers[0]?.phone || "");
+    } catch (error) {
+      console.error("Unable to load customers", error);
+      setErrorMessage("Customers could not be loaded. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadCustomers() {
-      try {
-        setIsLoading(true);
-
-        const response = await fetch(CUSTOMERS_ENDPOINT, {
-          cache: "no-store",
-          headers: adminAuthHeaders(),
-        });
-
-        if (!response.ok) {
-          throw new Error("Customers request failed.");
-        }
-
-        const data = (await response.json()) as unknown;
-        const rows = Array.isArray(data)
-          ? data
-          : Array.isArray((data as CustomersApiResponse | null)?.customers)
-            ? ((data as CustomersApiResponse).customers as unknown[])
-            : [];
-        const liveCustomers = rows.map((customer) =>
-          normalizeCustomer(customer as ApiCustomerRecord),
-        );
-
-        if (isMounted) {
-          setCustomers(liveCustomers);
-        }
-      } catch (error) {
-        console.error("Failed to load live customers.", error);
-
-        if (isMounted) {
-          setCustomers([]);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
+    if (initialCustomers.length > 0) {
+      return;
     }
 
-    loadCustomers();
+    const timer = window.setTimeout(() => {
+      void loadCustomers();
+    }, 0);
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    return () => window.clearTimeout(timer);
+  }, [initialCustomers.length]);
 
   const filteredCustomers = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
+    if (!normalizedQuery) {
+      return customers;
+    }
+
+    const normalizedPhoneQuery = normalizeBangladeshSearchPhone(normalizedQuery);
+
     return customers.filter((customer) => {
-      const matchesSearch =
-        !normalizedQuery ||
-        [
-          customer.name,
-          customer.email,
-          customer.phone,
-          customer.address,
-          customer.district,
-          customer.area,
-          customer.lastOrderStatus,
-        ]
-          .filter(Boolean)
-          .some((value) => value?.toLowerCase().includes(normalizedQuery));
+      const searchableValues = [customer.name, customer.email, customer.phone, customer.address, customer.district, customer.area]
+        .filter(Boolean)
+        .map((value) => value?.toLowerCase() ?? "");
+      const phoneMatch = normalizedPhoneQuery !== "" && normalizeBangladeshSearchPhone(customer.phone).includes(normalizedPhoneQuery);
 
-      const tableSegment = getTableSegment(customer);
-      const filterSegment = getFilterSegment(customer);
-      const matchesSegment =
-        activeSegment === "All" ||
-        activeSegment === tableSegment ||
-        activeSegment === filterSegment ||
-        (activeSegment === "Repeat Customer" && customer.orderCount >= 2) ||
-        (activeSegment === "Sleeping" && customer.orderCount === 1) ||
-        (activeSegment === "Risk" && tableSegment === "High Return Risk");
-
-      return matchesSearch && matchesSegment;
+      return phoneMatch || searchableValues.some((value) => value.includes(normalizedQuery));
     });
-  }, [activeSegment, customers, query]);
+  }, [customers, query]);
 
-  const repeatCustomers = customers.filter(
-    (customer) => customer.orderCount >= 2,
-  ).length;
-  const repeatRate = customers.length
-    ? Math.round((repeatCustomers / customers.length) * 100)
-    : 0;
-  const vipCustomers = customers.filter(
-    (customer) => customer.totalSpent >= 5000 || customer.orderCount >= 5,
-  ).length;
-  const returnRiskCustomers = customers.filter(
-    (customer) => customer.riskLabel === "High Return Risk",
-  ).length;
-  const featuredCustomer = filteredCustomers[0] ?? customers[0];
+  const totalOrders = customers.reduce((sum, customer) => sum + customer.orderCount, 0);
+  const selectedCustomer = filteredCustomers.find((customer) => customer.phone === selectedPhone) ?? filteredCustomers[0] ?? customers[0];
 
   return (
     <AdminShell>
       <div className="space-y-6">
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            helper="Growing base"
-            index={0}
-            label="Total Customers"
-            value={customers.length}
-          />
-          <StatCard
-            helper="Strong retention"
-            index={1}
-            label="Repeat Rate"
-            tone="good"
-            value={`${repeatRate}%`}
-          />
-          <StatCard
-            helper="High LTV"
-            index={2}
-            label="VIP Customers"
-            value={vipCustomers}
-          />
-          <StatCard
-            helper="Need followup"
-            index={3}
-            label="Risk Customers"
-            tone={returnRiskCustomers ? "bad" : "good"}
-            value={returnRiskCustomers}
-          />
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-950">Customers</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                Find customers and review their contact details and order history.
+              </p>
+            </div>
+            <button className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#5E7F85] hover:text-[#3D676E] focus:outline-none focus:ring-2 focus:ring-[#5E7F85] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60" disabled={isLoading} onClick={() => void loadCustomers()} type="button">
+              Refresh
+            </button>
+          </div>
+
+          <label className="mt-6 block text-sm font-semibold text-slate-700" htmlFor="customer-search">
+            Search customers
+          </label>
+          <input className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/20" id="customer-search" onChange={(event) => setQuery(event.target.value)} placeholder="Search by name, phone or email" type="search" value={query} />
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-          <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 p-6">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <div className="text-sm font-medium text-slate-500">
-                    CRM Center
-                  </div>
-                  <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                    Customers Database
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Live customer summaries are grouped from existing order
-                    records. Editing, outreach, manual orders and segmentation
-                    are coming later.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <DisabledButton>Export coming later</DisabledButton>
-                  <DisabledButton tone="brand">
-                    Create segment coming later
-                  </DisabledButton>
-                </div>
-              </div>
+        <section className="grid gap-4 md:grid-cols-2">
+          <StatCard helper="Customer records from local order history." icon="C" label="Total Customers" value={customers.length} />
+          <StatCard helper="Completed and in-progress order records linked to customers." icon="O" label="Total Orders" value={totalOrders} />
+        </section>
 
-              <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-                <input
-                  className="w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 text-sm font-medium text-slate-500 outline-none"
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search customer name or phone number"
-                  value={query}
-                />
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    "All",
-                    "VIP",
-                    "Repeat Customer",
-                    "Sleeping",
-                    "Due Pending",
-                    "Risk",
-                  ].map((item) => (
-                    <button
-                      className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
-                        activeSegment === item
-                          ? "border-[#5E7F85] bg-[#5E7F85] text-white"
-                          : "border-slate-200 bg-white text-slate-500 hover:border-[#5E7F85]/40 hover:text-[#5E7F85]"
-                      }`}
-                      key={item}
-                      onClick={() => setActiveSegment(item)}
-                      type="button"
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
+        <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-5 py-4">
+              <h2 className="text-lg font-bold text-slate-950">Customer Directory</h2>
+              <p className="mt-1 text-sm text-slate-500">Showing {filteredCustomers.length} of {customers.length} customers.</p>
             </div>
 
             {isLoading ? (
-              <div className="px-6 py-14 text-center text-sm font-semibold text-slate-500">
-                Loading customers from local order history...
+              <div className="p-10 text-center text-sm font-medium text-slate-500">Loading customers…</div>
+            ) : errorMessage ? (
+              <div className="p-10 text-center text-sm font-medium text-rose-600">{errorMessage}</div>
+            ) : customers.length === 0 ? (
+              <div className="p-10 text-center text-sm font-medium text-slate-500">No customers found.</div>
+            ) : filteredCustomers.length === 0 ? (
+              <div className="p-10 text-center text-sm font-medium text-slate-500">No customers match your search.</div>
+            ) : (
+              <>
+                <div className="grid gap-3 p-4 md:hidden">
+                {filteredCustomers.map((customer) => (
+                  <CustomerMobileCard
+                    customer={customer}
+                    key={`${customer.lastOrderId}-${customer.phone}-card`}
+                    onSelect={() => setSelectedPhone(customer.phone)}
+                  />
+                ))}
               </div>
-            ) : filteredCustomers.length ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="bg-stone-50 text-slate-500">
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
+                  <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
                     <tr>
-                      {[
-                        "Customer Name",
-                        "Phone",
-                        "Total Orders",
-                        "Lifetime Value (LTV)",
-                        "Last Known Address",
-                        "Last Purchase",
-                        "Action",
-                      ].map((heading) => (
-                        <th className="px-5 py-4 font-medium" key={heading}>
-                          {heading}
-                        </th>
-                      ))}
+                      <th className="px-5 py-3">Customer</th>
+                      <th className="px-5 py-3">Phone</th>
+                      <th className="px-5 py-3">Orders</th>
+                      <th className="px-5 py-3">Total Spent</th>
+                      <th className="px-5 py-3">Location</th>
+                      <th className="px-5 py-3">Last Order</th>
+                      <th className="px-5 py-3 text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {filteredCustomers.map((customer, index) => (
-                      <tr
-                        className={`border-t border-slate-100 align-top transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${
-                          index === 0
-                            ? "bg-[#5E7F85]/[0.06] shadow-[inset_3px_0_0_#5E7F85]"
-                            : "bg-white"
-                        }`}
-                        key={`${customer.lastOrderId}-${customer.phone}`}
-                      >
-                        <td className="px-5 py-4">
-                          <div className="font-black text-slate-950">
-                            {customer.name}
-                          </div>
-                          <div className="mt-1 text-xs font-semibold text-slate-500">
-                            {formatText(customer.email)}
-                          </div>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {filteredCustomers.map((customer) => (
+                      <tr className="transition hover:bg-slate-50" key={`${customer.lastOrderId}-${customer.phone}`} onClick={() => setSelectedPhone(customer.phone)}>
+                        <td className="px-5 py-4 align-top">
+                          <div className="font-semibold text-slate-950">{customer.name}</div>
+                          {customer.email ? <div className="mt-1 text-xs text-slate-500">{customer.email}</div> : null}
                         </td>
-                        <td className="px-5 py-4 font-semibold text-slate-700">
-                          {customer.phone}
-                        </td>
-                        <td className="px-5 py-4 font-black text-slate-950">
-                          {customer.orderCount}
-                        </td>
-                        <td className="px-5 py-4 font-bold text-slate-800">
-                          {formatMoney(customer.totalSpent)}
-                        </td>
-                        <td className="max-w-[360px] px-5 py-4">
-                          <div className="text-sm font-semibold leading-6 text-slate-700">
-                            {formatText(customer.address)}
-                          </div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            {formatLocation(customer)}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="text-xs font-semibold text-slate-500">
-                            {formatDate(customer.lastOrderAt)}
-                          </div>
-                          <Badge tone={getRiskTone(customer.riskLabel)}>
-                            {formatStatus(customer.lastOrderStatus)}
-                          </Badge>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex flex-col gap-2">
-                            <Link
-                              className="inline-flex rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
-                              href={`/customers/profile?phone=${encodeURIComponent(
-                                customer.phone,
-                              )}`}
-                            >
-                              Profile
+                        <td className="px-5 py-4 align-top font-medium text-slate-700">{customer.phone}</td>
+                        <td className="px-5 py-4 align-top text-slate-700">{customer.orderCount}</td>
+                        <td className="px-5 py-4 align-top font-semibold text-slate-800">{formatMoney(customer.totalSpent)}</td>
+                        <td className="max-w-xs px-5 py-4 align-top text-slate-600">{formatLocation(customer)}</td>
+                        <td className="px-5 py-4 align-top text-slate-600">{formatDate(customer.lastOrderAt)}</td>
+                        <td className="px-5 py-4 align-top">
+                          <div className="flex flex-col items-end gap-2">
+                            <Link className="inline-flex rounded-lg bg-[#5E7F85] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#4A6F75] focus:outline-none focus:ring-2 focus:ring-[#5E7F85] focus:ring-offset-2" href={`/customers/profile?phone=${encodeURIComponent(customer.phone)}`}>
+                              View Profile
                             </Link>
-                            <Link
-                              className="inline-flex rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-800 hover:text-white"
-                              href={`/orders/details?id=${customer.lastOrderId}`}
-                            >
-                              Last Order
-                            </Link>
+                            {customer.lastOrderId ? (
+                              <Link className="inline-flex rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-[#5E7F85] hover:text-[#3D676E] focus:outline-none focus:ring-2 focus:ring-[#5E7F85] focus:ring-offset-2" href={`/orders/details?id=${customer.lastOrderId}`}>
+                                Latest Order
+                              </Link>
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -631,29 +419,16 @@ export function RealCustomersPage({
                   </tbody>
                 </table>
               </div>
-            ) : (
-              <div className="px-6 py-14 text-center text-sm font-semibold text-slate-500">
-                No customers could be grouped from order data yet.
-              </div>
+              </>
             )}
-          </section>
-
-          <div className="space-y-6">
-            <CustomerProfilePanel customer={featuredCustomer} />
-
-            <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
-              <div className="text-sm font-bold text-amber-800">
-                AI Suggestion
-              </div>
-              <p className="mt-2 text-sm leading-6 text-amber-700">
-                {featuredCustomer
-                  ? `${featuredCustomer.name} is shown from live order history. Outreach suggestions, offers, and manual order creation are coming later.`
-                  : "Customer suggestions will appear after live order history is available. Outreach and manual order creation are coming later."}
-              </p>
-            </section>
           </div>
-        </div>
+
+          <CustomerQuickView customer={selectedCustomer} />
+        </section>
       </div>
     </AdminShell>
   );
 }
+
+
+

@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import { adminAuthHeaders } from "@/lib/admin-auth";
+import { bnbApiUrl } from "@/lib/bnb-api";
 import {
   fetchFinanceInventory,
   type FinanceInventoryProduct,
@@ -10,6 +12,8 @@ import {
 } from "@/features/finance-inventory/finance-inventory-client";
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
+
+const RECORD_PURCHASE_ENDPOINT = bnbApiUrl("record_purchase_entry.php");
 
 function Badge({
   children,
@@ -32,28 +36,6 @@ function Badge({
     >
       {children}
     </span>
-  );
-}
-
-function DisabledButton({
-  children,
-  variant = "secondary",
-}: {
-  children: ReactNode;
-  variant?: "brand" | "secondary";
-}) {
-  return (
-    <button
-      className={
-        variant === "brand"
-          ? "rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white opacity-60"
-          : "rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-400"
-      }
-      disabled
-      type="button"
-    >
-      {children}
-    </button>
   );
 }
 
@@ -126,35 +108,84 @@ export function RealPurchasesPage() {
   const [purchases, setPurchases] = useState<FinanceInventoryPurchase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [showEntryForm, setShowEntryForm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+
+  const loadPurchases = useCallback(async (signal?: AbortSignal) => {
+    try {
+      setIsLoading(true);
+      const data = await fetchFinanceInventory(signal);
+      setInventory(data.inventory);
+      setPurchases(data.purchases);
+    } catch (error) {
+      if (!signal?.aborted) {
+        console.error("Purchase data could not be loaded.", error);
+        setInventory([]);
+        setPurchases([]);
+      }
+    } finally {
+      if (!signal?.aborted) setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
-
-    async function loadPurchases() {
-      try {
-        setIsLoading(true);
-        const data = await fetchFinanceInventory(controller.signal);
-        setInventory(data.inventory);
-        setPurchases(data.purchases);
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          console.error("Purchase data could not be loaded.", error);
-          setInventory([]);
-          setPurchases([]);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadPurchases();
+    void loadPurchases(controller.signal);
 
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [loadPurchases]);
+
+  async function handleRecordPurchase(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const productId = String(form.get("product_id") ?? "");
+    const quantity = Number(form.get("quantity"));
+    const purchasePrice = Number(form.get("actual_purchase_price"));
+
+    if (!productId || quantity < 1 || purchasePrice < 0) {
+      setStatusMessage("Select a product and enter a valid quantity and cost.");
+      return;
+    }
+
+    setIsSaving(true);
+    setStatusMessage("");
+
+    try {
+      const response = await fetch(RECORD_PURCHASE_ENDPOINT, {
+        body: JSON.stringify({
+          actual_purchase_price: purchasePrice,
+          note: String(form.get("note") ?? "").trim(),
+          product_id: productId,
+          quantity,
+          status: "received",
+          supplier_name: String(form.get("supplier_name") ?? "").trim(),
+        }),
+        headers: adminAuthHeaders({ "Content-Type": "application/json" }),
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        message?: string;
+        success?: boolean;
+      } | null;
+
+      if (!response.ok || payload?.success === false) {
+        throw new Error(payload?.message ?? "Purchase entry could not be saved.");
+      }
+
+      formElement.reset();
+      setStatusMessage(payload?.message ?? "Purchase received and stock updated.");
+      setShowEntryForm(false);
+      await loadPurchases();
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Purchase entry could not be saved.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   const filteredPurchases = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -198,17 +229,59 @@ export function RealPurchasesPage() {
                 Purchase Stock Entry
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                Live supplier purchase and expense rows from the local MySQL
-                backend. Stock mutation workflows remain disabled until local
-                PHP write actions are added.
+                Record received purchases in local MySQL and update inventory
+                stock through the authenticated PHP workflow.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <DisabledButton>Save Draft</DisabledButton>
-              <DisabledButton variant="brand">Post to Inventory</DisabledButton>
-            </div>
+            <button
+              className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-950"
+              onClick={() => setShowEntryForm((current) => !current)}
+              type="button"
+            >
+              {showEntryForm ? "Close Entry" : "Receive Purchase"}
+            </button>
           </div>
         </section>
+
+        {showEntryForm ? (
+          <form className="grid gap-4 rounded-[2rem] border border-[#5E7F85]/20 bg-white p-6 shadow-sm lg:grid-cols-2" onSubmit={handleRecordPurchase}>
+            <div className="lg:col-span-2">
+              <h2 className="text-xl font-bold text-slate-950">Receive stock</h2>
+              <p className="mt-1 text-sm text-slate-500">Saving this entry immediately increases available stock.</p>
+            </div>
+            <label className="text-sm font-semibold text-slate-700">
+              Product
+              <select className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3" name="product_id" required defaultValue="">
+                <option value="" disabled>Select product</option>
+                {inventory.map((product) => <option key={product.id} value={product.id}>{product.name} ({product.sku || "No SKU"})</option>)}
+              </select>
+            </label>
+            <label className="text-sm font-semibold text-slate-700">
+              Supplier
+              <input className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3" name="supplier_name" placeholder="Supplier name" />
+            </label>
+            <label className="text-sm font-semibold text-slate-700">
+              Quantity
+              <input className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3" min="1" name="quantity" required type="number" />
+            </label>
+            <label className="text-sm font-semibold text-slate-700">
+              Unit purchase cost (BDT)
+              <input className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3" min="0" name="actual_purchase_price" required step="0.01" type="number" />
+            </label>
+            <label className="text-sm font-semibold text-slate-700 lg:col-span-2">
+              Note
+              <textarea className="mt-2 min-h-24 w-full rounded-2xl border border-slate-300 px-4 py-3" name="note" placeholder="Invoice, batch or internal note" />
+            </label>
+            <div className="flex items-center justify-between gap-4 lg:col-span-2">
+              <p aria-live="polite" className="text-sm font-semibold text-slate-600">{statusMessage}</p>
+              <button className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-bold text-white disabled:bg-slate-300" disabled={isSaving} type="submit">
+                {isSaving ? "Receiving..." : "Receive & Update Stock"}
+              </button>
+            </div>
+          </form>
+        ) : statusMessage ? (
+          <div aria-live="polite" className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-800">{statusMessage}</div>
+        ) : null}
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
@@ -354,8 +427,8 @@ export function RealPurchasesPage() {
                   {lowStockItems} SKUs are below the low-stock threshold.
                 </div>
                 <div className="rounded-2xl bg-white/70 p-4">
-                  Purchase write, GRN, and receive-stock actions are disabled on
-                  this local read view.
+                  Received purchases now update stock through the authenticated
+                  PHP/MySQL transaction.
                 </div>
               </div>
             </section>

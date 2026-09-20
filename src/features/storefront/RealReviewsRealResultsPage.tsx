@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import { RealResultsManagerPanel } from "@/features/storefront/RealResultsManagerPanel";
 import {
   defaultCmsMeta,
   fetchCmsMeta,
@@ -119,6 +120,7 @@ function reviewStatusLabel(review: CmsReview) {
 }
 
 export function RealReviewsRealResultsPage() {
+  const [activeTab, setActiveTab] = useState<"real-results" | "reviews">("real-results");
   const [cmsMeta, setCmsMeta] = useState<CmsMeta>(defaultCmsMeta);
   const [reviewDraft, setReviewDraft] = useState({
     customer_name: "",
@@ -268,6 +270,51 @@ export function RealReviewsRealResultsPage() {
   return (
     <AdminShell>
       <div className="space-y-6">
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="text-sm font-medium text-slate-500">
+                Storefront Social Proof
+              </div>
+              <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                Reviews & Real Results
+              </h1>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+                Manage structured Real Results stories and legacy customer reviews.
+                Homepage visibility stays controlled by active/featured status.
+              </p>
+            </div>
+            <div className="grid rounded-2xl bg-stone-100 p-1 text-sm font-bold text-slate-600 sm:grid-cols-2">
+              <button
+                className={`rounded-xl px-4 py-2 transition ${
+                  activeTab === "real-results"
+                    ? "bg-white text-[#5E7F85] shadow-sm"
+                    : "hover:text-slate-950"
+                }`}
+                onClick={() => setActiveTab("real-results")}
+                type="button"
+              >
+                Real Results
+              </button>
+              <button
+                className={`rounded-xl px-4 py-2 transition ${
+                  activeTab === "reviews"
+                    ? "bg-white text-[#5E7F85] shadow-sm"
+                    : "hover:text-slate-950"
+                }`}
+                onClick={() => setActiveTab("reviews")}
+                type="button"
+              >
+                Customer Reviews
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {activeTab === "real-results" ? (
+          <RealResultsManagerPanel />
+        ) : (
+          <>
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {liveStats.map(([label, value, helper]) => (
             <StatCard
@@ -513,6 +560,8 @@ export function RealReviewsRealResultsPage() {
             </div>
           </aside>
         </section>
+          </>
+        )}
       </div>
     </AdminShell>
   );

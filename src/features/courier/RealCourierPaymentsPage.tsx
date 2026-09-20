@@ -1,13 +1,15 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 import {
+  bookCourier,
   fetchLogisticsOrders,
+  syncCourierStatus,
   type LogisticsOrderRecord,
+  updateOrderStatus,
 } from "@/features/logistics/logistics-client";
 
 type CourierPaymentOrderRecord = LogisticsOrderRecord;
@@ -18,220 +20,57 @@ type RealCourierPaymentsPageProps = {
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
-function Badge({
-  children,
-  tone = "default",
-}: {
-  children: ReactNode;
-  tone?: BadgeTone;
-}) {
+const STATUS_LABELS: Record<string, string> = {
+  packed: "Packed",
+  shipped: "Shipped",
+  delivered: "Delivered",
+};
+
+function Badge({ children, tone = "default" }: { children: ReactNode; tone?: BadgeTone }) {
   const className = {
-    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
-    good: "bg-emerald-50 text-emerald-700",
-    warn: "bg-amber-50 text-amber-700",
-    bad: "bg-rose-50 text-rose-700",
-    default: "bg-slate-100 text-slate-600",
+    bad: "border-rose-200 bg-rose-50 text-rose-700",
+    brand: "border-[#5E7F85]/20 bg-[#5E7F85]/10 text-[#5E7F85]",
+    default: "border-slate-200 bg-slate-100 text-slate-600",
+    good: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    warn: "border-amber-200 bg-amber-50 text-amber-700",
   }[tone];
 
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold capitalize ${className}`}
-    >
-      {children}
-    </span>
-  );
+  return <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold ${className}`}>{children}</span>;
 }
 
-function StatCard({
-  helper,
-  icon,
-  label,
-  tone = "good",
-  value,
-}: {
-  helper: string;
-  icon: string;
-  label: string;
-  tone?: BadgeTone;
-  value: ReactNode;
-}) {
-  const helperClassName = {
-    brand: "bg-[#5E7F85]/10 text-[#5E7F85]",
-    good: "bg-emerald-50 text-emerald-700",
-    warn: "bg-amber-50 text-amber-700",
-    bad: "bg-rose-50 text-rose-700",
-    default: "bg-stone-50 text-slate-600",
-  }[tone];
-
+function StatCard({ helper, label, value }: { helper: string; label: string; value: ReactNode }) {
   return (
-    <div className="group relative overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#5E7F85]/5 transition group-hover:bg-[#5E7F85]/10" />
-      <div className="relative flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-slate-500">{label}</div>
-          <div className="mt-3 truncate text-2xl font-bold tracking-tight text-slate-900">
-            {value}
-          </div>
-        </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#5E7F85]/10 text-xs font-bold text-[#5E7F85] transition group-hover:bg-[#5E7F85] group-hover:text-white">
-          {icon}
-        </div>
-      </div>
-      <div
-        className={`relative mt-4 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${helperClassName}`}
-      >
-        {helper}
-      </div>
-    </div>
-  );
-}
-
-function DisabledButton({
-  children,
-  primary = false,
-  small = false,
-}: {
-  children: ReactNode;
-  primary?: boolean;
-  small?: boolean;
-}) {
-  return (
-    <button
-      className={`${
-        small ? "rounded-xl px-3 py-2 text-xs" : "rounded-2xl px-5 py-3 text-sm"
-      } font-semibold ${
-        primary
-          ? "bg-[#5E7F85] text-white opacity-45"
-          : "border border-slate-300 bg-white text-slate-400"
-      }`}
-      disabled
-      type="button"
-    >
-      {children}
-    </button>
-  );
-}
-
-function SelectShell({ label }: { label: string }) {
-  return (
-    <div className="relative min-w-[150px] rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-stone-50 px-4 py-2 text-xs font-bold text-slate-500 shadow-sm">
-      <span>{label}</span>
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">
-        v
-      </span>
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="text-sm font-medium text-slate-500">{label}</div>
+      <div className="mt-2 text-2xl font-bold tracking-tight text-slate-950">{value}</div>
+      <div className="mt-3 inline-flex rounded-full bg-[#5E7F85]/10 px-3 py-1 text-xs font-semibold text-[#5E7F85]">{helper}</div>
     </div>
   );
 }
 
 function DetailRow({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex justify-between gap-3">
+    <div className="flex items-start justify-between gap-3 text-sm">
       <span className="text-slate-500">{label}</span>
       <b className="text-right text-slate-900">{value}</b>
     </div>
   );
 }
 
-function getOrderStatusTone(status: string): BadgeTone {
-  if (status === "delivered") {
-    return "good";
-  }
-
-  if (status === "returned") {
-    return "bad";
-  }
-
-  if (status === "packed" || status === "shipped") {
-    return "brand";
-  }
-
-  return "default";
-}
-
-function getPaymentStatusTone(status: string): BadgeTone {
-  if (status === "paid") {
-    return "good";
-  }
-
-  if (status === "failed" || status === "refunded") {
-    return "bad";
-  }
-
-  return "warn";
-}
-
-function getCourierStatusTone(status: string | null): BadgeTone {
-  if (status === "delivered") {
-    return "good";
-  }
-
-  if (status === "returned" || status === "failed") {
-    return "bad";
-  }
-
-  if (status === "ready" || status === "sent") {
-    return "brand";
-  }
-
-  return "default";
-}
-
-function getRowClassName(order: CourierPaymentOrderRecord) {
-  if (order.order_status === "returned" || order.courier_status === "returned") {
-    return "bg-rose-50/30";
-  }
-
-  if (order.due_amount > 0 || order.courier_status === "failed") {
-    return "bg-amber-50/30";
-  }
-
-  if (order.order_status === "delivered" || order.courier_status === "delivered") {
-    return "bg-emerald-50/30";
-  }
-
-  if (order.order_status === "packed" || order.courier_status === "ready") {
-    return "bg-[#5E7F85]/[0.04]";
-  }
-
-  return "bg-white";
-}
-
-function getReadyDispatchCount(orders: CourierPaymentOrderRecord[]) {
-  return orders.filter(
-    (order) => order.courier_status === "ready" || order.order_status === "packed",
-  ).length;
-}
-
-function getDeliveredCount(orders: CourierPaymentOrderRecord[]) {
-  return orders.filter(
-    (order) =>
-      order.courier_status === "delivered" ||
-      order.order_status === "delivered",
-  ).length;
-}
-
-function getReturnedCount(orders: CourierPaymentOrderRecord[]) {
-  return orders.filter(
-    (order) =>
-      order.courier_status === "returned" || order.order_status === "returned",
-  ).length;
-}
-
-function getMismatchCount(orders: CourierPaymentOrderRecord[]) {
-  return orders.filter(
-    (order) =>
-      order.payment_status === "failed" ||
-      order.courier_status === "failed" ||
-      order.due_amount > 0,
-  ).length;
-}
-
 function formatStatus(value: string | null) {
-  return value ? value.replaceAll("_", " ") : "not set";
+  if (!value) return "Not set";
+  return STATUS_LABELS[value] || value.replaceAll("_", " ");
+}
+
+function statusTone(status: string): BadgeTone {
+  if (status === "delivered") return "good";
+  if (status === "shipped") return "brand";
+  if (status === "packed") return "warn";
+  return "default";
 }
 
 function formatText(value: string | null) {
-  return value || "Not available";
+  return value && value.trim() ? value : "Not available";
 }
 
 function formatMoney(value: number) {
@@ -239,481 +78,417 @@ function formatMoney(value: number) {
     currency: "BDT",
     maximumFractionDigits: 0,
     style: "currency",
-  }).format(value);
+  }).format(Number.isFinite(value) ? value : 0);
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "Not available";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Not available";
+
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parsed);
 }
 
 function formatLocation(order: CourierPaymentOrderRecord) {
-  return `${order.district ?? "No district"} / ${order.area ?? "No area"}`;
+  return order.delivery_zone || order.area || order.district || "Delivery area unavailable";
+}
+
+function getItemCount(order: CourierPaymentOrderRecord) {
+  return order.order_items.reduce((sum, item) => sum + item.quantity, 0);
 }
 
 function getItemsSummary(order: CourierPaymentOrderRecord) {
   if (!order.order_items.length) {
-    return "No items found";
+    return "Item details unavailable";
   }
 
-  return order.order_items
-    .slice(0, 3)
+  const visibleItems = order.order_items
+    .slice(0, 2)
     .map((item) => `${item.product_name} x${item.quantity}`)
     .join(", ");
+
+  return order.order_items.length > 2 ? `${visibleItems}, +${order.order_items.length - 2} more` : visibleItems;
 }
 
-export function RealCourierPaymentsPage({
-  orders: initialOrders = [],
-}: RealCourierPaymentsPageProps) {
+function getTrackingText(order: CourierPaymentOrderRecord) {
+  const parts = [order.courier_name, order.courier_tracking_id].filter(Boolean);
+  return parts.length ? parts.join(" / ") : null;
+}
+
+function CourierCard({
+  onBookCourier,
+  onSyncCourier,
+  isUpdating,
+  onMarkShipped,
+  order,
+}: {
+  isUpdating?: boolean;
+  onBookCourier?: (order: CourierPaymentOrderRecord) => void;
+  onSyncCourier?: (order: CourierPaymentOrderRecord) => void;
+  onMarkShipped?: (orderId: string) => void;
+  order: CourierPaymentOrderRecord;
+}) {
+  const tracking = getTrackingText(order);
+  const isPacked = order.order_status === "packed";
+
+  return (
+    <article className="flex h-full flex-col rounded-[1.5rem] border border-slate-200 bg-stone-50 p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-bold text-slate-950">{order.order_number ?? `BNB-${order.id}`}</h2>
+          <p className="mt-1 text-sm font-semibold text-slate-800">{order.customer_name}</p>
+          <a className="mt-1 block text-xs font-semibold text-[#5E7F85] underline-offset-4 hover:underline" href={`tel:${order.customer_phone}`}>
+            {order.customer_phone}
+          </a>
+        </div>
+        <Badge tone={statusTone(order.order_status)}>{formatStatus(order.order_status)}</Badge>
+      </div>
+
+      <div className="mt-4 grid gap-3 rounded-2xl bg-white p-4">
+        <DetailRow label="Delivery Area" value={formatLocation(order)} />
+        <DetailRow label="Total" value={formatMoney(order.total)} />
+        <DetailRow label="Payment" value="Cash on Delivery" />
+        <DetailRow label="Items" value={getItemCount(order)} />
+      </div>
+
+      <div className="mt-4 rounded-2xl bg-white p-4 text-sm leading-6 text-slate-700">
+        <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Address</div>
+        <p className="mt-2 font-semibold">{formatText(order.shipping_address)}</p>
+        <p className="mt-2 text-xs font-semibold text-slate-500">{getItemsSummary(order)}</p>
+      </div>
+
+      {tracking ? (
+        <div className="mt-4 rounded-2xl border border-[#5E7F85]/15 bg-[#5E7F85]/5 p-4 text-sm font-semibold text-[#5E7F85]">
+          {tracking}
+        </div>
+      ) : null}
+
+      <div className="mt-auto flex flex-wrap gap-3 pt-5">
+        <Link
+          className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-stone-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5E7F85]"
+          href={`/orders/details?id=${order.id}`}
+        >
+          View Order
+        </Link>
+        {isPacked && onBookCourier ? (
+          <button
+            className="rounded-2xl border border-[#5E7F85]/30 bg-white px-4 py-3 text-sm font-semibold text-[#5E7F85] transition hover:bg-[#5E7F85]/5"
+            onClick={() => onBookCourier(order)}
+            type="button"
+          >
+            {tracking ? "Edit Booking" : "Book Courier"}
+          </button>
+        ) : null}
+        {isPacked && onMarkShipped ? (
+          <button
+            className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5E7F85] disabled:cursor-not-allowed disabled:bg-slate-300"
+            disabled={isUpdating}
+            onClick={() => onMarkShipped(order.id)}
+            type="button"
+          >
+            {isUpdating ? "Updating..." : "Mark Shipped"}
+          </button>
+        ) : null}
+        {order.order_status === "shipped" && onSyncCourier ? (
+          <button className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-950" onClick={() => onSyncCourier(order)} type="button">
+            Update Delivery
+          </button>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+export function RealCourierPaymentsPage({ orders: initialOrders = [] }: RealCourierPaymentsPageProps) {
   const [orders, setOrders] = useState<CourierPaymentOrderRecord[]>(initialOrders);
   const [isLoading, setIsLoading] = useState(!initialOrders.length);
-  const courierOrders = useMemo(
-    () =>
-      orders.filter((order) =>
-        ["packed", "ready_to_ship", "shipped", "delivered", "returned"].includes(
-          order.order_status,
-        ) || ["ready", "sent", "delivered", "returned"].includes(
-          order.courier_status ?? "",
-        ),
-      ),
+  const [hasLoadError, setHasLoadError] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [updatingOrderIds, setUpdatingOrderIds] = useState<string[]>([]);
+  const [bookingOrder, setBookingOrder] = useState<CourierPaymentOrderRecord | null>(null);
+  const [isBooking, setIsBooking] = useState(false);
+  const [syncOrder, setSyncOrder] = useState<CourierPaymentOrderRecord | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const activeDispatchOrders = useMemo(
+    () => orders.filter((order) => order.order_status === "packed"),
     [orders],
   );
-  const readyDispatchOrders = getReadyDispatchCount(courierOrders);
-  const deliveredOrders = getDeliveredCount(courierOrders);
-  const returnedOrders = getReturnedCount(courierOrders);
-  const mismatchOrders = getMismatchCount(courierOrders);
-  const codPipeline = courierOrders.reduce((sum, order) => sum + order.due_amount, 0);
-  const totalPaid = courierOrders.reduce((sum, order) => sum + order.paid_amount, 0);
-  const settlementBase = codPipeline + totalPaid;
-  const collectedPercent =
-    settlementBase > 0
-      ? Math.round((totalPaid / settlementBase) * 100)
-      : 0;
-  const focusedOrder = courierOrders[0] ?? null;
+  const shippedOrders = useMemo(
+    () => orders.filter((order) => order.order_status === "shipped"),
+    [orders],
+  );
+  const recentDeliveredOrders = useMemo(
+    () => orders.filter((order) => order.order_status === "delivered").slice(0, 6),
+    [orders],
+  );
+  const activeItemCount = activeDispatchOrders.reduce((sum, order) => sum + getItemCount(order), 0);
+
+  const loadOrders = useCallback(async (signal?: AbortSignal) => {
+    try {
+      setIsLoading(true);
+      setHasLoadError(false);
+      const nextOrders = await fetchLogisticsOrders(signal);
+      setOrders(nextOrders);
+    } catch (error) {
+      if (!signal?.aborted) {
+        console.error("Courier queue could not be loaded.", error);
+        setOrders([]);
+        setHasLoadError(true);
+      }
+    } finally {
+      if (!signal?.aborted) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
-
-    async function loadOrders() {
-      try {
-        setIsLoading(true);
-        const nextOrders = await fetchLogisticsOrders(controller.signal);
-        setOrders(nextOrders);
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          console.error("Courier logistics orders could not be loaded.", error);
-          setOrders([]);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadOrders();
+    const loadTimer = window.setTimeout(() => {
+      void loadOrders(controller.signal);
+    }, 0);
 
     return () => {
+      window.clearTimeout(loadTimer);
       controller.abort();
     };
-  }, []);
+  }, [loadOrders]);
+
+  async function handleMarkShipped(orderId: string) {
+    setUpdatingOrderIds((current) => Array.from(new Set([...current, orderId])));
+    setStatusMessage("");
+
+    try {
+      const result = await updateOrderStatus(orderId, "shipped");
+      setStatusMessage(result.message ?? "Order marked shipped.");
+      await loadOrders();
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Order status update failed.");
+    } finally {
+      setUpdatingOrderIds((current) => current.filter((id) => id !== orderId));
+    }
+  }
+
+  async function handleCourierBooking(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!bookingOrder) return;
+    const form = new FormData(event.currentTarget);
+    const provider = String(form.get("provider") ?? "").trim();
+
+    if (!provider) {
+      setStatusMessage("Select a courier provider.");
+      return;
+    }
+
+    setIsBooking(true);
+    setStatusMessage("");
+    try {
+      const result = await bookCourier({
+        codAmount: bookingOrder.due_amount || bookingOrder.total,
+        consignmentId: String(form.get("consignment_id") ?? "").trim(),
+        deliveryFee: Number(form.get("delivery_fee") ?? 0),
+        orderId: bookingOrder.id,
+        provider,
+        trackingCode: String(form.get("tracking_code") ?? "").trim(),
+      });
+      setStatusMessage(result.message ?? "Courier booking saved.");
+      setBookingOrder(null);
+      await loadOrders();
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Courier booking failed.");
+    } finally {
+      setIsBooking(false);
+    }
+  }
+
+  async function handleCourierSync(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!syncOrder) return;
+    const form = new FormData(event.currentTarget);
+    const nextStatus = String(form.get("status") ?? "delivered") as "delivered" | "returned";
+    const note = String(form.get("note") ?? "").trim();
+    if (nextStatus === "returned" && !note) {
+      setStatusMessage("A return reason is required.");
+      return;
+    }
+    setIsSyncing(true); setStatusMessage("");
+    try {
+      const result = await syncCourierStatus({ note, orderId: syncOrder.id, status: nextStatus });
+      setStatusMessage(result.message ?? "Courier status synchronized.");
+      setSyncOrder(null);
+      await loadOrders();
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Courier status sync failed.");
+    } finally { setIsSyncing(false); }
+  }
 
   return (
     <AdminShell>
       <div className="space-y-6">
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            helper="Can send courier"
-            icon="#"
-            label="Ready Dispatch"
-            value={readyDispatchOrders}
-          />
-          <StatCard
-            helper="Awaiting settlement"
-            icon="T"
-            label="COD Pipeline"
-            tone="warn"
-            value={formatMoney(codPipeline)}
-          />
-          <StatCard
-            helper="Not tracked"
-            icon="C"
-            label="Courier Charge"
-            tone="default"
-            value="0"
-          />
-          <StatCard
-            helper="Need finance review"
-            icon="!"
-            label="Mismatch"
-            tone="bad"
-            value={mismatchOrders}
-          />
-        </section>
-
-        <section className="rounded-2xl border border-[#5E7F85]/20 bg-[#5E7F85]/5 px-5 py-4 text-sm font-semibold text-[#5E7F85]">
-          {readyDispatchOrders} parcels ready for courier upload. Tracking sync,
-          bulk export, and courier API upload remain preview-only.
-        </section>
-
-        <section className="flex flex-wrap items-center gap-2 rounded-[1.4rem] border border-slate-200 bg-white p-2 shadow-sm">
-          {["Dispatch", "Tracking", "Settlement"].map((tab, index) => (
+        <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#5E7F85]">Dispatch</p>
+              <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">Courier Dispatch</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                Handoff packed orders to courier, track shipped orders, and keep Cash on Delivery handling simple and truthful.
+              </p>
+            </div>
             <button
-              className={`rounded-xl px-4 py-2.5 text-sm font-bold ${
-                index === 0
-                  ? "bg-[#5E7F85] text-white shadow-sm"
-                  : "text-slate-500"
-              }`}
-              disabled
-              key={tab}
+              className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-stone-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5E7F85]"
+              onClick={() => void loadOrders()}
               type="button"
             >
-              {tab}
+              Refresh Queue
             </button>
-          ))}
-          <span className="ml-auto rounded-full bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
-            Tabs visual only
-          </span>
+          </div>
         </section>
 
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_360px]">
-          <section className="min-w-0 overflow-visible rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 p-6">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <div className="text-sm font-medium text-slate-500">
-                    Courier Dispatch Center
-                  </div>
-                  <h1 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                    Courier Dispatch Queue
-                  </h1>
-                  <div className="mt-1 text-sm text-slate-500">
-                    Send ready parcels to courier in bulk with one click.
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <DisabledButton>Export CSV</DisabledButton>
-                  <DisabledButton primary>Send to Courier</DisabledButton>
-                </div>
-              </div>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <SelectShell label="All Partners" />
-                <SelectShell label="All Settlements" />
-                <DisabledButton small>Sync Tracking</DisabledButton>
-                <DisabledButton small>Finance Review</DisabledButton>
-              </div>
-            </div>
+        {statusMessage ? (
+          <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-700 shadow-sm">{statusMessage}</div>
+        ) : null}
 
-            <div className="border-b border-slate-100 bg-stone-50/70 px-6 py-4 text-sm font-semibold text-slate-600">
-              Live records: {courierOrders.length}. Selection, courier upload, COD
-              reconciliation, tracking sync, export, and hard delete are
-              preview-only here. Connected row actions remain available below.
+        {bookingOrder ? (
+          <form className="grid gap-4 rounded-[1.5rem] border border-[#5E7F85]/25 bg-white p-5 shadow-sm md:grid-cols-2" onSubmit={handleCourierBooking}>
+            <div className="md:col-span-2">
+              <div className="text-xs font-bold uppercase tracking-[0.16em] text-[#5E7F85]">Courier Booking</div>
+              <h2 className="mt-2 text-xl font-bold text-slate-950">{bookingOrder.order_number ?? `BNB-${bookingOrder.id}`}</h2>
+              <p className="mt-1 text-sm text-slate-500">Save a manual booking now; live provider API can reuse this same workflow later.</p>
             </div>
+            <label className="text-sm font-semibold text-slate-700">
+              Courier provider
+              <select className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3" defaultValue={bookingOrder.courier_name ?? ""} name="provider" required>
+                <option disabled value="">Select provider</option>
+                <option value="Steadfast">Steadfast</option>
+                <option value="Pathao">Pathao</option>
+                <option value="RedX">RedX</option>
+                <option value="Paperfly">Paperfly</option>
+                <option value="Other">Other / Manual</option>
+              </select>
+            </label>
+            <label className="text-sm font-semibold text-slate-700">
+              Tracking code
+              <input className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3" defaultValue={bookingOrder.courier_tracking_id ?? ""} name="tracking_code" placeholder="Courier tracking code" />
+            </label>
+            <label className="text-sm font-semibold text-slate-700">
+              Consignment ID
+              <input className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3" name="consignment_id" placeholder="Optional consignment ID" />
+            </label>
+            <label className="text-sm font-semibold text-slate-700">
+              Courier cost (BDT)
+              <input className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3" min="0" name="delivery_fee" step="0.01" type="number" />
+            </label>
+            <div className="flex justify-end gap-3 md:col-span-2">
+              <button className="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700" disabled={isBooking} onClick={() => setBookingOrder(null)} type="button">Cancel</button>
+              <button className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-bold text-white disabled:bg-slate-300" disabled={isBooking} type="submit">{isBooking ? "Saving..." : "Save Booking & COD"}</button>
+            </div>
+          </form>
+        ) : null}
 
-            {isLoading ? (
-              <div className="px-5 py-14 text-center text-sm text-slate-500">
-                Loading live courier orders from local MySQL...
+        {syncOrder ? (
+          <form className="grid gap-4 rounded-[1.5rem] border border-[#5E7F85]/25 bg-white p-5 shadow-sm md:grid-cols-2" onSubmit={handleCourierSync}>
+            <div className="md:col-span-2"><div className="text-xs font-bold uppercase tracking-[0.16em] text-[#5E7F85]">Delivery Update</div><h2 className="mt-2 text-xl font-bold text-slate-950">{syncOrder.order_number ?? `BNB-${syncOrder.id}`}</h2><p className="mt-1 text-sm text-slate-500">Delivered creates a COD collection. Returned restores stocked inventory through the central order workflow.</p></div>
+            <label className="text-sm font-semibold text-slate-700">Courier result<select className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3" name="status"><option value="delivered">Delivered</option><option value="returned">Returned</option></select></label>
+            <label className="text-sm font-semibold text-slate-700">Operational note<input className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3" name="note" placeholder="Required for returned parcels" /></label>
+            <div className="flex justify-end gap-3 md:col-span-2"><button className="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700" disabled={isSyncing} onClick={() => setSyncOrder(null)} type="button">Cancel</button><button className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-bold text-white disabled:bg-slate-300" disabled={isSyncing} type="submit">{isSyncing ? "Updating..." : "Confirm Courier Result"}</button></div>
+          </form>
+        ) : null}
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <StatCard helper="Packed orders" label="Waiting Handoff" value={activeDispatchOrders.length} />
+          <StatCard helper="Across active queue" label="Items to Dispatch" value={activeItemCount} />
+          <StatCard helper="Read-only tracking" label="Shipped Orders" value={shippedOrders.length} />
+        </section>
+
+        <section className="rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 p-5">
+            <h2 className="text-xl font-bold tracking-tight text-slate-950">Active Courier Handoff</h2>
+            <p className="mt-1 text-sm text-slate-500">Only packed orders appear here for courier handoff.</p>
+          </div>
+
+          {isLoading ? (
+            <div className="p-10 text-center text-sm font-semibold text-slate-500">Loading courier queue...</div>
+          ) : hasLoadError ? (
+            <div className="p-10 text-center">
+              <p className="text-sm font-semibold text-rose-700">Courier queue could not be loaded. Please try again.</p>
+              <button
+                className="mt-4 rounded-full bg-[#5E7F85] px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-950"
+                onClick={() => void loadOrders()}
+                type="button"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : activeDispatchOrders.length ? (
+            <div className="grid gap-5 p-5 xl:grid-cols-2 2xl:grid-cols-3">
+              {activeDispatchOrders.map((order) => (
+                <CourierCard
+                  isUpdating={updatingOrderIds.includes(order.id)}
+                  key={order.id}
+                  onBookCourier={setBookingOrder}
+                  onMarkShipped={(orderId) => void handleMarkShipped(orderId)}
+                  order={order}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="p-10 text-center text-sm font-semibold text-slate-500">No orders are waiting for courier handoff.</div>
+          )}
+        </section>
+
+        {shippedOrders.length ? (
+          <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-bold tracking-tight text-slate-950">Shipped Orders</h2>
+                <p className="mt-1 text-sm text-slate-500">Read-only tracking view for orders already marked shipped.</p>
               </div>
-            ) : courierOrders.length ? (
-              <div className="overflow-x-auto lg:overflow-x-visible">
-                <table className="w-full table-fixed text-left text-sm">
-                  <colgroup>
-                    <col className="w-[4%]" />
-                    <col className="w-[20%]" />
-                    <col className="w-[11%]" />
-                    <col className="w-[10%]" />
-                    <col className="w-[7%]" />
-                    <col className="w-[12%]" />
-                    <col className="w-[11%]" />
-                    <col className="w-[9%]" />
-                    <col className="w-[11%]" />
-                    <col className="w-[5%]" />
-                  </colgroup>
-                  <thead className="sticky top-0 z-10 bg-stone-50 text-slate-500">
-                    <tr>
-                      <th className="px-3 py-4 font-medium">
-                        <input
-                          className="h-4 w-4 rounded border-slate-300"
-                          disabled
-                          type="checkbox"
-                        />
-                      </th>
-                      {[
-                        "Order",
-                        "Tracking",
-                        "COD",
-                        "Charge",
-                        "Courier",
-                        "Settlement",
-                        "Received",
-                        "Items",
-                        "Action",
-                      ].map((heading) => (
-                        <th
-                          className="px-3 py-4 font-medium"
-                          key={heading}
-                          scope="col"
-                        >
-                          {heading}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {courierOrders.map((order) => (
-                      <tr
-                        className={`border-t border-slate-100 align-top transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${getRowClassName(
-                          order,
-                        )}`}
-                        key={order.id}
-                      >
-                        <td className="px-3 py-4">
-                          <input
-                            className="h-4 w-4 rounded border-slate-300"
-                            disabled
-                            type="checkbox"
-                          />
-                        </td>
-                        <td className="px-3 py-4">
-                          <div className="break-words font-black text-slate-950">
-                            {order.order_number ?? "No order number"}
-                          </div>
-                          <div className="mt-1 text-xs font-semibold text-slate-500">
-                            {formatStatus(order.order_status)}
-                          </div>
-                          <div className="mt-3 font-bold leading-5 text-slate-800">
-                            {order.customer_name}
-                          </div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            {order.customer_phone}
-                          </div>
-                          <div className="mt-1 text-xs text-slate-400">
-                            {formatLocation(order)}
-                          </div>
-                        </td>
-                        <td className="break-words px-3 py-4 font-bold text-slate-800">
-                          {formatText(order.courier_tracking_id)}
-                        </td>
-                        <td className="px-3 py-4">
-                          <div className="font-black text-slate-950">
-                            {formatMoney(order.due_amount)}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            Total {formatMoney(order.total)}
-                          </div>
-                        </td>
-                        <td className="px-3 py-4">
-                          <Badge tone="default">Not tracked</Badge>
-                        </td>
-                        <td className="px-3 py-4">
-                          <div className="flex flex-col items-start gap-2">
-                            <Badge tone="brand">
-                              {formatText(order.courier_name)}
-                            </Badge>
-                            <Badge
-                              tone={getCourierStatusTone(order.courier_status)}
-                            >
-                              {formatStatus(order.courier_status)}
-                            </Badge>
-                            <Badge tone={getOrderStatusTone(order.order_status)}>
-                              {formatStatus(order.order_status)}
-                            </Badge>
-                          </div>
-                        </td>
-                        <td className="px-3 py-4">
-                          <Badge tone={getPaymentStatusTone(order.payment_status)}>
-                            {formatStatus(order.payment_status)}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-4 font-semibold text-slate-800">
-                          {formatMoney(order.paid_amount)}
-                        </td>
-                        <td className="px-3 py-4">
-                          <div className="max-h-16 overflow-hidden text-xs font-semibold leading-5 text-slate-700">
-                            {getItemsSummary(order)}
-                          </div>
-                          {order.order_items.length > 3 ? (
-                            <div className="mt-1 text-xs text-slate-500">
-                              +{order.order_items.length - 3} more rows
-                            </div>
-                          ) : null}
-                        </td>
-                        <td className="px-3 py-4">
-                          <details className="group relative">
-                            <summary className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-xl border border-slate-200 bg-white text-xs font-black text-[#5E7F85] shadow-sm transition hover:border-[#5E7F85]/40 hover:bg-[#5E7F85]/10 [&::-webkit-details-marker]:hidden">
-                              ...
-                            </summary>
-                            <div className="absolute right-0 z-30 mt-2 w-72 space-y-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
-                              <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                                Row actions
-                              </div>
-                            <Link
-                              className="block rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-center text-xs font-bold text-[#5E7F85] transition hover:bg-[#5E7F85] hover:text-white"
-                              href={`/orders/details?id=${order.id}`}
-                            >
-                              Open
-                            </Link>
-                            <DisabledButton small>Mark Courier Sent</DisabledButton>
-                            <DisabledButton small>Mark Delivered</DisabledButton>
-                            <DisabledButton small>Mark Returned</DisabledButton>
-                            <DisabledButton small>Sync</DisabledButton>
-                            </div>
-                          </details>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="px-5 py-14 text-center text-sm text-slate-500">
-                No courier or payment orders found for the live queue.
-              </div>
-            )}
+              <Badge tone="brand">Shipped</Badge>
+            </div>
+            <div className="mt-5 grid gap-5 xl:grid-cols-2 2xl:grid-cols-3">
+              {shippedOrders.map((order) => (
+                <CourierCard key={order.id} onSyncCourier={setSyncOrder} order={order} />
+              ))}
+            </div>
           </section>
+        ) : null}
 
-          <aside className="space-y-6">
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="text-sm font-medium text-slate-500">
-                Dispatch Summary
+        {recentDeliveredOrders.length ? (
+          <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-bold tracking-tight text-slate-950">Delivered Recently</h2>
+                <p className="mt-1 text-sm text-slate-500">Completed orders are not part of the active courier workflow.</p>
               </div>
-              <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                COD Collection
-              </h2>
-              <div className="mt-5 flex items-center justify-center">
-                <div className="relative flex h-28 w-28 items-center justify-center rounded-full border-8 border-stone-100">
-                  <div
-                    className="absolute inset-0 rounded-full border-8 border-[#5E7F85]"
-                    style={{
-                      clipPath: `inset(${100 - collectedPercent}% 0 0 0)`,
-                    }}
-                  />
-                  <div className="relative text-center">
-                    <div className="text-2xl font-black text-slate-900">
-                      {collectedPercent}%
+              <Badge tone="good">Delivered</Badge>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {recentDeliveredOrders.map((order) => (
+                <div className="rounded-2xl border border-slate-200 bg-stone-50 p-4" key={order.id}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-bold text-slate-950">{order.order_number ?? `BNB-${order.id}`}</div>
+                      <div className="mt-1 text-sm font-semibold text-slate-700">{order.customer_name}</div>
                     </div>
-                    <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                      Paid
-                    </div>
+                    <Badge tone="good">Delivered</Badge>
+                  </div>
+                  <div className="mt-3 grid gap-2">
+                    <DetailRow label="Payment" value="Cash on Delivery" />
+                    <DetailRow label="Total" value={formatMoney(order.total)} />
+                    <DetailRow label="Delivered At" value={formatDate(order.updated_at)} />
                   </div>
                 </div>
-              </div>
-              <div className="mt-5 space-y-3 text-sm">
-                <DetailRow label="COD Pipeline" value={formatMoney(codPipeline)} />
-                <DetailRow
-                  label="Paid Amount"
-                  value={
-                    <span className="text-emerald-700">
-                      {formatMoney(totalPaid)}
-                    </span>
-                  }
-                />
-                <DetailRow
-                  label="Pending / Difference"
-                  value={
-                    <span className="text-rose-600">
-                      {formatMoney(codPipeline)}
-                    </span>
-                  }
-                />
-              </div>
-            </section>
-
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="text-sm font-medium text-slate-500">
-                Courier Health
-              </div>
-              <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                Partner Performance
-              </h2>
-              <div className="mt-5 space-y-3">
-                {[
-                  `${deliveredOrders} delivered orders`,
-                  `${returnedOrders} returned orders`,
-                  "Courier API setup pending",
-                ].map((item) => (
-                  <div
-                    className="rounded-2xl bg-stone-50 px-4 py-3 text-sm font-semibold text-slate-700"
-                    key={item}
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium text-slate-500">
-                    Shipment Details
-                  </div>
-                  <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                    {focusedOrder?.order_number ?? "No active order"}
-                  </h2>
-                </div>
-                <Badge tone={getPaymentStatusTone(focusedOrder?.payment_status ?? "")}>
-                  {formatStatus(focusedOrder?.payment_status ?? null)}
-                </Badge>
-              </div>
-              {focusedOrder ? (
-                <div className="mt-4 space-y-2 text-sm">
-                  <DetailRow label="Customer" value={focusedOrder.customer_name} />
-                  <DetailRow
-                    label="Tracking"
-                    value={formatText(focusedOrder.courier_tracking_id)}
-                  />
-                  <DetailRow
-                    label="Partner"
-                    value={formatText(focusedOrder.courier_name)}
-                  />
-                  <DetailRow
-                    label="COD Due"
-                    value={formatMoney(focusedOrder.due_amount)}
-                  />
-                  <div className="mt-5 rounded-2xl bg-stone-50 p-4">
-                    <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
-                      Tracking Timeline
-                    </div>
-                    <div className="mt-3 space-y-2">
-                      {[
-                        ["Packed", focusedOrder.packed_at],
-                        ["Courier Sent", focusedOrder.shipped_at],
-                        ["Delivered", focusedOrder.delivered_at],
-                        ["Returned", focusedOrder.returned_at],
-                      ].map(([label, value], index) => (
-                        <div
-                          className="flex items-center gap-3 text-xs font-semibold text-slate-700"
-                          key={label}
-                        >
-                          <span
-                            className={`h-2.5 w-2.5 rounded-full ${
-                              value
-                                ? "bg-emerald-500"
-                                : index === 1
-                                  ? "bg-[#5E7F85]"
-                                  : "bg-slate-200"
-                            }`}
-                          />
-                          {label}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-4 rounded-2xl bg-stone-50 p-4 text-sm text-slate-500">
-                  No live order is available for shipment preview.
-                </div>
-              )}
-            </section>
-
-            <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
-              <div className="text-sm font-bold text-amber-800">Ops Note</div>
-              <div className="mt-2 text-sm leading-6 text-amber-700">
-                Only courier-ready orders should be uploaded later. Delivered
-                courier status, COD reconciliation, and payment updates will be
-                connected in future safe workflows.
-              </div>
-            </section>
-          </aside>
-        </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
     </AdminShell>
   );
 }
+

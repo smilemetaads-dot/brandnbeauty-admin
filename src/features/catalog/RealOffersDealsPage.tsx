@@ -468,7 +468,7 @@ export function RealOffersDealsPage() {
           </div>
         ) : null}
         {state.error ? <div className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">{state.error}</div> : null}
-        {value ? <details className="mt-3 text-xs text-slate-500"><summary className="cursor-pointer font-semibold">Uploaded URL</summary><input className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500" readOnly value={value} /></details> : null}
+        {value ? <details className="mt-3 text-xs text-slate-500"><summary className="cursor-pointer font-semibold">Advanced Details</summary><input className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500" readOnly value={value} /></details> : null}
       </div>
     );
   };
@@ -482,12 +482,12 @@ export function RealOffersDealsPage() {
         method: "POST",
       });
       const payload = (await response.json()) as { message?: string; offer?: unknown; success?: boolean };
-      if (!response.ok || payload.success === false) throw new Error(payload.message || "Status could not be updated.");
+      if (!response.ok || payload.success === false) throw new Error(payload.message || "Visibility could not be updated.");
       const savedOffer = normalizeOffer(payload.offer);
       if (savedOffer) setOffers((current) => sortedOffers(current.map((item) => (item.id === savedOffer.id ? savedOffer : item))));
-      setMessage(payload.message || "Offer status updated.");
+      setMessage(payload.message || "Offer visibility updated.");
     } catch (statusError) {
-      setError(statusError instanceof Error ? statusError.message : "Status could not be updated.");
+      setError(statusError instanceof Error ? statusError.message : "Visibility could not be updated.");
     }
   };
 
@@ -516,25 +516,6 @@ export function RealOffersDealsPage() {
     }
   };
 
-  const deleteOffer = async (offer: OfferRecord) => {
-    if (!window.confirm(`Delete "${offer.internal_title}"? The database row will be removed, but shared image files will remain.`)) return;
-    setError("");
-    setMessage("");
-
-    try {
-      const response = await fetch(`${MANAGE_OFFERS_ENDPOINT}?id=${encodeURIComponent(offer.id)}&confirm=delete`, {
-        headers: adminAuthHeaders(),
-        method: "DELETE",
-      });
-      const payload = (await response.json()) as { message?: string; success?: boolean };
-      if (!response.ok || payload.success === false) throw new Error(payload.message || "Offer could not be deleted.");
-      setOffers((current) => sortedOffers(current.filter((item) => item.id !== offer.id).map((item, index) => ({ ...item, sort_order: index + 1 }))));
-      if (form.id === offer.id) setForm({ ...emptyForm, sort_order: Math.max(1, offers.length) });
-      setMessage(payload.message || "Offer deleted successfully.");
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Offer could not be deleted.");
-    }
-  };
 
   return (
     <AdminShell>
@@ -553,11 +534,11 @@ export function RealOffersDealsPage() {
               onClick={() => setForm({ ...emptyForm, sort_order: offers.length + 1 })}
               type="button"
             >
-              Add Offer
+              Add New Offer
             </button>
           </div>
           <div className="mt-5 grid gap-3 text-sm md:grid-cols-4">
-            <div className="rounded-2xl bg-stone-50 p-4"><b>{offers.length}</b><span className="ml-2 text-slate-500">total records</span></div>
+            <div className="rounded-2xl bg-stone-50 p-4"><b>{offers.length}</b><span className="ml-2 text-slate-500">total offers</span></div>
             <div className="rounded-2xl bg-stone-50 p-4"><b>{activeVisibleCount}</b><span className="ml-2 text-slate-500">visible now</span></div>
             <div className="rounded-2xl bg-stone-50 p-4"><b>4</b><span className="ml-2 text-slate-500">homepage limit</span></div>
             <div className="rounded-2xl bg-stone-50 p-4"><b>1000 x 1000</b><span className="ml-2 text-slate-500">recommended</span></div>
@@ -570,7 +551,7 @@ export function RealOffersDealsPage() {
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
           <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 p-5">
-              <h2 className="text-lg font-bold text-slate-950">Offer Records</h2>
+              <h2 className="text-lg font-bold text-slate-950">Offers</h2>
               <p className="mt-1 text-sm text-slate-500">Active means eligible; schedule dates decide whether it is visible now without changing the stored status.</p>
             </div>
             {isLoading ? (
@@ -586,11 +567,11 @@ export function RealOffersDealsPage() {
                   <thead className="bg-stone-50 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
                     <tr>
                       <th className="px-5 py-4">Artwork</th>
-                      <th className="px-5 py-4">Internal Title</th>
-                      <th className="px-5 py-4">Link</th>
-                      <th className="px-5 py-4">Order</th>
+                      <th className="px-5 py-4">Offer Name</th>
+                      <th className="px-5 py-4">Offer Destination</th>
+                      <th className="px-5 py-4">Display Order</th>
                       <th className="px-5 py-4">Schedule</th>
-                      <th className="px-5 py-4">Status</th>
+                      <th className="px-5 py-4">Show on Website</th>
                       <th className="px-5 py-4">Actions</th>
                     </tr>
                   </thead>
@@ -607,7 +588,7 @@ export function RealOffersDealsPage() {
                           </td>
                           <td className="px-5 py-4">
                             <div className="font-bold text-slate-950">{offer.internal_title}</div>
-                            <div className="mt-1 text-xs text-slate-500">ID {offer.id}</div>
+                            
                           </td>
                           <td className="max-w-[220px] truncate px-5 py-4 text-slate-600">{offer.destination_link}</td>
                           <td className="px-5 py-4">
@@ -625,8 +606,7 @@ export function RealOffersDealsPage() {
                           <td className="px-5 py-4">
                             <div className="flex flex-wrap gap-2">
                               <button className="rounded-xl bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85]" onClick={() => setForm(formFromOffer(offer))} type="button">Edit</button>
-                              <button className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700" onClick={() => updateStatus(offer, offer.status === "active" ? "inactive" : "active")} type="button">{offer.status === "active" ? "Deactivate" : "Activate"}</button>
-                              <button className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700" onClick={() => deleteOffer(offer)} type="button">Delete</button>
+                              <button className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700" onClick={() => updateStatus(offer, offer.status === "active" ? "inactive" : "active")} type="button">{offer.status === "active" ? "Hide" : "Show"}</button>
                             </div>
                           </td>
                         </tr>
@@ -641,33 +621,33 @@ export function RealOffersDealsPage() {
           <aside className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm xl:sticky xl:top-28 xl:self-start">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-lg font-bold text-slate-950">{form.id ? "Edit Offer" : "Add Offer"}</h2>
+                <h2 className="text-lg font-bold text-slate-950">{form.id ? "Edit Offer" : "Add New Offer"}</h2>
                 <p className="mt-1 text-sm text-slate-500">Artwork contains its own offer title and CTA. The internal title is used for admin and accessibility only.</p>
               </div>
-              <Badge tone={form.status === "active" ? "good" : "default"}>{form.status}</Badge>
+              <Badge tone={form.status === "active" ? "good" : "default"}>{form.status === "active" ? "Shown" : form.status === "draft" ? "Draft" : form.status === "expired" ? "Expired" : "Hidden"}</Badge>
             </div>
 
             <div className="mt-5 space-y-4">
               <label className="block text-sm font-semibold text-slate-700">
-                Internal Title
+                Offer Name
                 <input className="mt-2 w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 outline-none focus:border-[#5E7F85]" onChange={(event) => updateForm({ internal_title: event.target.value })} placeholder="Buy 1 Get 1" value={form.internal_title} />
               </label>
 
               <label className="block text-sm font-semibold text-slate-700">
-                Destination Link
+                Offer Destination
                 <input className="mt-2 w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 outline-none focus:border-[#5E7F85]" onChange={(event) => updateForm({ destination_link: event.target.value })} placeholder="/products" value={form.destination_link} />
               </label>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block text-sm font-semibold text-slate-700">
-                  Sort Order
+                  Display Order
                   <input className="mt-2 w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 outline-none focus:border-[#5E7F85]" min={0} onChange={(event) => updateForm({ sort_order: Number(event.target.value) || 0 })} type="number" value={form.sort_order} />
                 </label>
                 <label className="block text-sm font-semibold text-slate-700">
-                  Status
+                  Show on Website
                   <select className="mt-2 w-full rounded-2xl border border-slate-200 bg-stone-50 px-4 py-3 outline-none focus:border-[#5E7F85]" onChange={(event) => updateForm({ status: event.target.value as OfferStatus })} value={form.status}>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="active">Shown</option>
+                    <option value="inactive">Hidden</option>
                     <option value="draft">Draft</option>
                     <option value="expired">Expired</option>
                   </select>

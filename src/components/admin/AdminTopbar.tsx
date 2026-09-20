@@ -18,6 +18,14 @@ const pageTitles: Record<string, string> = {
   "/customers/profile": "Customers Profile",
   "/dashboard": "Dashboard",
   "/finance/reconciliation": "Finance Reconciliation",
+  "/finance": "Finance Control Center",
+  "/finance/cash-ledger": "Cash & Bank Ledger",
+  "/finance/payables": "Payable Payments",
+  "/finance/close": "Month-End Finance Close",
+  "/finance/profitability": "Order Profitability",
+  "/finance/profit-loss": "Profit & Loss",
+  "/tracking": "Tracking & Attribution",
+  "/marketing": "Marketing Performance",
   "/footer": "Footer CMS",
   "/homepage-cms": "Homepage CMS",
   "/inventory": "Inventory",
@@ -75,57 +83,31 @@ export function AdminTopbar() {
   const pathname = usePathname();
   const title = getPageTitle(pathname);
   const status = getPageStatus(pathname);
-  const showSetupNotice = status !== null && status !== "Live";
 
   return (
     <header className="sticky top-0 z-10 border-b border-slate-200/70 bg-[#f7f5f1]/95 backdrop-blur">
-      <div className="flex min-h-20 items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="flex min-h-[4.5rem] items-center justify-between gap-4 px-4 py-2.5 sm:px-6 lg:px-8">
         <div className="min-w-0">
           <div className="text-sm font-black text-[#5E7F85] lg:hidden">
             BrandnBeauty Admin
           </div>
           <div className="hidden text-xs font-bold uppercase tracking-[0.18em] text-[#5E7F85] lg:block">
-            {status === "Live" ? "Live admin workspace" : "Admin setup workspace"}
+            BrandnBeauty Admin
           </div>
-          <h1 className="mt-1 truncate text-2xl font-black tracking-tight text-slate-950">
+          <h1 className="mt-0.5 truncate text-2xl font-black tracking-tight text-slate-950">
             {title}
           </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
+          <div className="mt-0.5 flex flex-wrap items-center gap-2">
             {status ? (
               <span className={`rounded-full px-2.5 py-1 text-xs font-black ${getStatusTone(status)}`}>
                 {status}
               </span>
             ) : null}
-            <p className="text-sm font-medium text-slate-500">
-              {showSetupNotice
-                ? "This module is available for setup/review. Some actions may be preview-only."
-                : "Catalog, orders, storefront, and operations"}
-            </p>
+            <p className="text-sm font-medium text-slate-500">Catalog, orders, storefront, and operations</p>
           </div>
         </div>
 
         <div className="flex min-w-0 items-center gap-3">
-          <div className="relative hidden min-w-[18rem] md:block">
-            <input
-              aria-label="Search admin data"
-              className="w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-white px-4 py-3 pl-10 text-sm font-medium text-slate-500 shadow-sm outline-none placeholder:text-slate-400"
-              disabled
-              placeholder="Search coming later"
-              type="search"
-            />
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">
-              /
-            </span>
-          </div>
-
-          <div className="hidden rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm sm:block">
-            <div className="text-sm font-bold text-slate-800">
-              {status === "Live" ? "Live Workspace" : "Setup Review"}
-            </div>
-            <div className="text-xs font-medium text-slate-500">
-              {status === "Live" ? "Live actions preserved" : "Preview-safe actions"}
-            </div>
-          </div>
 
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#5E7F85] text-sm font-black text-white shadow-sm">
             BN

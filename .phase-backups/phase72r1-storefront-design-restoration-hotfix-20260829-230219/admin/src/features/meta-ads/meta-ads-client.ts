@@ -1,0 +1,47 @@
+import { adminAuthHeaders } from "@/lib/admin-auth";
+import { bnbApiUrl } from "@/lib/bnb-api";
+
+export const MANAGE_META_ADS_ENDPOINT = "manage_meta_ads.php";
+
+export type MetaConnection = { accountName: string; accountStatus: string | null; adAccountId: string; connected: boolean; currency: string; graphVersion: string; lastError: string | null; lastSyncAt: string | null; timezoneName: string; tokenHint: string };
+export type MetaEntity = { clicks: number; configuredStatus: string; cpc: number; cpm: number; creativeId: string; creativeName: string; dailyBudget: number | null; deliveredOrders: number; deliveredRevenue: number; deliveredRoas: number | null; effectiveStatus: string; frequency: number; id: string; impressions: number; insightSyncedAt: string | null; lastSyncedAt: string | null; level: "ad" | "adset" | "campaign"; lifetimeBudget: number | null; name: string; objective: string; optimizationGoal: string; orderedRevenue: number; orderedRoas: number | null; parentId: string; parentName: string; placedOrders: number; reach: number; results: number; resultType: string; returnCancelOrders: number; spend: number; ctr: number };
+export type MetaDaily = { clicks: number; cpc: number; ctr: number; date: string; impressions: number; reach: number; resultType: string; results: number; spend: number; syncedAt: string | null };
+export type MetaDraft = { audience: string; createdAt: string | null; dailyBudget: number; destination: string; draftName: string; endDate: string | null; id: number; objective: string; optimizationEvent: string; placements: string; productOffer: string; startDate: string; status: string; strategyNote: string };
+export type MetaChangeRequest = { entityId: string; entityLevel: string; entityName: string; id: number; reason: string; requestedAction: string; requestedAt: string | null; requestedBy: string; requested: Record<string, unknown>; reviewNote: string; reviewedAt: string | null; reviewedBy: string; status: "approved" | "applied" | "failed" | "pending" | "rejected" };
+export type MetaSyncRun = { dateStart: string; dateStop: string; entityCount: number; errorMessage: string; finishedAt: string | null; id: number; insightCount: number; startedAt: string | null; status: string };
+export type MetaAdsState = { changeRequests: MetaChangeRequest[]; connection: MetaConnection; daily: MetaDaily[]; drafts: MetaDraft[]; entities: MetaEntity[]; generatedAt: string | null; range: { from: string; to: string }; syncRuns: MetaSyncRun[] };
+
+type Raw = Record<string, unknown>;
+const text = (value: unknown) => typeof value === "string" ? value : "";
+const number = (value: unknown) => Number.isFinite(Number(value)) ? Number(value) : 0;
+const nullableNumber = (value: unknown) => value === null || value === undefined || value === "" ? null : number(value);
+const nullableText = (value: unknown) => text(value) || null;
+
+function normalize(payload: Raw): MetaAdsState {
+  const connection = (payload.connection ?? {}) as Raw;
+  return {
+    connection: { accountName: text(connection.account_name), accountStatus: nullableText(connection.account_status), adAccountId: text(connection.ad_account_id), connected: Boolean(connection.connected), currency: text(connection.currency) || "BDT", graphVersion: text(connection.graph_version) || "v26.0", lastError: nullableText(connection.last_error), lastSyncAt: nullableText(connection.last_sync_at), timezoneName: text(connection.timezone_name) || "Asia/Dhaka", tokenHint: text(connection.token_hint) },
+    entities: ((payload.entities ?? []) as Raw[]).map((item) => ({ clicks: number(item.clicks), configuredStatus: text(item.configured_status), cpc: number(item.cpc), cpm: number(item.cpm), creativeId: text(item.creative_id), creativeName: text(item.creative_name), dailyBudget: nullableNumber(item.daily_budget), deliveredOrders: number(item.delivered_orders), deliveredRevenue: number(item.delivered_revenue), deliveredRoas: nullableNumber(item.delivered_roas), effectiveStatus: text(item.effective_status), frequency: number(item.frequency), id: text(item.id), impressions: number(item.impressions), insightSyncedAt: nullableText(item.insight_synced_at), lastSyncedAt: nullableText(item.last_synced_at), level: (text(item.level) || "campaign") as MetaEntity["level"], lifetimeBudget: nullableNumber(item.lifetime_budget), name: text(item.name), objective: text(item.objective), optimizationGoal: text(item.optimization_goal), orderedRevenue: number(item.ordered_revenue), orderedRoas: nullableNumber(item.ordered_roas), parentId: text(item.parent_id), parentName: text(item.parent_name), placedOrders: number(item.placed_orders), reach: number(item.reach), results: number(item.results), resultType: text(item.result_type), returnCancelOrders: number(item.return_cancel_orders), spend: number(item.spend), ctr: number(item.ctr) })),
+    daily: ((payload.daily ?? []) as Raw[]).map((item) => ({ clicks: number(item.clicks), cpc: number(item.cpc), ctr: number(item.ctr), date: text(item.insight_date), impressions: number(item.impressions), reach: number(item.reach_value), resultType: text(item.result_type), results: number(item.results), spend: number(item.spend), syncedAt: nullableText(item.synced_at) })),
+    drafts: ((payload.drafts ?? []) as Raw[]).map((item) => ({ audience: text(item.audience), createdAt: nullableText(item.created_at), dailyBudget: number(item.daily_budget), destination: text(item.destination), draftName: text(item.draft_name), endDate: nullableText(item.end_date), id: number(item.id), objective: text(item.objective), optimizationEvent: text(item.optimization_event), placements: text(item.placements), productOffer: text(item.product_offer), startDate: text(item.start_date), status: text(item.status), strategyNote: text(item.strategy_note) })),
+    changeRequests: ((payload.change_requests ?? []) as Raw[]).map((item) => { let requested: Record<string, unknown> = {}; try { requested = JSON.parse(text(item.requested_json) || "{}"); } catch { requested = {}; } return { entityId: text(item.entity_id), entityLevel: text(item.entity_level), entityName: text(item.entity_name), id: number(item.id), reason: text(item.reason), requestedAction: text(item.requested_action), requestedAt: nullableText(item.requested_at), requestedBy: text(item.requested_by), requested, reviewNote: text(item.review_note), reviewedAt: nullableText(item.reviewed_at), reviewedBy: text(item.reviewed_by), status: text(item.status) as MetaChangeRequest["status"] }; }),
+    syncRuns: ((payload.sync_runs ?? []) as Raw[]).map((item) => ({ dateStart: text(item.date_start), dateStop: text(item.date_stop), entityCount: number(item.entity_count), errorMessage: text(item.error_message), finishedAt: nullableText(item.finished_at), id: number(item.id), insightCount: number(item.insight_count), startedAt: nullableText(item.started_at), status: text(item.status) })),
+    generatedAt: nullableText(payload.generated_at), range: { from: text((payload.range as Raw | undefined)?.from), to: text((payload.range as Raw | undefined)?.to) },
+  };
+}
+
+async function request(dateFrom: string, dateTo: string, options?: RequestInit) {
+  const query = new URLSearchParams(); if (dateFrom) query.set("date_from", dateFrom); if (dateTo) query.set("date_to", dateTo);
+  const response = await fetch(`${bnbApiUrl(MANAGE_META_ADS_ENDPOINT)}${query.size ? `?${query}` : ""}`, { cache: "no-store", ...options, headers: adminAuthHeaders({ "Content-Type": "application/json", ...(options?.headers as Record<string, string> | undefined) }) });
+  const payload = await response.json().catch(() => ({})) as Raw & { message?: string; success?: boolean };
+  if (!response.ok || payload.success === false) throw new Error(payload.message || "Meta Ads data could not be loaded.");
+  return { message: payload.message ?? "", state: normalize(payload) };
+}
+
+export const loadMetaAds = (from = "", to = "") => request(from, to).then((result) => result.state);
+export const connectMetaAds = (connection: { accessToken: string; adAccountId: string; graphVersion: string }, from: string, to: string) => request(from, to, { method: "POST", body: JSON.stringify({ action: "connect", access_token: connection.accessToken, ad_account_id: connection.adAccountId, graph_version: connection.graphVersion }) });
+export const disconnectMetaAds = (from: string, to: string) => request(from, to, { method: "POST", body: JSON.stringify({ action: "disconnect" }) });
+export const syncMetaAds = (from: string, to: string) => request(from, to, { method: "POST", body: JSON.stringify({ action: "sync" }) });
+export const saveMetaDraft = (draft: Record<string, unknown>, from: string, to: string) => request(from, to, { method: "POST", body: JSON.stringify({ action: "save_draft", ...draft }) });
+export const requestMetaChange = (change: { entityId: string; reason: string; requested: Record<string, unknown>; requestedAction: string }, from: string, to: string) => request(from, to, { method: "POST", body: JSON.stringify({ action: "request_change", entity_id: change.entityId, reason: change.reason, requested: change.requested, requested_action: change.requestedAction }) });
+export const reviewMetaChange = (id: number, decision: "approved" | "rejected", reviewNote: string, from: string, to: string) => request(from, to, { method: "POST", body: JSON.stringify({ action: "review_change", decision, id, review_note: reviewNote }) });

@@ -1,4 +1,5 @@
 import { bnbApiUrl } from "@/lib/bnb-api";
+import { adminAuthHeaders } from "@/lib/admin-auth";
 
 export type FinanceInventoryProduct = {
   created_at: string | null;
@@ -43,6 +44,7 @@ export async function fetchFinanceInventory(
 ): Promise<FinanceInventoryData> {
   const response = await fetch(FINANCE_INVENTORY_ENDPOINT, {
     cache: "no-store",
+    headers: adminAuthHeaders(),
     signal,
   });
   const payload = (await response.json()) as FinanceInventoryResponse;

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import type { FormEvent, ReactNode } from "react";
+import Image from "next/image";
+import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -17,18 +18,6 @@ type RealConcernsPageProps = {
 
 type BadgeTone = "brand" | "good" | "warn" | "bad" | "default";
 
-type ConcernPreview = {
-  banner: string;
-  concernType: string;
-  id: string;
-  name: string;
-  parent: string;
-  products: string;
-  routine: string[];
-  severity: string;
-  slug: string;
-  status: string;
-};
 
 const inputClassName =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#5E7F85] focus:ring-2 focus:ring-[#5E7F85]/15";
@@ -38,6 +27,9 @@ const labelClassName = "text-sm font-semibold text-slate-700";
 const CONCERNS_ENDPOINT = bnbApiUrl("get_concerns.php?include_inactive=1");
 const MANAGE_CATALOG_META_ENDPOINT = bnbApiUrl("manage_catalog_meta.php");
 const DELETE_CATALOG_ITEM_ENDPOINT = bnbApiUrl("delete_catalog_item.php");
+const UPLOAD_MEDIA_ENDPOINT = bnbApiUrl("upload_media.php");
+const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 function toNumber(value: unknown) {
   const numberValue = Number(value);
@@ -89,101 +81,14 @@ function normalizeConcern(value: unknown): ConcernRecord | null {
   };
 }
 
-const concernGroups = [
-  {
-    title: "Skin Concern",
-    desc: "Face-focused problem discovery",
-    items: ["Acne", "Dark Spots", "Oily Skin", "Sensitive Skin", "Dry Skin"],
-  },
-  {
-    title: "Hair Concern",
-    desc: "Hair and scalp product discovery",
-    items: ["Hairfall", "Dandruff", "Frizz", "Damaged Hair"],
-  },
-  {
-    title: "Body Concern",
-    desc: "Body care problem discovery",
-    items: ["Body Acne", "Dark Underarm", "Dry Body Skin", "Rough Texture"],
-  },
-];
-
-const concernPreviews: ConcernPreview[] = [
-  {
-    banner: "Ready",
-    concernType: "Skin",
-    id: "acne",
-    name: "Acne",
-    parent: "Skin Concern",
-    products: "Preview",
-    routine: ["Cleanser", "Treatment", "Moisturizer", "Sunscreen"],
-    severity: "Medium",
-    slug: "acne",
-    status: "Active",
-  },
-  {
-    banner: "Ready",
-    concernType: "Skin",
-    id: "dark-spots",
-    name: "Dark Spots",
-    parent: "Skin Concern",
-    products: "Preview",
-    routine: ["Cleanser", "Brightening Serum", "Moisturizer", "Sunscreen"],
-    severity: "Medium",
-    slug: "dark-spots",
-    status: "Active",
-  },
-  {
-    banner: "Needs Image",
-    concernType: "Skin",
-    id: "oily-skin",
-    name: "Oily Skin",
-    parent: "Skin Concern",
-    products: "Preview",
-    routine: ["Cleanser", "Toner", "Gel Moisturizer", "Sunscreen"],
-    severity: "Mild",
-    slug: "oily-skin",
-    status: "Active",
-  },
-  {
-    banner: "Draft",
-    concernType: "Skin",
-    id: "sensitive-skin",
-    name: "Sensitive Skin",
-    parent: "Skin Concern",
-    products: "Preview",
-    routine: ["Gentle Cleanser", "Calming Serum", "Barrier Cream", "Sunscreen"],
-    severity: "Advanced",
-    slug: "sensitive-skin",
-    status: "Draft",
-  },
-];
 
 const getStatusLabel = (status: string | null) =>
-  status === "inactive" ? "Draft" : "Active";
-
-const getVisibilityLabel = (status: string | null) =>
   status === "inactive" ? "Hidden" : "Visible";
+
 
 const getStatusTone = (status: string | null): BadgeTone =>
   status === "inactive" ? "warn" : "good";
 
-const getSeoScore = (concern: ConcernRecord) => {
-  let score = 50;
-
-  if (concern.meta_title) {
-    score += 20;
-  }
-
-  if (concern.meta_description) {
-    score += 20;
-  }
-
-  if (concern.slug) {
-    score += 10;
-  }
-
-  return score;
-};
 
 function Badge({
   children,
@@ -252,6 +157,115 @@ function StatCard({
   );
 }
 
+
+type UploadState = { isUploading: boolean; message: string; ok: boolean };
+
+async function uploadTaxonomyMedia(file: File): Promise<string> {
+  if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
+    throw new Error("Only JPG, PNG, and WebP images are supported.");
+  }
+
+  if (file.size <= 0 || file.size > MAX_IMAGE_BYTES) {
+    throw new Error("Image must be greater than 0 bytes and no larger than 5MB.");
+  }
+
+  const body = new FormData();
+  body.append("image", file);
+
+  const response = await fetch(UPLOAD_MEDIA_ENDPOINT, {
+    body,
+    headers: adminAuthHeaders(),
+    method: "POST",
+  });
+  const payload = await response.json().catch(() => null) as { image_url?: string; message?: string; success?: boolean } | null;
+
+  if (!response.ok || payload?.success === false || !payload?.image_url) {
+    throw new Error(payload?.message || "Image upload failed.");
+  }
+
+  return payload.image_url;
+}
+
+function TaxonomyMediaField({
+  emptyText,
+  helper,
+  imageAlt,
+  isPending,
+  onChange,
+  onUpload,
+  removeLabel,
+  title,
+  uploadLabel,
+  uploadState,
+  value,
+}: {
+  emptyText: string;
+  helper: string;
+  imageAlt: string;
+  isPending: boolean;
+  onChange: (value: string) => void;
+  onUpload: (file: File) => Promise<void>;
+  removeLabel: string;
+  title: string;
+  uploadLabel: string;
+  uploadState: UploadState;
+  value: string;
+}) {
+  return (
+    <div className="space-y-3 rounded-2xl border border-slate-200 bg-stone-50 p-4 md:col-span-2">
+      <input name="image" type="hidden" value={value} />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className={labelClassName}>{title}</div>
+          <p className="mt-1 text-xs font-medium leading-5 text-slate-500">{helper}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <label className={`inline-flex cursor-pointer rounded-2xl px-4 py-2.5 text-xs font-bold ${uploadState.isUploading || isPending ? "bg-slate-100 text-slate-400" : "bg-[#5E7F85]/10 text-[#5E7F85] hover:bg-[#5E7F85]/15"}`}>
+            <input
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              disabled={uploadState.isUploading || isPending}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) void onUpload(file);
+              }}
+              type="file"
+            />
+            {uploadState.isUploading ? "Uploading..." : value ? `Replace ${uploadLabel}` : `Upload ${uploadLabel}`}
+          </label>
+          <button
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!value || uploadState.isUploading || isPending}
+            onClick={() => onChange("")}
+            type="button"
+          >
+            {removeLabel}
+          </button>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-dashed border-slate-200 bg-white">
+        {value ? (
+          <Image alt={imageAlt} className="h-40 w-full object-contain p-3" height={160} src={value} unoptimized width={320} />
+        ) : (
+          <div className="flex h-40 items-center justify-center px-4 text-center text-sm font-semibold text-slate-500">{emptyText}</div>
+        )}
+      </div>
+
+      {uploadState.message ? (
+        <p className={`text-sm font-semibold ${uploadState.ok ? "text-emerald-700" : "text-rose-700"}`}>{uploadState.message}</p>
+      ) : null}
+
+      <details className="rounded-2xl border border-slate-200 bg-white p-3">
+        <summary className="cursor-pointer text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Advanced Details</summary>
+        <div className="mt-3 break-all rounded-xl bg-stone-50 px-3 py-2 text-xs font-semibold text-slate-600">
+          {value || "No uploaded URL assigned."}
+        </div>
+      </details>
+    </div>
+  );
+}
 function TableHead({ children }: { children: ReactNode }) {
   return (
     <thead className="bg-stone-50 text-xs uppercase tracking-[0.12em] text-slate-500">
@@ -260,41 +274,6 @@ function TableHead({ children }: { children: ReactNode }) {
   );
 }
 
-function DisabledButton({
-  children,
-  className = "",
-  title = "Not connected yet",
-}: {
-  children: ReactNode;
-  className?: string;
-  title?: string;
-}) {
-  return (
-    <button
-      aria-label={title}
-      className={`cursor-not-allowed rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-400 ${className}`}
-      disabled
-      title={title}
-      type="button"
-    >
-      {children}
-    </button>
-  );
-}
-
-function getPreviewForConcern(concern: ConcernRecord | null) {
-  if (!concern) {
-    return concernPreviews[0];
-  }
-
-  return (
-    concernPreviews.find(
-      (preview) =>
-        preview.slug === concern.slug ||
-        preview.name.toLowerCase() === concern.name.toLowerCase(),
-    ) ?? concernPreviews[0]
-  );
-}
 
 function ConcernForm({
   editingConcern,
@@ -313,6 +292,23 @@ function ConcernForm({
   const [name, setName] = useState(editingConcern?.name ?? "");
   const [slug, setSlug] = useState(editingConcern?.slug ?? "");
   const [slugEdited, setSlugEdited] = useState(false);
+  const [imageUrl, setImageUrl] = useState(editingConcern?.image ?? "");
+  const [uploadState, setUploadState] = useState<UploadState>({ isUploading: false, message: "", ok: false });
+
+  async function handleMediaUpload(file: File) {
+    setUploadState({ isUploading: true, message: "Uploading image...", ok: false });
+    try {
+      const uploadedUrl = await uploadTaxonomyMedia(file);
+      setImageUrl(uploadedUrl);
+      setUploadState({ isUploading: false, message: "Image uploaded. Save changes to publish it.", ok: true });
+    } catch (error) {
+      setUploadState({
+        isUploading: false,
+        message: error instanceof Error ? error.message : "Image upload failed.",
+        ok: false,
+      });
+    }
+  }
 
   function handleNameChange(value: string) {
     setName(value);
@@ -334,11 +330,7 @@ function ConcernForm({
               {isEditing ? `Edit ${editingConcern?.name}` : "Add Concern"}
             </h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              This form now creates live concern metadata through the local PHP
-              backend. Active concerns appear on the homepage and concern
-              routes; inactive concerns stay hidden. Use a clean slug, square
-              or 4:3 image at least 800px wide, and lower sort order for
-              earlier placement.
+              Visible concerns appear in the homepage Shop by Concern section and concern browsing pages.
             </p>
           </div>
           {isEditing ? (
@@ -363,7 +355,7 @@ function ConcernForm({
           <input name="id" type="hidden" value={editingConcern?.id ?? ""} />
 
           <label className={labelClassName}>
-            Name
+            Concern Name
             <input
               className={inputClassName}
               name="name"
@@ -397,7 +389,7 @@ function ConcernForm({
           <label className={labelClassName}>
             Visibility
             <span className="mt-1 block text-xs font-medium text-slate-500">
-              Active means visible on storefront sections; inactive hides it.
+              Visible concerns appear publicly where allowed. Hidden concerns stay saved but are not shown publicly.
             </span>
             <select
               className={inputClassName}
@@ -423,40 +415,51 @@ function ConcernForm({
             />
           </label>
 
-          <label className={labelClassName}>
-            Image URL
-            <span className="mt-1 block text-xs font-medium text-slate-500">
-              Use a square JPG, PNG, or WEBP. Blank is allowed and shows the concern name.
-            </span>
-            <input
-              className={inputClassName}
-              defaultValue={editingConcern?.image ?? ""}
-              name="image"
-              placeholder="https://..."
-              type="text"
-            />
-          </label>
+                    <TaxonomyMediaField
+            emptyText="No concern image uploaded."
+            helper="Used in Shop by Concern cards on the homepage. Recommended size: square image, preferably 1000 × 1000 px."
+            imageAlt={editingConcern?.name ? `${editingConcern.name} image` : "Concern Image preview"}
+            isPending={isPending}
+            onChange={(value) => {
+              setImageUrl(value);
+              setUploadState(value ? uploadState : { isUploading: false, message: "Image removed from this concern. Save changes to publish it.", ok: true });
+            }}
+            onUpload={handleMediaUpload}
+            removeLabel="Remove Image"
+            title="Concern Image"
+            uploadLabel="Image"
+            uploadState={uploadState}
+            value={imageUrl}
+          />
 
-          <label className={`${labelClassName} md:col-span-2`}>
-            SEO Title
-            <input
-              className={inputClassName}
-              defaultValue={editingConcern?.meta_title ?? ""}
-              name="metaTitle"
-              placeholder="Acne care products in Bangladesh | BrandnBeauty"
-              type="text"
-            />
-          </label>
+          <details className="rounded-2xl border border-slate-200 bg-stone-50 p-4 md:col-span-2">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+              Optional SEO
+            </summary>
+            <div className="mt-4 space-y-4">
+              <label className={labelClassName}>
+                SEO Title
+                <input
+                  className={inputClassName}
+                  defaultValue={editingConcern?.meta_title ?? ""}
+                  name="metaTitle"
+                  placeholder="Optional title for search results"
+                  type="text"
+                />
+              </label>
 
-          <label className={`${labelClassName} md:col-span-2`}>
-            Meta Description
-            <textarea
-              className={`${inputClassName} h-24 resize-y`}
-              defaultValue={editingConcern?.meta_description ?? ""}
-              name="metaDescription"
-              placeholder="Find acne care products in Bangladesh with simple routine guidance..."
-            />
-          </label>
+              <label className={labelClassName}>
+                Meta Description
+                <textarea
+                  className={inputClassName}
+                  defaultValue={editingConcern?.meta_description ?? ""}
+                  name="metaDescription"
+                  placeholder="Write a short search summary"
+                  rows={3}
+                />
+              </label>
+            </div>
+          </details>
 
           {state.message ? (
             <div
@@ -614,8 +617,8 @@ export function RealConcernsPage({
     }
   }
 
-  async function handleDeleteConcern(concernId: string) {
-    if (!window.confirm("Delete this concern?")) {
+  async function handleHideConcern(concernId: string) {
+    if (!window.confirm("Hide this concern?\n\nThis concern will no longer appear publicly. Existing product relationships will remain unchanged.")) {
       return;
     }
 
@@ -639,21 +642,20 @@ export function RealConcernsPage({
       } | null;
 
       if (!response.ok || !result?.success) {
-        throw new Error(result?.message ?? "Concern could not be deleted.");
+        throw new Error(result?.message ?? "Concern could not be hidden.");
       }
 
-      setConcerns((current) => current.filter((concern) => concern.id !== concernId));
-      setSelectedId((current) =>
-        current === concernId
-          ? concerns.find((concern) => concern.id !== concernId)?.id ?? ""
-          : current,
+      setConcerns((current) =>
+        current.map((concern) =>
+          concern.id === concernId ? { ...concern, status: "inactive" } : concern,
+        ),
       );
-      setFormState({ ok: true, message: result.message ?? "Item deleted successfully" });
+      setFormState({ ok: true, message: result.message ?? "Concern hidden successfully" });
     } catch (error) {
       setFormState({
         ok: false,
         message:
-          error instanceof Error ? error.message : "Concern could not be deleted.",
+          error instanceof Error ? error.message : "Concern could not be hidden.",
       });
     } finally {
       setDeletingConcernIds((current) => current.filter((id) => id !== concernId));
@@ -668,19 +670,9 @@ export function RealConcernsPage({
   const visibleCount = concerns.filter(
     (concern) => concern.status !== "inactive",
   ).length;
-  const needsWork = concerns.filter(
-    (concern) =>
-      getSeoScore(concern) < 75 ||
-      !concern.image ||
-      concern.status === "inactive",
+  const hiddenCount = concerns.filter(
+    (concern) => concern.status === "inactive",
   ).length;
-  const avgSeo = concerns.length
-    ? Math.round(
-        concerns.reduce((sum, concern) => sum + getSeoScore(concern), 0) /
-          concerns.length,
-      )
-    : 0;
-  const selectedPreview = getPreviewForConcern(selectedConcern);
   const filteredConcerns = useMemo(
     () =>
       concerns.filter((concern) => {
@@ -699,30 +691,12 @@ export function RealConcernsPage({
           searchText.includes(searchTerm.trim().toLowerCase());
         const matchesFilter =
           concernFilter === "All" ||
-          (concernFilter === "Active" && concern.status !== "inactive") ||
-          (concernFilter === "Draft" && concern.status === "inactive") ||
           (concernFilter === "Visible" && concern.status !== "inactive") ||
-          (concernFilter === "Hidden" && concern.status === "inactive") ||
-          (concernFilter === "Concern Menu" && concern.status !== "inactive");
+          (concernFilter === "Hidden" && concern.status === "inactive") ;
 
         return matchesSearch && matchesFilter;
       }),
     [concernFilter, concerns, searchTerm],
-  );
-  const liveConcernPreviewRows = useMemo(
-    () =>
-      filteredConcerns.map((concern, index) => {
-        const preview = getPreviewForConcern(concern);
-
-        return {
-          concern,
-          preview: {
-            ...(index < 4 ? preview : { ...preview, products: "Preview" }),
-            products: String(concern.product_count ?? 0),
-          },
-        };
-      }),
-    [filteredConcerns],
   );
   const showForm = showAddForm || Boolean(editingConcern);
 
@@ -751,20 +725,10 @@ export function RealConcernsPage({
                 Concerns Control Room
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                Manage problem-based discovery, concern landing SEO, routine
-                mapping and concern filter visibility from one clean place.
+                Manage the concerns customers use to browse products by skin, hair, body and beauty needs.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DisabledButton title="Import concerns is not connected yet">
-                Import
-              </DisabledButton>
-              <DisabledButton
-                className="border-[#5E7F85]/30 bg-[#5E7F85]/5 text-[#5E7F85]/50"
-                title="Routine mapping is not connected yet"
-              >
-                Routine Mapping
-              </DisabledButton>
               <button
                 className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-semibold text-white"
                 onClick={() => setShowAddForm(true)}
@@ -788,88 +752,37 @@ export function RealConcernsPage({
               </b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Avg SEO score: <b className="text-emerald-700">{avgSeo}/100</b>
+              Hidden: <b className="text-amber-700">{hiddenCount}</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Needs work: <b className="text-amber-700">{needsWork}</b>
+              Total concerns: <b className="text-slate-900">{concerns.length}</b>
             </div>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
-            ["Total Concerns", String(concerns.length), "Problem pages"],
-            ["Concern Groups", String(concernGroups.length), "Skin, hair, body"],
+            ["Total Concerns", String(concerns.length), "Saved concern pages"],
+            ["Visible", String(visibleCount), "Shown publicly"],
+            ["Hidden", String(hiddenCount), "Saved but not shown"],
             [
-              "Mapped Products",
+              "Products",
               String(
                 concerns.reduce(
                   (sum, concern) => sum + (concern.product_count ?? 0),
                   0,
                 ),
               ),
-              "Problem matching",
+              "Mapped products",
             ],
-            ["SEO Needs Work", String(needsWork), "Review banner/meta"],
           ].map((item, index) => (
             <StatCard
-              active={item[0] === "SEO Needs Work"}
+              active={item[0] === "Visible"}
               index={index}
               item={item as [string, string, string]}
               key={item[0]}
             />
           ))}
-        </div>
-
-        <div className="rounded-[2rem] border border-[#5E7F85]/15 bg-[#5E7F85]/5 p-5 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="text-sm font-bold text-slate-900">
-                Concern Group View
-              </div>
-              <div className="mt-1 text-sm leading-6 text-slate-600">
-                Concern pages problem-based discovery er jonno group wise thakbe.
-                Frontend e Shop by Concern, filters and routine recommendations
-                ekhanei control hobe.
-              </div>
-            </div>
-            <DisabledButton
-              className="w-fit bg-[#5E7F85]/10 text-[#5E7F85]/50"
-              title="New concern group is not connected yet"
-            >
-              + New Concern
-            </DisabledButton>
-          </div>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
-            {concernGroups.map((group) => (
-              <div
-                className="rounded-[1.5rem] border border-slate-200 bg-white p-4"
-                key={group.title}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-bold text-slate-900">
-                      {group.title}
-                    </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {group.desc}
-                    </div>
-                  </div>
-                  <Badge tone="brand">{group.items.length}</Badge>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {group.items.map((item) => (
-                    <span
-                      className="rounded-full bg-stone-50 px-3 py-2 text-xs font-bold text-slate-600"
-                      key={item}
-                    >
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
@@ -883,17 +796,6 @@ export function RealConcernsPage({
                   <h2 className="mt-1 text-xl font-bold tracking-tight">
                     Concern Landing List
                   </h2>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <DisabledButton title="Use each concern form to edit sort order">
-                    Sort Order
-                  </DisabledButton>
-                  <DisabledButton
-                    className="bg-[#5E7F85]/10 text-[#5E7F85]/50"
-                    title="Bulk visibility update is not connected yet"
-                  >
-                    Bulk Visibility
-                  </DisabledButton>
                 </div>
               </div>
               <div className="mt-5 grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
@@ -910,14 +812,7 @@ export function RealConcernsPage({
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {[
-                    "All",
-                    "Active",
-                    "Draft",
-                    "Visible",
-                    "Hidden",
-                    "Concern Menu",
-                  ].map((item) => (
+                  {["All", "Visible", "Hidden"].map((item) => (
                     <button
                       className={`rounded-full px-4 py-2 text-xs font-semibold ${
                         item === concernFilter
@@ -941,13 +836,10 @@ export function RealConcernsPage({
                   <tr>
                     {[
                       "Concern",
-                      "Type",
-                      "Severity",
+                      "Slug",
                       "Products",
-                      "Routine",
-                      "SEO",
-                      "Banner",
-                      "Status",
+                      "Image",
+                      "Visibility",
                       "Action",
                     ].map((head) => (
                       <th className="px-5 py-4 font-medium" key={head}>
@@ -957,8 +849,8 @@ export function RealConcernsPage({
                   </tr>
                 </TableHead>
                 <tbody>
-                  {liveConcernPreviewRows.length > 0 ? (
-                    liveConcernPreviewRows.map(({ concern, preview }) => (
+                  {filteredConcerns.length > 0 ? (
+                    filteredConcerns.map((concern) => (
                       <tr
                         className={`cursor-pointer border-t border-slate-100 transition hover:bg-stone-50 hover:shadow-[inset_3px_0_0_#5E7F85] ${
                           selectedConcern?.id === concern.id
@@ -974,57 +866,16 @@ export function RealConcernsPage({
                           <div className="font-bold text-slate-900">
                             {concern.name}
                           </div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            /concern/{concern.slug}
-                          </div>
                         </td>
-                        <td className="px-5 py-4">
-                          <Badge tone="brand">{preview.concernType}</Badge>
-                        </td>
-                        <td className="px-5 py-4">
-                          <Badge
-                            tone={
-                              preview.severity === "Advanced"
-                                ? "bad"
-                                : preview.severity === "Medium"
-                                  ? "warn"
-                                  : "good"
-                            }
-                          >
-                            {preview.severity}
-                          </Badge>
+                        <td className="px-5 py-4 text-xs font-semibold text-slate-500">
+                          /concern/{concern.slug}
                         </td>
                         <td className="px-5 py-4 font-semibold text-slate-500">
-                          {preview.products}
+                          {concern.product_count ?? 0}
                         </td>
                         <td className="px-5 py-4">
-                          <div className="flex max-w-[240px] flex-wrap gap-1">
-                            {preview.routine.slice(0, 3).map((step) => (
-                              <span
-                                className="rounded-full bg-stone-100 px-2 py-1 text-[10px] font-bold text-slate-600"
-                                key={step}
-                              >
-                                {step}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <Badge
-                            tone={
-                              getSeoScore(concern) >= 80
-                                ? "good"
-                                : getSeoScore(concern) >= 70
-                                  ? "warn"
-                                  : "bad"
-                            }
-                          >
-                            {getSeoScore(concern)}/100
-                          </Badge>
-                        </td>
-                        <td className="px-5 py-4">
-                          <Badge tone={concern.image ? "good" : "warn"}>
-                            {concern.image ? "Ready" : preview.banner}
+                          <Badge tone={concern.image ? "good" : "default"}>
+                            {concern.image ? "Image Set" : "No Image"}
                           </Badge>
                         </td>
                         <td className="px-5 py-4">
@@ -1052,13 +903,15 @@ export function RealConcernsPage({
                             </button>
                             <button
                               className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                              disabled={deletingConcernIds.includes(concern.id)}
-                              onClick={() => handleDeleteConcern(concern.id)}
+                              disabled={deletingConcernIds.includes(concern.id) || concern.status === "inactive"}
+                              onClick={() => handleHideConcern(concern.id)}
                               type="button"
                             >
                               {deletingConcernIds.includes(concern.id)
-                                ? "Deleting..."
-                                : "Delete"}
+                                ? "Hiding..."
+                                : concern.status === "inactive"
+                                  ? "Hidden"
+                                  : "Hide"}
                             </button>
                           </div>
                         </td>
@@ -1081,153 +934,20 @@ export function RealConcernsPage({
 
           <div className="space-y-6 xl:sticky xl:top-28 xl:self-start">
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              {selectedConcern ? (
-                <>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-medium text-slate-500">
-                        Selected Concern
-                      </div>
-                      <h3 className="mt-1 text-xl font-bold tracking-tight">
-                        {selectedConcern.name}
-                      </h3>
-                      <div className="mt-1 text-xs text-slate-500">
-                        /concern/{selectedConcern.slug}
-                      </div>
-                    </div>
-                    <Badge tone={getStatusTone(selectedConcern.status)}>
-                      {getVisibilityLabel(selectedConcern.status)}
-                    </Badge>
-                  </div>
-                  <div className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-stone-50 p-4">
-                    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#5E7F85] via-[#6f949a] to-[#d9e5e1] p-5 text-white shadow-sm">
-                      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/15" />
-                      <div className="absolute -bottom-12 left-1/2 h-36 w-36 rounded-full bg-white/10" />
-                      <div className="relative">
-                        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/75">
-                          Shop by Concern
-                        </div>
-                        <div className="mt-3 text-2xl font-black tracking-tight">
-                          {selectedConcern.name}
-                        </div>
-                        <div className="mt-2 max-w-[240px] text-xs font-medium leading-5 text-white/85">
-                          {selectedConcern.meta_description ??
-                            `Find routine-friendly products for ${selectedConcern.name.toLowerCase()} concern with simple guidance and safer cosmetic claims.`}
-                        </div>
-                        <div className="mt-5 flex flex-wrap gap-2">
-                          <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold">
-                            /concern/{selectedConcern.slug}
-                          </span>
-                          <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold">
-                            {selectedConcern.product_count ?? 0} Products
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Badge tone="brand">
-                        SEO {getSeoScore(selectedConcern)}/100
-                      </Badge>
-                      <Badge tone={selectedConcern.image ? "good" : "warn"}>
-                        {selectedConcern.image ? "Ready" : selectedPreview.banner}
-                      </Badge>
-                      <Badge tone="default">
-                        {selectedConcern.product_count ?? 0} Products
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="mt-5 space-y-3 text-sm">
-                    {[
-                      ["Concern Group", selectedPreview.parent],
-                      ["Concern Type", selectedPreview.concernType],
-                      ["Severity", selectedPreview.severity],
-                      ["Products", selectedConcern.product_count ?? 0],
-                      ["Routine Steps", selectedPreview.routine.length],
-                      ["Status", getStatusLabel(selectedConcern.status)],
-                    ].map(([label, value]) => (
-                      <div
-                        className="flex justify-between rounded-2xl bg-stone-50 px-4 py-3"
-                        key={label}
-                      >
-                        <span className="text-slate-500">{label}</span>
-                        <b className="text-right text-slate-900">{value}</b>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-5 grid gap-3">
-                    <Link
-                      className="rounded-2xl bg-[#5E7F85] px-4 py-3 text-center text-sm font-semibold text-white"
-                      href={`/concerns?edit=${selectedConcern.id}`}
-                    >
-                      Edit Concern
-                    </Link>
-                    <DisabledButton title="SEO settings are not connected yet">
-                      SEO Settings
-                    </DisabledButton>
-                    <DisabledButton title="Banner upload is not connected yet">
-                      Upload Banner
-                    </DisabledButton>
-                  </div>
-                </>
-              ) : (
-                <div className="rounded-3xl border border-dashed border-slate-300 bg-stone-50 p-6 text-center text-sm font-medium text-slate-500">
-                  Concern preview appears here after live concerns are added.
-                </div>
-              )}
-            </div>
-
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
               <div className="text-sm font-medium text-slate-500">
-                Concern Mapping
+                Homepage Visibility
               </div>
               <h3 className="mt-1 text-xl font-bold tracking-tight">
-                Routine / Related Filters
+                Shop by Concern
               </h3>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                Visible concerns appear in the homepage Shop by Concern section and concern browsing pages. Product-level concern mapping is managed from product create/edit screens.
+              </p>
               {selectedConcern ? (
-                <>
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {selectedPreview.routine.map((item) => (
-                      <span
-                        className="rounded-full bg-[#5E7F85]/10 px-3 py-2 text-xs font-bold text-[#5E7F85]"
-                        key={item}
-                      >
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-5 border-t border-slate-100 pt-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="text-sm font-medium text-slate-500">
-                        Product Mapping
-                      </div>
-                      <Badge tone="good">
-                        {selectedConcern.product_count ?? 0} Products
-                      </Badge>
-                    </div>
-                    <div className="mt-3 rounded-2xl bg-stone-50 px-4 py-4 text-xs font-semibold leading-5 text-slate-600">
-                      Products mapped to this concern are counted from the live
-                      database. Product-level concern mapping is managed from
-                      product create/edit screens.
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="mt-5 rounded-2xl bg-stone-50 px-4 py-4 text-sm font-medium text-slate-500">
-                  Select or add a concern to view routine and product mapping.
-                  <div className="mt-2 font-bold text-slate-700">0 Products</div>
+                <div className="mt-5 rounded-2xl bg-stone-50 px-4 py-4 text-sm font-semibold text-slate-600">
+                  {selectedConcern.product_count ?? 0} Products mapped
                 </div>
-              )}
-            </div>
-
-            <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
-              <div className="text-sm font-bold text-amber-800">
-                SEO + Storefront Note
-              </div>
-              <div className="mt-2 text-sm leading-6 text-amber-700">
-                Active concerns are visible on storefront sections. Keep slug
-                and image clean, avoid medical claims, use sort order for
-                placement, and set inactive before saving unfinished rows.
-              </div>
+              ) : null}
             </div>
           </div>
         </div>
