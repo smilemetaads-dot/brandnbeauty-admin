@@ -24,6 +24,9 @@ type Candidate = {
 type DashboardData = {
   status?: {
     master_bot_enabled?: boolean;
+    global_mode_desired?: "off" | "assist" | "auto";
+    global_mode_effective?: "off" | "assist" | "auto";
+    automatic_reply_env_enabled?: boolean;
     ai_generation_desired?: boolean;
     ai_generation_effective?: boolean;
     messenger_ai_env_enabled?: boolean;
@@ -183,6 +186,10 @@ export function AiCommerceControlCenter() {
 
   const status = data.status || {};
   const masterOn = Boolean(status.master_bot_enabled);
+  const globalMode = status.global_mode_desired || (masterOn ? "assist" : "off");
+  const effectiveGlobalMode = status.global_mode_effective || (masterOn ? "assist" : "off");
+  const autoReplyArmed = effectiveGlobalMode === "auto" && Boolean(status.automatic_reply_effective);
+  const autoReplyEnvReady = Boolean(status.automatic_reply_env_enabled);
   const aiGenerationOn = Boolean(status.ai_generation_desired);
   const aiEnvironmentReady =
     Boolean(status.openai_api_key_configured) &&
@@ -214,28 +221,37 @@ export function AiCommerceControlCenter() {
           >
             <Icon name="refresh"/>Refresh
           </button>
-          <button
-            className={
-              "flex h-10 items-center gap-2 rounded-xl px-4 text-[9px] font-bold transition " +
-              (masterOn
-                ? "bg-[#3b646d] text-white hover:bg-[#31545c]"
-                : "border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100")
-            }
-            disabled={loading}
-            onClick={() =>
-              action({
-                action: "set_global_bot",
-                enabled: !masterOn,
-                note: !masterOn
-                  ? "Owner enabled AI Commerce assist mode."
-                  : "Owner disabled AI Commerce globally.",
-              })
-            }
-            type="button"
-          >
-            <Icon name="command"/>
-            {masterOn ? "Bot Assist ON" : "Bot Assist OFF"}
-          </button>
+          <div className="flex h-10 overflow-hidden rounded-xl border border-[#dce4e0] bg-white">
+            {(["off","assist","auto"] as const).map((mode) => {
+              const active = globalMode === mode;
+              return (
+                <button
+                  className={
+                    "px-3 text-[8px] font-bold uppercase tracking-[.08em] transition " +
+                    (active
+                      ? mode === "off"
+                        ? "bg-rose-50 text-rose-700"
+                        : mode === "auto"
+                          ? "bg-[#3b646d] text-white"
+                          : "bg-[#edf3f4] text-[#31545c]"
+                      : "text-[#7b8781] hover:bg-[#f7f9f8]")
+                  }
+                  disabled={loading}
+                  key={mode}
+                  onClick={() =>
+                    action({
+                      action: "set_global_mode",
+                      mode,
+                      note: "Owner changed global Messenger mode from AI Commerce Control Center.",
+                    })
+                  }
+                  type="button"
+                >
+                  {mode === "off" ? "Bot OFF" : mode === "assist" ? "Assist" : "Auto"}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -255,9 +271,9 @@ export function AiCommerceControlCenter() {
         <Kpi
           icon="command"
           label="Master control"
-          note="Global owner-controlled bot gate"
-          tone={masterOn ? "good" : "bad"}
-          value={<StatusPill tone={masterOn ? "good" : "bad"}>{masterOn ? "Enabled" : "Disabled"}</StatusPill>}
+          note="Global mode: OFF, Assist, or Auto"
+          tone={globalMode === "off" ? "bad" : globalMode === "auto" ? "good" : "default"}
+          value={<StatusPill tone={globalMode === "off" ? "bad" : globalMode === "auto" ? "good" : "default"}>{globalMode.toUpperCase()}</StatusPill>}
         />
         <Kpi
           icon="send"
@@ -295,14 +311,18 @@ export function AiCommerceControlCenter() {
           >
             {aiGenerationOn ? "Turn off generation" : "Turn on generation"}
           </button>
-          <p className="mt-3 border-t border-[#edf0ee] pt-3 text-[7px] leading-4 text-[#87928d]">AI drafts only; no automatic customer send</p>
+          <p className="mt-3 border-t border-[#edf0ee] pt-3 text-[7px] leading-4 text-[#87928d]">AI powers Assist and eligible Auto replies</p>
         </article>
         <Kpi
           icon="shield"
           label="Auto reply"
-          note="Permanent safety lock for this phase"
-          tone="warn"
-          value={<StatusPill tone="warn">Locked OFF</StatusPill>}
+          note={autoReplyEnvReady ? "Owner + safety + confidence gates" : "Environment kill switch is OFF"}
+          tone={autoReplyArmed ? "good" : autoReplyEnvReady ? "warn" : "bad"}
+          value={
+            <StatusPill tone={autoReplyArmed ? "good" : autoReplyEnvReady ? "warn" : "bad"}>
+              {autoReplyArmed ? "ARMED" : autoReplyEnvReady ? "STANDBY" : "ENV OFF"}
+            </StatusPill>
+          }
         />
         <Kpi
           icon="review"
@@ -427,7 +447,7 @@ export function AiCommerceControlCenter() {
             <p className="text-[8px] font-bold uppercase tracking-[.12em] text-[#84908a]">Campaign control</p>
             <h2 className="mt-1 text-[14px] font-bold text-[#33423b]">Bot policy</h2>
             <p className="mt-2 text-[7px] leading-4 text-[#87928d]">
-              Choose whether a Meta campaign stays manual-only, uses AI assistance, or inherits the global setting.
+              Override the global mode per Meta campaign: manual-only, human-reviewed Assist, full Auto, or Inherit.
             </p>
 
             <div className="mt-5 space-y-4">
@@ -450,6 +470,7 @@ export function AiCommerceControlCenter() {
                 >
                   <option value="off">OFF — manual only</option>
                   <option value="assist">Assist — human approval</option>
+                  <option value="auto">Auto — bot replies when safe</option>
                   <option value="inherit">Inherit global control</option>
                 </select>
               </label>
@@ -478,9 +499,9 @@ export function AiCommerceControlCenter() {
               </span>
               <div>
                 <p className="text-[8px] font-bold uppercase tracking-[.12em] text-amber-700">Safety lock</p>
-                <h3 className="mt-1 text-[11px] font-bold text-amber-900">Automatic replies stay disabled</h3>
+                <h3 className="mt-1 text-[11px] font-bold text-amber-900">Auto is gated, not unconditional</h3>
                 <p className="mt-2 text-[7px] leading-4 text-amber-700">
-                  AI may draft replies only when you enable generation. Human takeover, safety flags and campaign OFF policies continue to block sends.
+                  AUTO can send only when the global/campaign policy allows it, the environment kill switch is armed, Messenger send is ready, and safety + confidence checks pass. Otherwise the bot stays silent or hands off to a human.
                 </p>
               </div>
             </div>
