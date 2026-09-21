@@ -1425,6 +1425,15 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
           readAttribute(product, ["suitable_for"], "Oily / Acne Prone"),
         );
         setWarnings(readAttribute(product, ["warnings"], ""));
+        setWarningsStatus(
+          readAttribute(product, ["warnings_status"], "unknown"),
+        );
+        setFunctionalProfile(
+          readAttribute(product, ["functional_profile"], ""),
+        );
+        setSkinType(
+          readAttribute(product, ["skin_types", "suitable_for"], "Oily"),
+        );
         setKeyIngredientRows(
           splitLines(readAttribute(product, ["key_ingredients"], "")),
         );
