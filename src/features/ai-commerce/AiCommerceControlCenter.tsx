@@ -171,16 +171,6 @@ export function AiCommerceControlCenter() {
   const [campaignId, setCampaignId] = useState("");
   const [campaignMode, setCampaignMode] = useState("off");
   const [readinessProductId, setReadinessProductId] = useState<number | null>(null);
-  const [skinTypes, setSkinTypes] = useState("");
-  const [concerns, setConcerns] = useState("");
-  const [ingredients, setIngredients] = useState("");
-  const [benefits, setBenefits] = useState("");
-  const [howToUse, setHowToUse] = useState("");
-  const [warnings, setWarnings] = useState("");
-  const [warningsStatus, setWarningsStatus] = useState("verified_none");
-  const [productUrl, setProductUrl] = useState("");
-  const [functionalProfile, setFunctionalProfile] = useState("");
-  const [size, setSize] = useState("");
 
   async function load() {
     setLoading(true);
@@ -237,36 +227,6 @@ export function AiCommerceControlCenter() {
       }),
     [readinessProducts],
   );
-
-  function listValue(value: string) {
-    return value
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-
-  async function saveReadiness() {
-    if (!readinessProductId) {
-      setMessage("Select a product first.");
-      return;
-    }
-
-    await action({
-      action: "save_product_readiness",
-      product_id: readinessProductId,
-      verified_by: "BrandnBeauty Admin",
-      skin_types: listValue(skinTypes),
-      primary_concerns: listValue(concerns),
-      key_ingredients: listValue(ingredients),
-      benefits: listValue(benefits),
-      how_to_use: howToUse.trim(),
-      warnings: listValue(warnings),
-      warnings_status: warningsStatus,
-      product_url: productUrl.trim(),
-      functional_profile: functionalProfile.trim(),
-      size: size.trim(),
-    });
-  }
 
   async function action(payload: Record<string, unknown>, id?: number) {
     if (id) setBusyId(id);
@@ -513,19 +473,7 @@ export function AiCommerceControlCenter() {
                         : "border-[#e6ebe8] bg-white hover:bg-[#f8faf9]")
                     }
                     key={product.product_id}
-                    onClick={() => {
-                      setReadinessProductId(product.product_id);
-                      setSkinTypes("");
-                      setConcerns("");
-                      setIngredients("");
-                      setBenefits("");
-                      setHowToUse("");
-                      setWarnings("");
-                      setWarningsStatus("verified_none");
-                      setProductUrl("");
-                      setFunctionalProfile("");
-                      setSize("");
-                    }}
+                    onClick={() => setReadinessProductId(product.product_id)}
                     type="button"
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -564,74 +512,70 @@ export function AiCommerceControlCenter() {
                 <div>
                   <p className="text-[8px] font-bold uppercase tracking-[.12em] text-[#84908a]">Selected product</p>
                   <h3 className="mt-1 text-[13px] font-bold text-[#33423b]">{selectedReadinessProduct.name}</h3>
-                  <p className="mt-1 text-[7px] text-[#87928d]">
-                    Human-verify these fields before saving. The bot will not invent missing facts.
+                  <p className="mt-1 text-[7px] leading-4 text-[#87928d]">
+                    This is now an audit view only. Bot recommendation data comes from the main product record in Catalog.
                   </p>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="text-[8px] font-bold text-[#405049]">
-                    Skin types
-                    <input className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setSkinTypes(e.target.value)} placeholder="oily, combination" value={skinTypes}/>
-                  </label>
-                  <label className="text-[8px] font-bold text-[#405049]">
-                    Primary concerns
-                    <input className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setConcerns(e.target.value)} placeholder="acne, oiliness" value={concerns}/>
-                  </label>
-                  <label className="text-[8px] font-bold text-[#405049]">
-                    Key ingredients
-                    <input className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setIngredients(e.target.value)} placeholder="salicylic acid, niacinamide" value={ingredients}/>
-                  </label>
-                  <label className="text-[8px] font-bold text-[#405049]">
-                    Benefits
-                    <input className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setBenefits(e.target.value)} placeholder="cleans excess oil, supports acne care" value={benefits}/>
-                  </label>
-                  <label className="text-[8px] font-bold text-[#405049]">
-                    Size
-                    <input className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setSize(e.target.value)} placeholder="100 ml" value={size}/>
-                  </label>
-                  <label className="text-[8px] font-bold text-[#405049]">
-                    Product URL
-                    <input className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setProductUrl(e.target.value)} placeholder="https://..." value={productUrl}/>
-                  </label>
+                  <div className="rounded-xl border border-[#e5ebe8] bg-white p-4">
+                    <p className="text-[7px] font-bold uppercase tracking-[.12em] text-[#8a9590]">Readiness</p>
+                    <div className="mt-2">
+                      <StatusPill
+                        tone={
+                          selectedReadinessProduct.readiness_status === "READY"
+                            ? "good"
+                            : selectedReadinessProduct.readiness_status === "PARTIAL"
+                              ? "warn"
+                              : "bad"
+                        }
+                      >
+                        {selectedReadinessProduct.readiness_status}
+                      </StatusPill>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-[#e5ebe8] bg-white p-4">
+                    <p className="text-[7px] font-bold uppercase tracking-[.12em] text-[#8a9590]">Recommendation</p>
+                    <p className="mt-2 text-[9px] font-bold text-[#405049]">
+                      {selectedReadinessProduct.recommendation_eligible ? "Eligible" : "Not eligible yet"}
+                    </p>
+                  </div>
                 </div>
 
-                <label className="block text-[8px] font-bold text-[#405049]">
-                  Functional profile
-                  <textarea className="mt-1.5 min-h-20 w-full rounded-xl border border-[#dce4e0] bg-white px-3 py-2 text-[9px]" onChange={(e)=>setFunctionalProfile(e.target.value)} placeholder="What this product is verified to do." value={functionalProfile}/>
-                </label>
+                <div className="rounded-xl border border-[#e5ebe8] bg-white p-4">
+                  <p className="text-[7px] font-bold uppercase tracking-[.12em] text-[#8a9590]">Missing from main product record</p>
+                  {selectedReadinessProduct.missing_required_fields?.length ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {selectedReadinessProduct.missing_required_fields.map((field) => (
+                        <StatusPill key={field} tone="warn">{field}</StatusPill>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[9px] font-bold text-emerald-700">No required bot fields are missing.</p>
+                  )}
+                </div>
 
-                <label className="block text-[8px] font-bold text-[#405049]">
-                  How to use
-                  <textarea className="mt-1.5 min-h-20 w-full rounded-xl border border-[#dce4e0] bg-white px-3 py-2 text-[9px]" onChange={(e)=>setHowToUse(e.target.value)} placeholder="Verified usage instructions" value={howToUse}/>
-                </label>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="text-[8px] font-bold text-[#405049]">
-                    Warning status
-                    <select className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setWarningsStatus(e.target.value)} value={warningsStatus}>
-                      <option value="verified_none">Verified — no special warning</option>
-                      <option value="verified_warnings">Verified warnings</option>
-                      <option value="unknown">Unknown</option>
-                    </select>
-                  </label>
-                  <label className="text-[8px] font-bold text-[#405049]">
-                    Warnings
-                    <input className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setWarnings(e.target.value)} placeholder="comma separated" value={warnings}/>
-                  </label>
+                <div className="rounded-xl border border-[#d5e2df] bg-[#edf3f4] p-4">
+                  <p className="text-[8px] font-bold text-[#3b646d]">Single source of truth</p>
+                  <p className="mt-2 text-[7px] leading-4 text-[#647b77]">
+                    Update brand, category, concerns, suitable-for / skin type, ingredients, benefits, how to use and warnings in Catalog → Product Edit. Price and stock remain live from the catalog automatically.
+                  </p>
                 </div>
 
                 <button
                   className="h-10 rounded-xl bg-[#3b646d] px-5 text-[8px] font-bold text-white transition hover:bg-[#31545c]"
-                  onClick={() => void saveReadiness()}
+                  onClick={() => {
+                    window.sessionStorage.setItem("bnb-product-editor-id", String(selectedReadinessProduct.product_id));
+                    window.location.href = "/?page=Add%2FEdit%20Product";
+                  }}
                   type="button"
                 >
-                  Verify & save for bot
+                  Open product editor
                 </button>
               </div>
             ) : (
               <div className="flex min-h-72 items-center justify-center text-center text-[8px] font-semibold text-[#87928d]">
-                Select a product to complete its bot-readiness profile.
+                Select a product to see what its main catalog record is still missing.
               </div>
             )}
           </div>
