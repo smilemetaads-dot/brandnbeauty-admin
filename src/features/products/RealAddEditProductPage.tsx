@@ -2063,7 +2063,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   };
 
   const saveDraft = () => {
-    saveProductToBackend("Draft");
+    saveProductToBackend(status === "Visible" ? "Visible" : "Draft");
   };
 
   const saveChanges = () => {
@@ -4622,7 +4622,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
               onClick={saveDraft}
               type="button"
             >
-              Save draft
+              {status === "Visible" ? "Save changes" : "Save draft"}
             </button>
             <button
               className="flex h-10 items-center gap-2 rounded-xl bg-[#3b646d] px-4 text-[8.5px] font-bold text-white shadow-sm disabled:bg-slate-300"
@@ -4664,7 +4664,9 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
                   ? "Saving..."
                   : isUploadingImage
                     ? "Uploading image..."
-                    : "Save as Draft"}
+                    : status === "Visible"
+                      ? "Save Changes"
+                      : "Save as Draft"}
               </button>
               <button
                 type="button"
