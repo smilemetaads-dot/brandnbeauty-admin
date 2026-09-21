@@ -37,6 +37,39 @@ type DashboardData = {
     automatic_reply_effective?: boolean;
     pending_review_candidates?: number;
     sent_candidates?: number;
+    latest_inbound?: {
+      id?: number;
+      conversation_id?: number | null;
+      raw_text?: string | null;
+      intent?: string | null;
+      processing_status?: string | null;
+      created_at?: string | null;
+    } | null;
+    latest_candidate?: {
+      id?: number;
+      conversation_id?: number | null;
+      inbound_message_id?: number | null;
+      intent?: string | null;
+      language?: string | null;
+      response_text?: string | null;
+      model_name?: string | null;
+      routing_path?: string | null;
+      generation_status?: string | null;
+      review_status?: string | null;
+      outbound_message_id?: string | null;
+      send_error_code?: string | null;
+      created_at?: string | null;
+      inbound_text?: string | null;
+    } | null;
+    latest_handoff?: {
+      id?: number;
+      conversation_id?: number | null;
+      reason_code?: string | null;
+      priority?: string | null;
+      status?: string | null;
+      short_summary?: string | null;
+      created_at?: string | null;
+    } | null;
   };
   queue?: {
     candidates?: Candidate[];
@@ -266,6 +299,46 @@ export function AiCommerceControlCenter() {
           <button className="underline" onClick={() => void load()} type="button">Try again</button>
         </div>
       ) : null}
+
+      <section className="grid gap-3 xl:grid-cols-3">
+        <article className="rounded-2xl border border-[#e2e8e5] bg-white p-5">
+          <p className="text-[8px] font-bold uppercase tracking-[.12em] text-[#84908a]">Latest inbound</p>
+          <p className="mt-3 text-[10px] font-semibold leading-5 text-[#33423b]">
+            {status.latest_inbound?.raw_text || "No recent inbound message recorded."}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {status.latest_inbound?.processing_status ? <StatusPill>{status.latest_inbound.processing_status}</StatusPill> : null}
+            {status.latest_inbound?.intent ? <StatusPill>{status.latest_inbound.intent}</StatusPill> : null}
+          </div>
+        </article>
+
+        <article className="rounded-2xl border border-[#e2e8e5] bg-white p-5">
+          <p className="text-[8px] font-bold uppercase tracking-[.12em] text-[#84908a]">Latest AI candidate</p>
+          <p className="mt-3 text-[10px] font-semibold leading-5 text-[#33423b]">
+            {status.latest_candidate?.response_text || "No recent AI candidate recorded."}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {status.latest_candidate?.generation_status ? <StatusPill>{status.latest_candidate.generation_status}</StatusPill> : null}
+            {status.latest_candidate?.review_status ? (
+              <StatusPill tone={status.latest_candidate.review_status === "sent" ? "good" : "warn"}>
+                {status.latest_candidate.review_status}
+              </StatusPill>
+            ) : null}
+            {status.latest_candidate?.model_name ? <StatusPill>{status.latest_candidate.model_name}</StatusPill> : null}
+          </div>
+        </article>
+
+        <article className="rounded-2xl border border-[#e2e8e5] bg-white p-5">
+          <p className="text-[8px] font-bold uppercase tracking-[.12em] text-[#84908a]">Latest handoff</p>
+          <p className="mt-3 text-[10px] font-semibold leading-5 text-[#33423b]">
+            {status.latest_handoff?.short_summary || "No recent human handoff recorded."}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {status.latest_handoff?.reason_code ? <StatusPill tone="warn">{status.latest_handoff.reason_code}</StatusPill> : null}
+            {status.latest_handoff?.status ? <StatusPill>{status.latest_handoff.status}</StatusPill> : null}
+          </div>
+        </article>
+      </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Kpi
