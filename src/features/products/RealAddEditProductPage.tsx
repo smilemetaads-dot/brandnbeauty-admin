@@ -967,6 +967,54 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
     { label: "Shipping weight", ok: Number(weight) > 0, required: true, section: "seo" },
     { label: "At least one valid variant", ok: !isVariantProduct || variants.some((item) => item.status === "Active" && item.option.trim()), required: true, section: "variants" },
   ];
+  const aiRecommendationChecks = [
+    { label: "Brand", ok: Boolean(brand && brand.trim()) },
+    { label: "Category", ok: Boolean(category && category.trim()) },
+    {
+      label: "Skin types",
+      ok: Boolean(
+        String(skinType || "")
+          .split(/,|\r?\n|\//)
+          .map((item) => item.trim())
+          .filter(Boolean).length,
+      ),
+    },
+    {
+      label: "Primary concern",
+      ok: Boolean(
+        concernIds.length ||
+          String(concern || "").trim(),
+      ),
+    },
+    {
+      label: "Ingredients or functional profile",
+      ok: Boolean(
+        keyIngredientRows.join("").trim() ||
+          ingredients.trim() ||
+          functionalProfile.trim(),
+      ),
+    },
+    { label: "Benefits", ok: Boolean(benefitRows.join("").trim()) },
+    { label: "How to use", ok: Boolean(howToUse.trim()) },
+    {
+      label: "Safety verification",
+      ok:
+        ["verified_none", "verified_warnings"].includes(warningsStatus) &&
+        (warningsStatus !== "verified_warnings" || Boolean(warnings.trim())),
+    },
+    { label: "Product URL", ok: Boolean(autoSlug) && !slugConflict },
+    { label: "Live selling price", ok: Number(previewSalePrice) > 0 },
+  ];
+  const aiRecommendationMissing = aiRecommendationChecks
+    .filter((item) => !item.ok)
+    .map((item) => item.label);
+  const aiRecommendationReady = aiRecommendationMissing.length === 0;
+  const aiRecommendationPercent = Math.round(
+    ((aiRecommendationChecks.length - aiRecommendationMissing.length) /
+      aiRecommendationChecks.length) *
+      100,
+  );
+
   const publishBlocked = publishChecks.some(
     (item) => item.required && !item.ok,
   );
@@ -1933,7 +1981,10 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
       stock: String(previewStockQty || ""),
       stock_quantity: String(previewStockQty || ""),
       suitable_for: suitableFor,
-      skin_types: splitLines(skinType),
+      skin_types: String(skinType || "")
+        .split(/,|\r?\n|\//)
+        .map((item) => item.trim())
+        .filter(Boolean),
       primary_concerns: Array.from(
         new Set(
           [
@@ -3689,6 +3740,62 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
                   value={functionalProfile}
                 />
               </label>
+
+              <div className="rounded-lg border border-[#e0e8e5] bg-white p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[8px] font-bold text-[#405049]">
+                      Bot recommendation readiness
+                    </div>
+                    <p className="mt-1 text-[7px] leading-4 text-[#829089]">
+                      Updates live from this product record. No duplicate AI Commerce entry is needed.
+                    </p>
+                  </div>
+                  <div
+                    className={
+                      "rounded-full px-2.5 py-1 text-[7px] font-bold " +
+                      (aiRecommendationReady
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-amber-50 text-amber-700")
+                    }
+                  >
+                    {aiRecommendationReady
+                      ? "READY"
+                      : `${aiRecommendationPercent}% READY`}
+                  </div>
+                </div>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {aiRecommendationChecks.map((item) => (
+                    <div
+                      className="flex items-center gap-2 rounded-lg bg-[#fafcfc] px-2.5 py-2 text-[7px] font-semibold text-[#5c6b65]"
+                      key={item.label}
+                    >
+                      <span
+                        className={
+                          "flex h-4 w-4 items-center justify-center rounded-full text-[7px] " +
+                          (item.ok
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-amber-100 text-amber-700")
+                        }
+                      >
+                        {item.ok ? "✓" : "!"}
+                      </span>
+                      {item.label}
+                    </div>
+                  ))}
+                </div>
+
+                {!aiRecommendationReady ? (
+                  <p className="mt-3 text-[7px] leading-4 text-amber-700">
+                    Missing for bot recommendation: {aiRecommendationMissing.join(", ")}
+                  </p>
+                ) : (
+                  <p className="mt-3 text-[7px] leading-4 font-semibold text-emerald-700">
+                    This product has the required catalog information for recommendation matching. Final eligibility still depends on live stock and active status.
+                  </p>
+                )}
+              </div>
 
               <div className="rounded-lg border border-[#e0e8e5] bg-white px-3 py-2 text-[7px] leading-4 text-[#74847d]">
                 Primary concerns come automatically from the product concerns selected in Organization. Brand, category, price, stock and product URL are also read automatically from the catalog.
