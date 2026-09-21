@@ -777,6 +777,12 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
   const [warnings, setWarnings] = useState(
     readAttribute(editingProduct, ["warnings"], ""),
   );
+  const [warningsStatus, setWarningsStatus] = useState(
+    readAttribute(editingProduct, ["warnings_status"], "unknown"),
+  );
+  const [functionalProfile, setFunctionalProfile] = useState(
+    readAttribute(editingProduct, ["functional_profile"], ""),
+  );
   const [keyIngredientRows, setKeyIngredientRows] = useState(
     splitLines(readAttribute(editingProduct, ["key_ingredients"], "")),
   );
@@ -794,7 +800,9 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
     "COD Available",
     "Fast Delivery",
   ]);
-  const [skinType, setSkinType] = useState("Oily / Acne Prone");
+  const [skinType, setSkinType] = useState(
+    readAttribute(editingProduct, ["skin_types", "suitable_for"], "Oily"),
+  );
   const [routineStep, setRoutineStep] = useState("Cleanser");
   const [routineTime, setRoutineTime] = useState("AM + PM");
   const [routineFrequency, setRoutineFrequency] = useState("Daily");
@@ -953,7 +961,7 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
     { label: "Unique SKU", ok: Boolean(autoSku.trim()) && !skuConflict, required: true, section: "inventory" },
     { label: "Category and brand", ok: Boolean(category && brand), required: true, section: "organization" },
     { label: "Benefits and ingredients", ok: Boolean(benefitRows.join("").trim() && ingredients.trim()), required: true, section: "content" },
-    { label: "Usage and warnings", ok: Boolean(howToUse.trim() && warnings.trim()), required: true, section: "content" },
+    { label: "Usage and safety status", ok: Boolean(howToUse.trim() && ["verified_none", "verified_warnings"].includes(warningsStatus) && (warningsStatus !== "verified_warnings" || warnings.trim())), required: true, section: "content" },
     { label: "At least one FAQ", ok: faqRows.some((item) => item.question.trim() && item.answer.trim()), required: false, section: "content" },
     { label: "SEO title and description", ok: Boolean(seoTitle.trim() && metaDescription.trim()), required: false, section: "seo" },
     { label: "Shipping weight", ok: Number(weight) > 0, required: true, section: "seo" },
@@ -1925,7 +1933,20 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
       stock: String(previewStockQty || ""),
       stock_quantity: String(previewStockQty || ""),
       suitable_for: suitableFor,
+      skin_types: splitLines(skinType),
+      primary_concerns: Array.from(
+        new Set(
+          [
+            concern,
+            ...concernIds
+              .map((id) => concernOptions.find((item) => String(item.id) === String(id))?.name || "")
+              .filter(Boolean),
+          ].filter(Boolean),
+        ),
+      ),
+      functional_profile: functionalProfile,
       warnings,
+      warnings_status: warningsStatus,
     };
 
     try {
@@ -3620,6 +3641,59 @@ export function RealAddEditProductPage(_props: RealAddEditProductPageProps) {
                 value={suitableFor}
               />
             </label>
+
+            <div className="rounded-xl border border-[#d5e2df] bg-[#f5f9f8] p-4">
+              <div className="mb-4">
+                <div className="text-[8px] font-bold uppercase tracking-[.12em] text-[#3b646d]">
+                  AI recommendation matching
+                </div>
+                <p className="mt-1 text-[7px] leading-4 text-[#74847d]">
+                  These are part of the main product record. The Messenger bot reads them directly; nothing needs to be entered again in AI Commerce.
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className={exactLabelClass}>
+                  Skin types
+                  <input
+                    className={exactInputClass}
+                    onChange={(event) => setSkinType(event.target.value)}
+                    placeholder="Oily, Combination"
+                    value={skinType}
+                  />
+                  <span className="mt-2 block text-[7px] leading-4 font-medium text-[#8c9892]">
+                    Comma-separated. Use verified suitability only.
+                  </span>
+                </label>
+
+                <label className={exactLabelClass}>
+                  Safety verification
+                  <select
+                    className={exactInputClass}
+                    onChange={(event) => setWarningsStatus(event.target.value)}
+                    value={warningsStatus}
+                  >
+                    <option value="unknown">Not verified yet</option>
+                    <option value="verified_none">Verified — no special warning</option>
+                    <option value="verified_warnings">Verified warnings / cautions</option>
+                  </select>
+                </label>
+              </div>
+
+              <label className={exactLabelClass}>
+                Functional profile
+                <textarea
+                  className={`${exactTextAreaClass} h-24`}
+                  onChange={(event) => setFunctionalProfile(event.target.value)}
+                  placeholder="Short verified summary of what this product is suitable for and what role it serves."
+                  value={functionalProfile}
+                />
+              </label>
+
+              <div className="rounded-lg border border-[#e0e8e5] bg-white px-3 py-2 text-[7px] leading-4 text-[#74847d]">
+                Primary concerns come automatically from the product concerns selected in Organization. Brand, category, price, stock and product URL are also read automatically from the catalog.
+              </div>
+            </div>
           </ExactEditorSection>
 
           <ExactEditorSection
