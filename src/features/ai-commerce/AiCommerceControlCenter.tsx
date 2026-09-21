@@ -74,6 +74,22 @@ type DashboardData = {
   queue?: {
     candidates?: Candidate[];
   };
+  readiness?: {
+    summary?: {
+      READY?: number;
+      PARTIAL?: number;
+      NOT_READY?: number;
+    };
+    products?: Array<{
+      product_id: number;
+      name: string;
+      brand?: string | null;
+      category?: string | null;
+      readiness_status: "READY" | "PARTIAL" | "NOT_READY";
+      missing_required_fields?: string[];
+      recommendation_eligible?: boolean;
+    }>;
+  };
 };
 
 function Icon({ name, size = 15 }: { name: string; size?: number }) {
@@ -154,6 +170,17 @@ export function AiCommerceControlCenter() {
   const [edits, setEdits] = useState<Record<number, string>>({});
   const [campaignId, setCampaignId] = useState("");
   const [campaignMode, setCampaignMode] = useState("off");
+  const [readinessProductId, setReadinessProductId] = useState<number | null>(null);
+  const [skinTypes, setSkinTypes] = useState("");
+  const [concerns, setConcerns] = useState("");
+  const [ingredients, setIngredients] = useState("");
+  const [benefits, setBenefits] = useState("");
+  const [howToUse, setHowToUse] = useState("");
+  const [warnings, setWarnings] = useState("");
+  const [warningsStatus, setWarningsStatus] = useState("verified_none");
+  const [productUrl, setProductUrl] = useState("");
+  const [functionalProfile, setFunctionalProfile] = useState("");
+  const [size, setSize] = useState("");
 
   async function load() {
     setLoading(true);
@@ -165,7 +192,7 @@ export function AiCommerceControlCenter() {
         throw new Error(json.error || "Could not load AI Commerce controls.");
       }
 
-      setData({ status: json.status, queue: json.queue });
+      setData({ status: json.status, queue: json.queue, readiness: json.readiness });
 
       const nextEdits: Record<number, string> = {};
       for (const candidate of json.queue?.candidates || []) {
@@ -191,6 +218,55 @@ export function AiCommerceControlCenter() {
       ),
     [data.queue?.candidates],
   );
+
+  const readinessProducts = useMemo(
+    () => data.readiness?.products || [],
+    [data.readiness?.products],
+  );
+
+  const selectedReadinessProduct = useMemo(
+    () => readinessProducts.find((item) => item.product_id === readinessProductId) || null,
+    [readinessProducts, readinessProductId],
+  );
+
+  const facewashReadinessProducts = useMemo(
+    () =>
+      readinessProducts.filter((item) => {
+        const haystack = `${item.name || ""} ${item.category || ""}`.toLowerCase();
+        return haystack.includes("facewash") || haystack.includes("face wash") || haystack.includes("cleanser");
+      }),
+    [readinessProducts],
+  );
+
+  function listValue(value: string) {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  async function saveReadiness() {
+    if (!readinessProductId) {
+      setMessage("Select a product first.");
+      return;
+    }
+
+    await action({
+      action: "save_product_readiness",
+      product_id: readinessProductId,
+      verified_by: "BrandnBeauty Admin",
+      skin_types: listValue(skinTypes),
+      primary_concerns: listValue(concerns),
+      key_ingredients: listValue(ingredients),
+      benefits: listValue(benefits),
+      how_to_use: howToUse.trim(),
+      warnings: listValue(warnings),
+      warnings_status: warningsStatus,
+      product_url: productUrl.trim(),
+      functional_profile: functionalProfile.trim(),
+      size: size.trim(),
+    });
+  }
 
   async function action(payload: Record<string, unknown>, id?: number) {
     if (id) setBusyId(id);
@@ -404,6 +480,162 @@ export function AiCommerceControlCenter() {
           tone={(status.pending_review_candidates ?? 0) > 0 ? "warn" : "default"}
           value={String(status.pending_review_candidates ?? 0)}
         />
+      </section>
+
+      <section className="rounded-2xl border border-[#e2e8e5] bg-white">
+        <header className="flex flex-col gap-3 border-b border-[#edf0ee] p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[8px] font-bold uppercase tracking-[.12em] text-[#84908a]">Product intelligence</p>
+            <h2 className="mt-1 text-[15px] font-bold text-[#33423b]">Bot product readiness</h2>
+            <p className="mt-1 text-[7px] leading-4 text-[#87928d]">
+              Verify the fields the bot is allowed to use for recommendations. Live price and stock always stay connected to the catalog.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <StatusPill tone="good">READY {data.readiness?.summary?.READY ?? 0}</StatusPill>
+            <StatusPill tone="warn">PARTIAL {data.readiness?.summary?.PARTIAL ?? 0}</StatusPill>
+            <StatusPill tone="bad">NOT READY {data.readiness?.summary?.NOT_READY ?? 0}</StatusPill>
+          </div>
+        </header>
+
+        <div className="grid gap-5 p-5 xl:grid-cols-[minmax(260px,.7fr)_minmax(0,1.3fr)]">
+          <div>
+            <p className="text-[8px] font-bold uppercase tracking-[.12em] text-[#84908a]">Facewash priority</p>
+            <div className="mt-3 max-h-[430px] space-y-2 overflow-auto pr-1">
+              {(facewashReadinessProducts.length ? facewashReadinessProducts : readinessProducts).map((product) => {
+                const active = readinessProductId === product.product_id;
+                return (
+                  <button
+                    className={
+                      "w-full rounded-xl border p-3 text-left transition " +
+                      (active
+                        ? "border-[#8fb0ad] bg-[#f1f6f5]"
+                        : "border-[#e6ebe8] bg-white hover:bg-[#f8faf9]")
+                    }
+                    key={product.product_id}
+                    onClick={() => {
+                      setReadinessProductId(product.product_id);
+                      setSkinTypes("");
+                      setConcerns("");
+                      setIngredients("");
+                      setBenefits("");
+                      setHowToUse("");
+                      setWarnings("");
+                      setWarningsStatus("verified_none");
+                      setProductUrl("");
+                      setFunctionalProfile("");
+                      setSize("");
+                    }}
+                    type="button"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[9px] font-bold text-[#33423b]">{product.name}</p>
+                        <p className="mt-1 text-[7px] text-[#87928d]">
+                          {[product.brand, product.category].filter(Boolean).join(" · ") || "Catalog product"}
+                        </p>
+                      </div>
+                      <StatusPill
+                        tone={
+                          product.readiness_status === "READY"
+                            ? "good"
+                            : product.readiness_status === "PARTIAL"
+                              ? "warn"
+                              : "bad"
+                        }
+                      >
+                        {product.readiness_status}
+                      </StatusPill>
+                    </div>
+                    {product.missing_required_fields?.length ? (
+                      <p className="mt-2 text-[7px] leading-4 text-[#9a6a2a]">
+                        Missing: {product.missing_required_fields.join(", ")}
+                      </p>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[#edf0ee] bg-[#fafbfa] p-4">
+            {selectedReadinessProduct ? (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-[8px] font-bold uppercase tracking-[.12em] text-[#84908a]">Selected product</p>
+                  <h3 className="mt-1 text-[13px] font-bold text-[#33423b]">{selectedReadinessProduct.name}</h3>
+                  <p className="mt-1 text-[7px] text-[#87928d]">
+                    Human-verify these fields before saving. The bot will not invent missing facts.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="text-[8px] font-bold text-[#405049]">
+                    Skin types
+                    <input className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setSkinTypes(e.target.value)} placeholder="oily, combination" value={skinTypes}/>
+                  </label>
+                  <label className="text-[8px] font-bold text-[#405049]">
+                    Primary concerns
+                    <input className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setConcerns(e.target.value)} placeholder="acne, oiliness" value={concerns}/>
+                  </label>
+                  <label className="text-[8px] font-bold text-[#405049]">
+                    Key ingredients
+                    <input className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setIngredients(e.target.value)} placeholder="salicylic acid, niacinamide" value={ingredients}/>
+                  </label>
+                  <label className="text-[8px] font-bold text-[#405049]">
+                    Benefits
+                    <input className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setBenefits(e.target.value)} placeholder="cleans excess oil, supports acne care" value={benefits}/>
+                  </label>
+                  <label className="text-[8px] font-bold text-[#405049]">
+                    Size
+                    <input className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setSize(e.target.value)} placeholder="100 ml" value={size}/>
+                  </label>
+                  <label className="text-[8px] font-bold text-[#405049]">
+                    Product URL
+                    <input className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setProductUrl(e.target.value)} placeholder="https://..." value={productUrl}/>
+                  </label>
+                </div>
+
+                <label className="block text-[8px] font-bold text-[#405049]">
+                  Functional profile
+                  <textarea className="mt-1.5 min-h-20 w-full rounded-xl border border-[#dce4e0] bg-white px-3 py-2 text-[9px]" onChange={(e)=>setFunctionalProfile(e.target.value)} placeholder="What this product is verified to do." value={functionalProfile}/>
+                </label>
+
+                <label className="block text-[8px] font-bold text-[#405049]">
+                  How to use
+                  <textarea className="mt-1.5 min-h-20 w-full rounded-xl border border-[#dce4e0] bg-white px-3 py-2 text-[9px]" onChange={(e)=>setHowToUse(e.target.value)} placeholder="Verified usage instructions" value={howToUse}/>
+                </label>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="text-[8px] font-bold text-[#405049]">
+                    Warning status
+                    <select className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setWarningsStatus(e.target.value)} value={warningsStatus}>
+                      <option value="verified_none">Verified — no special warning</option>
+                      <option value="verified_warnings">Verified warnings</option>
+                      <option value="unknown">Unknown</option>
+                    </select>
+                  </label>
+                  <label className="text-[8px] font-bold text-[#405049]">
+                    Warnings
+                    <input className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4e0] bg-white px-3 text-[9px]" onChange={(e)=>setWarnings(e.target.value)} placeholder="comma separated" value={warnings}/>
+                  </label>
+                </div>
+
+                <button
+                  className="h-10 rounded-xl bg-[#3b646d] px-5 text-[8px] font-bold text-white transition hover:bg-[#31545c]"
+                  onClick={() => void saveReadiness()}
+                  type="button"
+                >
+                  Verify & save for bot
+                </button>
+              </div>
+            ) : (
+              <div className="flex min-h-72 items-center justify-center text-center text-[8px] font-semibold text-[#87928d]">
+                Select a product to complete its bot-readiness profile.
+              </div>
+            )}
+          </div>
+        </div>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,.55fr)]">
