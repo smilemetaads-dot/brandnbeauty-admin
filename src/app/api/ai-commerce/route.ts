@@ -85,14 +85,21 @@ export async function GET() {
     );
     const queue = await readJsonResponse(queueResponse, "QUEUE");
 
+    const readinessResponse = await backendFetch(
+      "manage_messenger_product_readiness.php",
+    );
+    const readiness = await readJsonResponse(readinessResponse, "READINESS");
+
     return NextResponse.json({
       success: true,
       status,
       queue,
+      readiness,
       diagnostics: {
         backend_origin: new URL(backendBase).origin,
         status_http: statusResponse.status,
         queue_http: queueResponse.status,
+        readiness_http: readinessResponse.status,
       },
     });
   } catch (error) {
@@ -133,9 +140,18 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const response = await backendFetch("messenger_bot_reply_review_api.php", {
+    const endpoint =
+      body?.action === "save_product_readiness"
+        ? "manage_messenger_product_readiness.php"
+        : "messenger_bot_reply_review_api.php";
+    const payload =
+      body?.action === "save_product_readiness"
+        ? { ...body, action: undefined, confirmed: true }
+        : { ...body, confirmed: true };
+
+    const response = await backendFetch(endpoint, {
       method: "POST",
-      body: JSON.stringify({ ...body, confirmed: true }),
+      body: JSON.stringify(payload),
     });
     const data = await readJsonResponse(response, "ACTION");
     return NextResponse.json(data, { status: response.status });
