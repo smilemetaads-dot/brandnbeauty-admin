@@ -9,6 +9,7 @@ export type InventoryProduct = {
   available: number;
   brand: string;
   category: string;
+  damaged: number;
   health: InventoryHealth;
   id: string;
   image: string;
@@ -16,6 +17,7 @@ export type InventoryProduct = {
   lowStockThreshold: number;
   name: string;
   onHand: number;
+  quarantine: number;
   reserved: number;
   sku: string;
   updatedAt: string;
@@ -37,11 +39,16 @@ export type InventoryMovement = {
 };
 
 export type InventorySummary = {
+  availableUnits: number;
+  damagedUnits: number;
   draftAdjustments: number;
   inStock: number;
+  incomingUnits: number;
   lowStock: number;
   onHandUnits: number;
   outOfStock: number;
+  quarantineUnits: number;
+  reservedUnits: number;
   totalSkus: number;
 };
 
@@ -80,6 +87,7 @@ function product(raw: unknown): InventoryProduct | null {
     available: Math.max(0, number(row.available)),
     brand: text(row.brand),
     category: text(row.category),
+    damaged: Math.max(0, number(row.damaged)),
     health: health(row.health),
     id,
     image: text(row.image),
@@ -87,6 +95,7 @@ function product(raw: unknown): InventoryProduct | null {
     lowStockThreshold: Math.max(0, number(row.low_stock_threshold)),
     name,
     onHand: Math.max(0, number(row.on_hand)),
+    quarantine: Math.max(0, number(row.quarantine)),
     reserved: Math.max(0, number(row.reserved)),
     sku: text(row.sku),
     updatedAt: text(row.updated_at),
@@ -117,11 +126,16 @@ function movement(raw: unknown): InventoryMovement | null {
 function summary(raw: unknown, products: InventoryProduct[]): InventorySummary {
   const row = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
   return {
+    availableUnits: number(row.available_units),
+    damagedUnits: number(row.damaged_units),
     draftAdjustments: number(row.draft_adjustments),
     inStock: number(row.in_stock),
+    incomingUnits: number(row.incoming_units),
     lowStock: number(row.low_stock),
     onHandUnits: number(row.on_hand_units),
     outOfStock: number(row.out_of_stock),
+    quarantineUnits: number(row.quarantine_units),
+    reservedUnits: number(row.reserved_units),
     totalSkus: number(row.total_skus) || products.length,
   };
 }

@@ -17,6 +17,9 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Dashboard", href: "/dashboard", status: "Live" },
       { label: "Business Analytics", href: "/business-analytics", status: "Preview" },
+      { label: "Business OS Foundation", href: "/business-os/foundation", status: "Preview" },
+      { label: "Business OS Control", href: "/business-os/control", status: "Preview" },
+      { label: "Owner Command Center", href: "/business-os/owner-command-center", status: "Preview" },
     ],
   },
   {
@@ -25,6 +28,9 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Products", href: "/products", status: "Live" },
       { label: "Add/Edit Product", href: "/products/edit", status: "Live" },
+      { label: "Product Knowledge Readiness", href: "/products/knowledge-readiness", status: "Preview" },
+      { label: "Content Enrichment", href: "/products/content-enrichment", status: "Preview" },
+      { label: "Content Review", href: "/products/content-review", status: "Preview" },
       { label: "Categories", href: "/categories", status: "Live" },
       { label: "Concerns", href: "/concerns", status: "Live" },
       { label: "Brands", href: "/brands", status: "Live" },
@@ -42,7 +48,10 @@ export const adminNavGroups: AdminNavGroup[] = [
       { label: "Orders", href: "/orders", status: "Live" },
       { label: "Order Details", href: "/orders/details", status: "Partial" },
       { label: "Packing Desk", href: "/packing", status: "Partial" },
+      { label: "Dispatch Control", href: "/dispatch-control", status: "Preview" },
+      { label: "Delivery Monitoring", href: "/delivery-monitoring", status: "Preview" },
       { label: "Courier & Payments", href: "/courier", status: "Partial" },
+      { label: "Return Receiving", href: "/returns/receiving", status: "Preview" },
       { label: "Checkout & Shipping Rules", href: "/checkout-rules", status: "Preview" },
       { label: "Invoice & Thank You Settings", href: "/invoice-settings", status: "Preview" },
     ],
@@ -111,8 +120,9 @@ export const adminNavGroups: AdminNavGroup[] = [
     icon: "AI",
     label: "AI Commerce",
     items: [
-      { label: "Control Center", href: "/ai-commerce" },
+      { label: "Control Center", href: "/ai-commerce", status: "Preview" },
     ],
   },];
+
 
 

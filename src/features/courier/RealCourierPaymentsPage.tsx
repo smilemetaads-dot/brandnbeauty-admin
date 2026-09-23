@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
@@ -392,7 +392,7 @@ export function RealCourierPaymentsPage({ orders: initialOrders = [] }: RealCour
 
         {syncOrder ? (
           <form className="grid gap-4 rounded-[1.5rem] border border-[#5E7F85]/25 bg-white p-5 shadow-sm md:grid-cols-2" onSubmit={handleCourierSync}>
-            <div className="md:col-span-2"><div className="text-xs font-bold uppercase tracking-[0.16em] text-[#5E7F85]">Delivery Update</div><h2 className="mt-2 text-xl font-bold text-slate-950">{syncOrder.order_number ?? `BNB-${syncOrder.id}`}</h2><p className="mt-1 text-sm text-slate-500">Delivered creates a COD collection. Returned restores stocked inventory through the central order workflow.</p></div>
+            <div className="md:col-span-2"><div className="text-xs font-bold uppercase tracking-[0.16em] text-[#5E7F85]">Delivery Update</div><h2 className="mt-2 text-xl font-bold text-slate-950">{syncOrder.order_number ?? `BNB-${syncOrder.id}`}</h2><p className="mt-1 text-sm text-slate-500">Delivered creates a COD collection. Returned records the courier outcome; sellable inventory changes only after warehouse receiving and inspection.</p></div>
             <label className="text-sm font-semibold text-slate-700">Courier result<select className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3" name="status"><option value="delivered">Delivered</option><option value="returned">Returned</option></select></label>
             <label className="text-sm font-semibold text-slate-700">Operational note<input className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3" name="note" placeholder="Required for returned parcels" /></label>
             <div className="flex justify-end gap-3 md:col-span-2"><button className="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700" disabled={isSyncing} onClick={() => setSyncOrder(null)} type="button">Cancel</button><button className="rounded-2xl bg-[#5E7F85] px-5 py-3 text-sm font-bold text-white disabled:bg-slate-300" disabled={isSyncing} type="submit">{isSyncing ? "Updating..." : "Confirm Courier Result"}</button></div>
