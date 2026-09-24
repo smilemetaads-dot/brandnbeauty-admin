@@ -1,5 +1,5 @@
-import { RealPackingDeskPage } from "@/features/packing/RealPackingDeskPage";
+import { LivePackingDeskWorkspace } from "@/features/packing/LivePackingDeskWorkspace";
 
 export default function PackingPage() {
-  return <RealPackingDeskPage />;
+  return <LivePackingDeskWorkspace />;
 }

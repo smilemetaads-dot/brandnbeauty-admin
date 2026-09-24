@@ -38,13 +38,9 @@ const COURIER_STATUSES = [
   "failed",
 ] as const;
 
-const STOCK_DEDUCTION_ORDER_STATUSES = [
-  "confirmed",
-  "processing",
-  "ready_to_pack",
-] as const;
+const STOCK_DEDUCTION_ORDER_STATUSES = [] as const;
 
-const STOCK_RESTORE_ORDER_STATUSES = ["cancelled", "returned"] as const;
+const STOCK_RESTORE_ORDER_STATUSES = [] as const;
 
 type OrderStatus = (typeof ORDER_STATUSES)[number];
 type PaymentStatus = (typeof PAYMENT_STATUSES)[number];

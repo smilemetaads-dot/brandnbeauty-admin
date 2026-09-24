@@ -18,6 +18,7 @@ import {
   type CatalogSummary,
   type ProductStatus,
 } from "@/features/products/products-client";
+import { ProductCsvImportPanel } from "@/features/products/ProductCsvImportPanel";
 
 type IconName =
   | "alert"
@@ -246,6 +247,7 @@ export function ExactProductsWorkspace({
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [notice, setNotice] = useState("");
+  const [showCsvImport, setShowCsvImport] = useState(false);
 
   const showNotice = useCallback((message: string) => {
     setNotice(message);
@@ -454,11 +456,7 @@ export function ExactProductsWorkspace({
         <div className="flex flex-wrap gap-2">
           <button
             className="flex h-10 items-center gap-2 rounded-xl border border-[#dce4e0] bg-white px-3.5 text-[9.5px] font-bold text-[#596962]"
-            onClick={() =>
-              showNotice(
-                "Import remains disabled until the validated catalog-import backend is connected.",
-              )
-            }
+            onClick={() => setShowCsvImport((current) => !current)}
             type="button"
           >
             <Icon name="upload" size={13} /> Import
@@ -483,6 +481,16 @@ export function ExactProductsWorkspace({
           </button>
         </div>
       </section>
+
+      {showCsvImport ? (
+        <ProductCsvImportPanel
+          onClose={() => setShowCsvImport(false)}
+          onImported={async () => {
+            await load();
+            showNotice("Governed product import completed and catalog refreshed.");
+          }}
+        />
+      ) : null}
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[

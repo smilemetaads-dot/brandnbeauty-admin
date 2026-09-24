@@ -20,8 +20,8 @@ export default function LoginPage() {
           <div className="p-6">
             <LoginForm />
             <div className="mt-5 rounded-2xl bg-stone-50 px-4 py-3 text-xs font-semibold leading-5 text-slate-500">
-              Admin access is checked through the local PHP/MySQL auth gateway.
-              Successful sessions are stored locally for this admin dashboard.
+              Admin access is checked through the BrandnBeauty PHP/MySQL auth gateway.
+              Successful sessions are securely managed for this admin dashboard.
             </div>
           </div>
         </section>
