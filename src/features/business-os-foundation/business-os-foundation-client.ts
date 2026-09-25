@@ -33,6 +33,23 @@ export type FeatureFlag = {
   updatedAt: string;
 };
 
+export type ActionBoundary = {
+  actionKey: string;
+  domainName: string;
+  actionLabel: string;
+  actionKind: "read" | "draft" | "execute";
+  executionMode: "read_only" | "draft_only" | "human_approval" | "manual_only" | "blocked";
+  riskLevel: string;
+  featureFlagKey: string;
+  requiredPermission: string;
+  aiAllowed: boolean;
+  humanApprovalRequired: boolean;
+  downstreamAutoExecute: boolean;
+  description: string;
+  version: number;
+  updatedAt: string;
+};
+
 export type BusinessOsFoundationState = {
   summary: {
     pendingApprovals: number | null;
@@ -48,6 +65,7 @@ export type BusinessOsFoundationState = {
   registry: FoundationItem[];
   sourceOfTruth: SourceTruth[];
   featureFlags: FeatureFlag[];
+  actionBoundary: ActionBoundary[];
   queues: {
     approvals: Raw[];
     alerts: Raw[];
@@ -104,7 +122,22 @@ function normalize(payload: Raw): BusinessOsFoundationState {
       version: num(item.version),
       updatedAt: text(item.updated_at),
     })),
-    queues: {
+    actionBoundary: ((payload.action_boundary ?? []) as Raw[]).map((item) => ({
+      actionKey: text(item.action_key),
+      domainName: text(item.domain_name),
+      actionLabel: text(item.action_label),
+      actionKind: (["read","draft","execute"].includes(text(item.action_kind)) ? text(item.action_kind) : "read") as ActionBoundary["actionKind"],
+      executionMode: (["read_only","draft_only","human_approval","manual_only","blocked"].includes(text(item.execution_mode)) ? text(item.execution_mode) : "blocked") as ActionBoundary["executionMode"],
+      riskLevel: text(item.risk_level),
+      featureFlagKey: text(item.feature_flag_key),
+      requiredPermission: text(item.required_permission),
+      aiAllowed: Boolean(num(item.ai_allowed)),
+      humanApprovalRequired: Boolean(num(item.human_approval_required)),
+      downstreamAutoExecute: Boolean(num(item.downstream_auto_execute)),
+      description: text(item.description),
+      version: num(item.version),
+      updatedAt: text(item.updated_at),
+    })),    queues: {
       approvals: (payload.queues as Raw | undefined)?.approvals as Raw[] ?? [],
       alerts: (payload.queues as Raw | undefined)?.alerts as Raw[] ?? [],
       tasks: (payload.queues as Raw | undefined)?.tasks as Raw[] ?? [],
