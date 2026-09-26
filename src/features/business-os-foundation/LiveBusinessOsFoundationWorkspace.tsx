@@ -117,6 +117,18 @@ export function LiveBusinessOsFoundationWorkspace() {
     </section>
 
     <section className="rounded-2xl border border-[#e2e8e5] bg-white">
+      <div className="border-b p-5"><h2 className="text-[16px] font-bold text-[#23322b]">AI / Action boundary</h2><p className="mt-1 text-[8px] text-[#7c8882]">One canonical policy for what AI may read or draft and which business actions remain human-controlled, manual-only or blocked.</p></div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[960px] text-left">
+          <thead className="bg-[#fafbfa] text-[7px] font-bold uppercase tracking-[.1em] text-[#87928d]"><tr><th className="px-4 py-3">Action</th><th className="px-4 py-3">Domain</th><th className="px-4 py-3">Mode</th><th className="px-4 py-3">Risk</th><th className="px-4 py-3">AI</th><th className="px-4 py-3">Approval</th><th className="px-4 py-3">Auto execute</th></tr></thead>
+          <tbody className="divide-y">
+            {(state?.actionBoundary ?? []).map((action) => <tr key={action.actionKey}><td className="px-4 py-3"><b className="text-[9px] text-[#405049]">{action.actionLabel}</b><p className="mt-1 text-[7px] text-[#89958f]">{action.actionKey}</p></td><td className="px-4 py-3 text-[8px] text-[#65736c]">{action.domainName}</td><td className="px-4 py-3"><Pill value={action.executionMode}/></td><td className="px-4 py-3 text-[8px] font-bold text-[#65736c]">{pretty(action.riskLevel)}</td><td className="px-4 py-3 text-[8px] font-bold text-[#65736c]">{action.aiAllowed ? "Allowed" : "No"}</td><td className="px-4 py-3 text-[8px] font-bold text-[#65736c]">{action.humanApprovalRequired ? "Required" : "No"}</td><td className="px-4 py-3 text-[8px] font-bold text-rose-700">{action.downstreamAutoExecute ? "Yes" : "No"}</td></tr>)}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section className="rounded-2xl border border-[#e2e8e5] bg-white">
       <div className="border-b p-5"><h2 className="text-[16px] font-bold text-[#23322b]">Canonical source of truth</h2></div>
       <div className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-3">
         {(state?.sourceOfTruth ?? []).map((item) => <article key={item.domain} className="rounded-xl border p-4"><p className="text-[7px] font-bold uppercase tracking-[.1em] text-[#81908a]">{item.domain}</p><b className="mt-2 block text-[10px] text-[#405049]">{item.owner}</b><p className="mt-2 text-[7.5px] leading-4 text-[#7d8983]">{item.rule}</p></article>)}
