@@ -679,18 +679,6 @@ export function LiveProductContentEnrichmentWorkspace() {
                     <option value="authorized_retailer">
                       Authorized retailer
                     </option>
-                    <option value="peer_reviewed_study">
-                      Peer-reviewed study
-                    </option>
-                    <option value="systematic_review">
-                      Systematic review / meta-analysis
-                    </option>
-                    <option value="clinical_guideline">
-                      Clinical guideline
-                    </option>
-                    <option value="regulatory">
-                      Regulatory / official authority
-                    </option>
                     <option value="other">Other</option>
                   </select>
 
