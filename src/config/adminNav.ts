@@ -29,6 +29,7 @@ export const adminNavGroups: AdminNavGroup[] = [
       { label: "Products", href: "/products", status: "Live" },
       { label: "Add/Edit Product", href: "/products/edit", status: "Live" },
       { label: "Product Knowledge Readiness", href: "/products/knowledge-readiness", status: "Preview" },
+      { label: "Claim & Evidence Readiness", href: "/products/evidence-readiness", status: "Preview" },
       { label: "Content Enrichment", href: "/products/content-enrichment", status: "Preview" },
       { label: "Content Review", href: "/products/content-review", status: "Preview" },
       { label: "Categories", href: "/categories", status: "Live" },
