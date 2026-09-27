@@ -23,10 +23,6 @@ export type ProductContentSource = {
     | "manufacturer"
     | "packaging"
     | "authorized_retailer"
-    | "peer_reviewed_study"
-    | "systematic_review"
-    | "clinical_guideline"
-    | "regulatory"
     | "other";
   source_url: string;
   updated_at: string;
