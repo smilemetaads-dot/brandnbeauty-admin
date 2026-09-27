@@ -6,6 +6,7 @@ export type ClaimStatus = "draft" | "verified" | "restricted" | "archived";
 export type ClaimType = "benefit" | "visible_result" | "best_for" | "usage" | "safety" | "ingredient" | "other";
 
 export type EvidenceSource = {
+  active?: boolean;
   id: string;
   product_id: string;
   source_type: string;
@@ -37,6 +38,7 @@ export type ProductClaim = {
     chatbot_eligible: boolean;
     internal_education_only: boolean;
     source_count: number;
+    active_source_count: number;
     verified_source_count: number;
     contradictory_source_count: number;
     blockers: string[];
@@ -146,6 +148,22 @@ export async function decideProductClaim(input: {
   return post<ProductEvidenceState>({
     action: input.action,
     claim_id: input.claimId,
+    actor: input.actor,
+    reason: input.reason || "",
+    confirmed: true,
+  });
+}
+
+export async function verifyEvidenceSource(input: {
+  productId: string;
+  sourceId: string;
+  actor: string;
+  reason?: string;
+}) {
+  return post<ProductEvidenceState>({
+    action: "verify_source",
+    product_id: input.productId,
+    source_id: input.sourceId,
     actor: input.actor,
     reason: input.reason || "",
     confirmed: true,
