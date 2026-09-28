@@ -63,6 +63,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Customers", href: "/customers", status: "Live" },
       { label: "Customers Profile", href: "/customers/profile", status: "Partial" },
+      { label: "Customer Growth & Follow-up", href: "/customers/growth", status: "Preview" },
     ],
   },
   {
