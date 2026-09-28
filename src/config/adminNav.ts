@@ -122,6 +122,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "AI Commerce",
     items: [
       { label: "Control Center", href: "/ai-commerce", status: "Preview" },
+      { label: "AI Recommendation Readiness", href: "/ai-commerce/recommendation-readiness", status: "Preview" },
     ],
   },];
 
