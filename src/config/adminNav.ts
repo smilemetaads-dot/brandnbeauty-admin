@@ -107,6 +107,11 @@ export const adminNavGroups: AdminNavGroup[] = [
     icon: "GR",
     label: "Growth",
     items: [
+      { label: "Growth Control Center", href: "/growth/control-center", status: "Preview" },
+      { label: "Content & Creative OS", href: "/growth/content-creative", status: "Preview" },
+      { label: "Tracking & Attribution OS", href: "/growth/tracking-attribution", status: "Preview" },
+      { label: "Meta Ads Control", href: "/growth/meta-ads", status: "Preview" },
+      { label: "Marketing Performance OS", href: "/growth/marketing-performance", status: "Preview" },
       { label: "Marketing Performance", href: "/marketing", status: "Partial" },
       { label: "Tracking & Attribution", href: "/tracking", status: "Partial" },
     ],
