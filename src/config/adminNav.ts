@@ -72,6 +72,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Suppliers", href: "/suppliers", status: "Partial" },
       { label: "Suppliers Analytics", href: "/suppliers/analytics", status: "Partial" },
+      { label: "Procurement & Reorder Exceptions", href: "/procurement/reorder-exceptions", status: "Preview" },
     ],
   },
   {
