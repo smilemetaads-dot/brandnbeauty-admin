@@ -80,6 +80,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Finance",
     items: [
       { label: "Finance Control", href: "/finance", status: "Partial" },
+      { label: "Finance Exceptions & Profitability", href: "/finance/exceptions", status: "Preview" },
       { label: "Cash & Bank Ledger", href: "/finance/cash-ledger", status: "Partial" },
       { label: "Payable Payments", href: "/finance/payables", status: "Partial" },
       { label: "Month-End Close", href: "/finance/close", status: "Partial" },
