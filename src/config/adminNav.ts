@@ -120,6 +120,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     icon: "CO",
     label: "Control",
     items: [
+      { label: "Launch Control Center", href: "/launch-control", status: "Preview" },
       { label: "Roles & Permissions", href: "/roles", status: "Preview" },
       { label: "Settings", href: "/settings", status: "Live" },
       { label: "Brand & Site Identity", href: "/settings/brand-site-identity", status: "Live" },
