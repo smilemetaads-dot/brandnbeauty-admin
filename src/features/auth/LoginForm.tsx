@@ -83,7 +83,7 @@ export function LoginForm() {
         data.token,
       )}; path=/; max-age=86400; SameSite=Lax`;
       setClientStatus("Local admin session created.");
-      router.replace("/");
+      router.replace("/dashboard");
       router.refresh();
     } catch (error) {
       if (error instanceof Error && error.message === timeoutErrorMessage) {

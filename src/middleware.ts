@@ -35,7 +35,7 @@ export function middleware(request: NextRequest) {
 
   if (token && isLoginRoute) {
     const dashboardUrl = request.nextUrl.clone();
-    dashboardUrl.pathname = "/";
+    dashboardUrl.pathname = "/dashboard";
     dashboardUrl.search = "";
 
     return NextResponse.redirect(dashboardUrl);
