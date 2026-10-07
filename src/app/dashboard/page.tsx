@@ -1,4 +1,5 @@
-import { AdminShell } from "@/components/admin/AdminShell";
-import { LiveOwnerDashboard } from "@/features/dashboard/LiveOwnerDashboard";
+import { redirect } from "next/navigation";
 
-export default function DashboardPage(){return <AdminShell><LiveOwnerDashboard/></AdminShell>}
+export default function DashboardPage() {
+  redirect("/");
+}
