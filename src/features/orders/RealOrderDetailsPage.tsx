@@ -137,8 +137,20 @@ function formatDate(value: string | null) {
   }).format(parsed);
 }
 
-function formatPaymentMethod() {
-  return "Cash on Delivery";
+function formatPaymentMethod(value: string) {
+  const normalized = value.trim().toLowerCase();
+  if (["cod", "cash_on_delivery", "cash on delivery"].includes(normalized)) {
+    return "Cash on Delivery";
+  }
+
+  return normalized
+    ? normalized
+        .replaceAll("_", " ")
+        .split(" ")
+        .filter(Boolean)
+        .map((word) => `${word[0]?.toUpperCase() ?? ""}${word.slice(1)}`)
+        .join(" ")
+    : "Not available";
 }
 
 function getVariantText(item: OrderItemRecord) {
@@ -473,7 +485,7 @@ export function RealOrderDetailsPage({ order }: RealOrderDetailsPageProps) {
                     {formatText(order.delivery_zone)} / {formatText(order.area || order.district)}
                   </p>
                 </InfoBlock>
-                <InfoBlock label="Payment Method">{formatPaymentMethod()}</InfoBlock>
+                <InfoBlock label="Payment Method">{formatPaymentMethod(order.payment_method)}</InfoBlock>
               </div>
             </Card>
 
