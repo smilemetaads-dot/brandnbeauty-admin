@@ -64,18 +64,65 @@ export function getBnbApiRuntime(): BnbApiRuntime {
   };
 }
 
+const LEGACY_BACKEND_PATH_PREFIX = "/BrandnBeauty/brandnbeauty-backend";
+
+function normalizeBackendAssetPath(pathname: string) {
+  if (pathname === `${LEGACY_BACKEND_PATH_PREFIX}/php`) {
+    return "/php";
+  }
+
+  if (pathname.startsWith(`${LEGACY_BACKEND_PATH_PREFIX}/php/`)) {
+    return pathname.slice(LEGACY_BACKEND_PATH_PREFIX.length);
+  }
+
+  return pathname;
+}
+
+function normalizeAbsoluteBnbAssetUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    const apiBase = new URL(getBnbApiBaseUrl());
+    const hostname = parsed.hostname.toLowerCase();
+    const normalizedPath = normalizeBackendAssetPath(parsed.pathname);
+    const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(hostname);
+    const isApiHost = hostname === apiBase.hostname.toLowerCase();
+
+    if (!isLocalHost && !isApiHost && normalizedPath === parsed.pathname) {
+      return value;
+    }
+
+    return `${apiBase.origin}${normalizedPath}${parsed.search}${parsed.hash}`;
+  } catch {
+    return value;
+  }
+}
+
 export function bnbApiAssetUrl(
   path: string | null | undefined,
   fallback?: string | null,
 ) {
   if (!path) return fallback ?? null;
-  if (/^https?:\/\//i.test(path)) return path;
-  if (path.startsWith("/BrandnBeauty/")) {
-    try {
-      return `${new URL(getBnbApiBaseUrl()).origin}${path}`;
-    } catch {
-      return fallback ?? null;
+  if (/^https?:\/\//i.test(path)) return normalizeAbsoluteBnbAssetUrl(path);
+
+  try {
+    const apiBase = new URL(getBnbApiBaseUrl());
+    const normalizedPath = normalizeBackendAssetPath(path);
+
+    if (normalizedPath === "/php" || normalizedPath.startsWith("/php/")) {
+      return `${apiBase.origin}${normalizedPath}`;
     }
+
+    if (path.startsWith("/uploads/")) {
+      return bnbApiUrl(path);
+    }
+
+    if (path.startsWith("/BrandnBeauty/")) {
+      return `${apiBase.origin}${path}`;
+    }
+  } catch {
+    return fallback ?? null;
   }
+
+  if (path.startsWith("/")) return path;
   return bnbApiUrl(path);
 }
