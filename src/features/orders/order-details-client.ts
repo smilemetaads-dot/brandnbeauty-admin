@@ -1,4 +1,4 @@
-﻿import { bnbApiUrl } from "@/lib/bnb-api";
+﻿import { bnbApiAssetUrl, bnbApiUrl } from "@/lib/bnb-api";
 import { adminAuthHeaders } from "@/lib/admin-auth";
 
 export type OrderItemRecord = {
@@ -46,6 +46,7 @@ export type OrderDetailsRecord = {
   order_status: string;
   packed_at: string | null;
   paid_amount: number;
+  payment_method: string;
   payment_status: string;
   returned_at: string | null;
   shipped_at: string | null;
@@ -69,6 +70,7 @@ type ApiOrder = {
   id?: number | string | null;
   order_id?: number | string | null;
   order_note?: string | null;
+  payment_method?: string | null;
   payment_status?: string | null;
   shipping_address?: string | null;
   status?: string | null;
@@ -112,10 +114,6 @@ function normalizeStatus(value: string | null | undefined, fallback: string) {
   return status || fallback;
 }
 
-function isPaymentComplete(paymentStatus: string) {
-  return ["paid", "completed", "success", "successful"].includes(paymentStatus);
-}
-
 export function normalizeOrderDetails(
   payload: ApiOrderDetailsResponse,
 ): OrderDetailsRecord | null {
@@ -125,23 +123,22 @@ export function normalizeOrderDetails(
 
   const apiOrder = payload.order;
   const id = String(apiOrder.order_id ?? apiOrder.id ?? "");
-  const paymentStatus = normalizeStatus(
-    apiOrder.payment_status,
+  const orderStatus = normalizeStatus(apiOrder.status, "pending");
+  const paymentMethod = normalizeStatus(
+    apiOrder.payment_method ?? apiOrder.payment_status,
     "cash_on_delivery",
   );
   const total = toNumber(apiOrder.total_amount);
   const subtotal = toNumber(apiOrder.subtotal_amount);
   const deliveryCharge = toNumber(apiOrder.delivery_charge);
-  const paidAmount = isPaymentComplete(paymentStatus) ? total : 0;
-  const dueAmount = Math.max(total - paidAmount, 0);
 
   return {
     area: apiOrder.city ?? null,
-    cancelled_at: null,
+    cancelled_at: orderStatus === "cancelled" ? (apiOrder.updated_at ?? null) : null,
     confirmed_at: null,
     courier_name: null,
     courier_note: null,
-    courier_status: "not_sent",
+    courier_status: null,
     courier_tracking_id: null,
     created_at: apiOrder.created_at ?? null,
     customer_address: apiOrder.shipping_address ?? null,
@@ -152,9 +149,9 @@ export function normalizeOrderDetails(
       apiOrder.status === "delivered" ? (apiOrder.updated_at ?? null) : null,
     delivery_charge: deliveryCharge,
     delivery_zone: apiOrder.city ?? null,
-    discount: 0,
+    discount: Math.max(subtotal + deliveryCharge - total, 0),
     district: apiOrder.city ?? null,
-    due_amount: dueAmount,
+    due_amount: 0,
     id,
     note: apiOrder.order_note ?? null,
     order_items: (payload.items ?? []).map((item, index) => {
@@ -171,7 +168,7 @@ export function normalizeOrderDetails(
           item.product_id === null || item.product_id === undefined
             ? null
             : String(item.product_id),
-        product_image: item.image ?? item.thumbnail ?? null,
+        product_image: bnbApiAssetUrl(item.image ?? item.thumbnail ?? null, null),
         product_name: item.product_name ?? "Unnamed Product",
         product_size: item.variant_name ?? null,
         product_sku: item.sku ?? null,
@@ -188,25 +185,20 @@ export function normalizeOrderDetails(
       };
     }),
     order_number: id ? `BNB-${id.padStart(6, "0")}` : null,
-    order_status: normalizeStatus(apiOrder.status, "pending"),
+    order_status: orderStatus,
     packed_at: apiOrder.status === "packed" ? (apiOrder.updated_at ?? null) : null,
-    paid_amount: paidAmount,
-    payment_status: paymentStatus,
+    paid_amount: 0,
+    payment_method: paymentMethod,
+    payment_status: paymentMethod,
     returned_at:
       apiOrder.status === "returned" ? (apiOrder.updated_at ?? null) : null,
     shipped_at:
       apiOrder.status === "shipped" ? (apiOrder.updated_at ?? null) : null,
-    source: "MySQL",
-    stock_deducted: true,
-    stock_deducted_at: apiOrder.created_at ?? null,
-    stock_restored: ["cancelled", "returned"].includes(
-      normalizeStatus(apiOrder.status, "pending"),
-    ),
-    stock_restored_at: ["cancelled", "returned"].includes(
-      normalizeStatus(apiOrder.status, "pending"),
-    )
-      ? (apiOrder.updated_at ?? null)
-      : null,
+    source: "MySQL orders",
+    stock_deducted: false,
+    stock_deducted_at: null,
+    stock_restored: false,
+    stock_restored_at: null,
     subtotal,
     total,
     updated_at: apiOrder.updated_at ?? apiOrder.created_at ?? null,
