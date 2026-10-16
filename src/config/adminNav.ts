@@ -47,14 +47,14 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Orders",
     items: [
       { label: "Orders", href: "/orders", status: "Live" },
-      { label: "Order Details", href: "/orders/details", status: "Partial" },
+      { label: "Order Details", href: "/orders/details", status: "Live" },
       { label: "Packing Desk", href: "/packing", status: "Live" },
       { label: "Dispatch Control", href: "/dispatch-control", status: "Live" },
       { label: "Delivery Monitoring", href: "/delivery-monitoring", status: "Live" },
       { label: "Courier & Payments", href: "/courier", status: "Live" },
       { label: "Return Receiving", href: "/returns/receiving", status: "Live" },
-      { label: "Checkout & Shipping Rules", href: "/checkout-rules", status: "Preview" },
-      { label: "Invoice & Thank You Settings", href: "/invoice-settings", status: "Preview" },
+      { label: "Checkout & Shipping Rules", href: "/checkout-rules", status: "Live" },
+      { label: "Invoice & Thank You Settings", href: "/invoice-settings", status: "Partial" },
     ],
   },
   {
@@ -62,7 +62,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Customers",
     items: [
       { label: "Customers", href: "/customers", status: "Live" },
-      { label: "Customers Profile", href: "/customers/profile", status: "Partial" },
+      { label: "Customers Profile", href: "/customers/profile", status: "Live" },
       { label: "Customer Growth & Follow-up", href: "/customers/growth", status: "Preview" },
     ],
   },
@@ -71,7 +71,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Suppliers",
     items: [
       { label: "Suppliers", href: "/suppliers", status: "Live" },
-      { label: "Suppliers Analytics", href: "/suppliers/analytics", status: "Partial" },
+      { label: "Suppliers Analytics", href: "/suppliers/analytics", status: "Live" },
       { label: "Procurement & Reorder Exceptions", href: "/procurement/reorder-exceptions", status: "Preview" },
     ],
   },
