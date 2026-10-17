@@ -189,7 +189,8 @@ function InvoicePrintPageContent() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
+    const orderId = id;
+    if (!orderId) return;
 
     const controller = new AbortController();
 
@@ -197,7 +198,7 @@ function InvoicePrintPageContent() {
       try {
         setIsLoading(true);
         const [nextOrder, settingsResponse] = await Promise.all([
-          fetchOrderDetails(id, controller.signal),
+          fetchOrderDetails(orderId, controller.signal),
           fetch(bnbApiUrl("get_settings.php"), { cache: "no-store", signal: controller.signal }),
         ]);
         setOrder(nextOrder);
