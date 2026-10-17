@@ -96,7 +96,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Homepage Manager", href: "/homepage-cms", status: "Live" },
       { label: "Special Offers", href: "/offers", status: "Live" },
-      { label: "Banner CMS", href: "/banners", status: "Partial" },
+      { label: "Banner CMS", href: "/banners", status: "Live" },
       { label: "Header & Navigation", href: "/navigation", status: "Live" },
       { label: "Footer CMS", href: "/footer", status: "Live" },
       { label: "Reviews & Real Results", href: "/reviews", status: "Live" },

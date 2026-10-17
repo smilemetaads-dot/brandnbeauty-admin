@@ -1,3 +1,5 @@
+import { resolveLegacyMediaUrl } from "./legacy-media-map";
+
 const LOCAL_BNB_API_BASE_URL =
   "http://localhost/BrandnBeauty/brandnbeauty-backend/php";
 const PRODUCTION_BNB_API_BASE_URL = "https://api.brandnbeauty.com/php";
@@ -67,11 +69,17 @@ export function getBnbApiRuntime(): BnbApiRuntime {
 const LEGACY_BACKEND_PATH_PREFIX = "/BrandnBeauty/brandnbeauty-backend";
 
 function normalizeBackendAssetPath(pathname: string) {
-  if (pathname === `${LEGACY_BACKEND_PATH_PREFIX}/php`) {
-    return "/php";
+  if (
+    pathname === `${LEGACY_BACKEND_PATH_PREFIX}/php` ||
+    pathname === `${LEGACY_BACKEND_PATH_PREFIX}/uploads`
+  ) {
+    return pathname.slice(LEGACY_BACKEND_PATH_PREFIX.length);
   }
 
-  if (pathname.startsWith(`${LEGACY_BACKEND_PATH_PREFIX}/php/`)) {
+  if (
+    pathname.startsWith(`${LEGACY_BACKEND_PATH_PREFIX}/php/`) ||
+    pathname.startsWith(`${LEGACY_BACKEND_PATH_PREFIX}/uploads/`)
+  ) {
     return pathname.slice(LEGACY_BACKEND_PATH_PREFIX.length);
   }
 
@@ -102,6 +110,8 @@ export function bnbApiAssetUrl(
   fallback?: string | null,
 ) {
   if (!path) return fallback ?? null;
+  const mapped = resolveLegacyMediaUrl(path);
+  if (mapped) return mapped;
   if (/^https?:\/\//i.test(path)) return normalizeAbsoluteBnbAssetUrl(path);
 
   try {
@@ -113,7 +123,7 @@ export function bnbApiAssetUrl(
     }
 
     if (path.startsWith("/uploads/")) {
-      return bnbApiUrl(path);
+      return `${apiBase.origin}${path}`;
     }
 
     if (path.startsWith("/BrandnBeauty/")) {
