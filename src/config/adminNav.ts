@@ -63,7 +63,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Customers", href: "/customers", status: "Live" },
       { label: "Customers Profile", href: "/customers/profile", status: "Live" },
-      { label: "Customer Growth & Follow-up", href: "/customers/growth", status: "Preview" },
+      { label: "Customer Growth & Follow-up", href: "/customers/growth", status: "Live" },
     ],
   },
   {
@@ -72,7 +72,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Suppliers", href: "/suppliers", status: "Live" },
       { label: "Suppliers Analytics", href: "/suppliers/analytics", status: "Live" },
-      { label: "Procurement & Reorder Exceptions", href: "/procurement/reorder-exceptions", status: "Preview" },
+      { label: "Procurement & Reorder Exceptions", href: "/procurement/reorder-exceptions", status: "Live" },
     ],
   },
   {
@@ -80,7 +80,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Finance",
     items: [
       { label: "Finance Control", href: "/finance", status: "Live" },
-      { label: "Finance Exceptions & Profitability", href: "/finance/exceptions", status: "Preview" },
+      { label: "Finance Exceptions & Profitability", href: "/finance/exceptions", status: "Live" },
       { label: "Cash & Bank Ledger", href: "/finance/cash-ledger", status: "Live" },
       { label: "Payable Payments", href: "/finance/payables", status: "Live" },
       { label: "Month-End Close", href: "/finance/close", status: "Live" },

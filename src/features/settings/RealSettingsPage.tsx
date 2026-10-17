@@ -76,7 +76,7 @@ const systemToggles = [
 ] as const;
 
 const safetyItems = [
-  "Delivery charge saves update the local MySQL settings table through admin auth.",
+  "Delivery charge saves update the authenticated MySQL settings backend through admin auth.",
   "Payment, courier, checkout field visibility and stock automation controls are coming later.",
   "Storefront checkout falls back to local defaults if the settings API is unavailable.",
 ] as const;
@@ -341,7 +341,7 @@ export function RealSettingsPage() {
                 Settings Control Room
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Manage delivery charges with live local settings loaded from
+                Manage delivery charges with live settings loaded from
                 the MySQL backend. Automation, integrations and admin system
                 controls are coming later.
               </p>
@@ -363,7 +363,7 @@ export function RealSettingsPage() {
           </div>
           <div className="grid gap-3 border-t border-slate-100 bg-stone-50/70 p-4 text-sm md:grid-cols-3">
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
-              Environment: <b className="text-[#5E7F85]">Local MySQL</b>
+              Environment: <b className="text-[#5E7F85]">Authenticated MySQL API</b>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-slate-600">
               Last update:{" "}
