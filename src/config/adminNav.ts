@@ -16,7 +16,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Overview",
     items: [
       { label: "Dashboard", href: "/dashboard", status: "Live" },
-      { label: "Business Analytics", href: "/business-analytics", status: "Preview" },
+      { label: "Business Analytics", href: "/business-analytics", status: "Live" },
       { label: "Business OS Foundation", href: "/business-os/foundation", status: "Preview" },
       { label: "Business OS Control", href: "/business-os/control", status: "Preview" },
       { label: "Owner Command Center", href: "/business-os/owner-command-center", status: "Preview" },
@@ -54,7 +54,7 @@ export const adminNavGroups: AdminNavGroup[] = [
       { label: "Courier & Payments", href: "/courier", status: "Live" },
       { label: "Return Receiving", href: "/returns/receiving", status: "Live" },
       { label: "Checkout & Shipping Rules", href: "/checkout-rules", status: "Live" },
-      { label: "Invoice & Thank You Settings", href: "/invoice-settings", status: "Partial" },
+      { label: "Invoice & Thank You Settings", href: "/invoice-settings", status: "Live" },
     ],
   },
   {
@@ -119,7 +119,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     icon: "CO",
     label: "Control",
     items: [
-      { label: "Roles & Permissions", href: "/roles", status: "Preview" },
+      { label: "Roles & Permissions", href: "/roles", status: "Partial" },
       { label: "Settings", href: "/settings", status: "Live" },
       { label: "Brand & Site Identity", href: "/settings/brand-site-identity", status: "Live" },
     ],
