@@ -37,7 +37,7 @@ export const adminNavGroups: AdminNavGroup[] = [
       { label: "Brands", href: "/brands", status: "Live" },
       { label: "Collections", href: "/collections", status: "Live" },
       { label: "Offers & Deals", href: "/offers", status: "Live" },
-      { label: "Product Recommendations", href: "/recommendations", status: "Preview" },
+      { label: "Product Recommendations", href: "/recommendations", status: "Live" },
       { label: "Inventory", href: "/inventory", status: "Live" },
       { label: "Purchase Stock Entry", href: "/purchases", status: "Live" },
     ],

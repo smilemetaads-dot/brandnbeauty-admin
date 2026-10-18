@@ -1,5 +1,20 @@
-import { RealProductRecommendationsPage } from "@/features/catalog/RealProductRecommendationsPage";
+"use client";
+
+import { useRouter } from "next/navigation";
+
+import { AdminShell } from "@/components/admin/AdminShell";
+import { LiveProductRecommendationsWorkspace } from "@/features/recommendations/LiveProductRecommendationsWorkspace";
 
 export default function RecommendationsPage() {
-  return <RealProductRecommendationsPage />;
+  const router = useRouter();
+
+  return (
+    <AdminShell>
+      <LiveProductRecommendationsWorkspace
+        onNavigate={(page) => {
+          router.push(page === "Products" ? "/products" : "/dashboard");
+        }}
+      />
+    </AdminShell>
+  );
 }
