@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { AdminAccessBoundary } from "./AdminAccessBoundary";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminTopbar } from "./AdminTopbar";
 
@@ -15,7 +16,7 @@ export function AdminShell({ children }: AdminShellProps) {
         <div className="flex min-w-0 flex-1 flex-col lg:pl-[19rem]">
           <AdminTopbar />
           <main className="flex-1 px-4 py-4 sm:px-6 lg:px-7">
-            <div className="mx-auto w-full max-w-[1480px]">{children}</div>
+            <div className="mx-auto w-full max-w-[1480px]"><AdminAccessBoundary>{children}</AdminAccessBoundary></div>
           </main>
         </div>
       </div>

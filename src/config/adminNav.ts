@@ -119,7 +119,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     icon: "CO",
     label: "Control",
     items: [
-      { label: "Roles & Permissions", href: "/roles", status: "Partial" },
+      { label: "Roles & Permissions", href: "/roles", status: "Live" },
       { label: "Settings", href: "/settings", status: "Live" },
       { label: "Brand & Site Identity", href: "/settings/brand-site-identity", status: "Live" },
     ],

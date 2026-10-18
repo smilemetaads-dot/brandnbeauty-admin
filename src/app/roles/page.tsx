@@ -1,5 +1,12 @@
-import { RealRolesPermissionsPage } from "@/features/settings/RealRolesPermissionsPage";
+"use client";
+
+import { AdminShell } from "@/components/admin/AdminShell";
+import { LiveRolesPermissionsWorkspace } from "@/features/roles-permissions/LiveRolesPermissionsWorkspace";
 
 export default function RolesPage() {
-  return <RealRolesPermissionsPage />;
+  return (
+    <AdminShell>
+      <LiveRolesPermissionsWorkspace />
+    </AdminShell>
+  );
 }
