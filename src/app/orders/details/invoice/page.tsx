@@ -189,12 +189,11 @@ function InvoicePrintPageContent() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const orderId = id;
-    if (!orderId) return;
+    if (!id) return;
 
     const controller = new AbortController();
 
-    async function load() {
+    async function load(orderId: string) {
       try {
         setIsLoading(true);
         const [nextOrder, settingsResponse] = await Promise.all([
@@ -219,7 +218,7 @@ function InvoicePrintPageContent() {
       }
     }
 
-    void load();
+    void load(id);
     return () => controller.abort();
   }, [id]);
 
