@@ -17,9 +17,9 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Dashboard", href: "/dashboard", status: "Live" },
       { label: "Business Analytics", href: "/business-analytics", status: "Live" },
-      { label: "Business OS Foundation", href: "/business-os/foundation", status: "Preview" },
-      { label: "Business OS Control", href: "/business-os/control", status: "Preview" },
-      { label: "Owner Command Center", href: "/business-os/owner-command-center", status: "Preview" },
+      { label: "Business OS Foundation", href: "/business-os/foundation", status: "Live" },
+      { label: "Business OS Control", href: "/business-os/control", status: "Live" },
+      { label: "Owner Command Center", href: "/business-os/owner-command-center", status: "Live" },
     ],
   },
   {
@@ -28,10 +28,10 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Products", href: "/products", status: "Live" },
       { label: "Add/Edit Product", href: "/products/edit", status: "Live" },
-      { label: "Product Knowledge Readiness", href: "/products/knowledge-readiness", status: "Preview" },
-      { label: "Claim & Evidence Readiness", href: "/products/evidence-readiness", status: "Preview" },
-      { label: "Content Enrichment", href: "/products/content-enrichment", status: "Preview" },
-      { label: "Content Review", href: "/products/content-review", status: "Preview" },
+      { label: "Product Knowledge Readiness", href: "/products/knowledge-readiness", status: "Live" },
+      { label: "Claim & Evidence Readiness", href: "/products/evidence-readiness", status: "Live" },
+      { label: "Content Enrichment", href: "/products/content-enrichment", status: "Live" },
+      { label: "Content Review", href: "/products/content-review", status: "Live" },
       { label: "Categories", href: "/categories", status: "Live" },
       { label: "Concerns", href: "/concerns", status: "Live" },
       { label: "Brands", href: "/brands", status: "Live" },
@@ -107,10 +107,10 @@ export const adminNavGroups: AdminNavGroup[] = [
     icon: "GR",
     label: "Growth",
     items: [
-      { label: "Growth Control Center", href: "/growth/control-center", status: "Preview" },
-      { label: "Content & Creative OS", href: "/growth/content-creative", status: "Preview" },
-      { label: "Tracking & Attribution OS", href: "/growth/tracking-attribution", status: "Preview" },
-      { label: "Meta Ads Control", href: "/growth/meta-ads", status: "Preview" },
+      { label: "Growth Control Center", href: "/growth/control-center", status: "Live" },
+      { label: "Content & Creative OS", href: "/growth/content-creative", status: "Live" },
+      { label: "Tracking & Attribution OS", href: "/growth/tracking-attribution", status: "Live" },
+      { label: "Meta Ads Control", href: "/growth/meta-ads", status: "Live" },
       { label: "Marketing Performance", href: "/growth/marketing-performance", status: "Live" },
       { label: "Tracking & Attribution", href: "/tracking", status: "Live" },
     ],
@@ -128,8 +128,8 @@ export const adminNavGroups: AdminNavGroup[] = [
     icon: "AI",
     label: "AI Commerce",
     items: [
-      { label: "Control Center", href: "/ai-commerce", status: "Preview" },
-      { label: "AI Recommendation Readiness", href: "/ai-commerce/recommendation-readiness", status: "Preview" },
+      { label: "Control Center", href: "/ai-commerce", status: "Live" },
+      { label: "AI Recommendation Readiness", href: "/ai-commerce/recommendation-readiness", status: "Live" },
     ],
   },];
 
